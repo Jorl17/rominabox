@@ -195,8 +195,9 @@ export function RemoveGame({
       confirm={confirm}
     >
       <p>
-        Its app is gone. This deletes its saves, states and settings from this
-        computer.
+        Its app is no longer at {game.app}. If you moved it, open it once and it
+        will appear again. Removing deletes its saves, states and settings from
+        this computer.
       </p>
     </Confirm>
   );

@@ -122,7 +122,7 @@ describe("the Game data section", () => {
   it("lists each game with its console and app, and offers Remove only for a game whose app is gone", async () => {
     await shown();
     expect(rows()).toEqual([
-      ["", "Knuckles", "Mega Drive / Genesis", "Gone", "Remove"],
+      ["", "Knuckles", "Mega Drive / Genesis", "Not found", "Remove"],
       ["", "Pokemon Gold", "Mega Drive / Genesis", "Running", ""],
       ["", "Sonic 3", "Mega Drive / Genesis", "Found", ""],
     ]);

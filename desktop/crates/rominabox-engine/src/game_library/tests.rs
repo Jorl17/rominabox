@@ -217,7 +217,10 @@ fn a_game_is_removed_only_when_its_app_is_gone() {
     installed(&library, &sonic, "rings", true);
 
     let error = library.remove(SONIC).unwrap_err();
-    assert_eq!(error, format!("\u{201c}Sonic 3\u{201d} is still at {}.", sonic.app));
+    assert_eq!(error, format!(
+            "\u{201c}Sonic 3\u{201d} is still installed at {}. We only remove the data of games whose app is gone.",
+            sonic.app
+        ));
     assert_eq!(save(&library, &sonic), "rings");
     assert_eq!(library.remove("../../x").unwrap_err(), "There is no game ../../x on this computer.");
 

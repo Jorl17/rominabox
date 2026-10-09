@@ -30,7 +30,7 @@ function bulkReport(report: bridge.BulkImport): string {
 /** The state of a game's app, in the App column. */
 function appState(game: bridge.InstalledGame): string {
   if (game.running) return "Running";
-  return game.appPresent ? "Found" : "Gone";
+  return game.appPresent ? "Found" : "Not found";
 }
 
 /** The games on this computer, with their saves, states and settings. Here

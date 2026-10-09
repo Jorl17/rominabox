@@ -303,7 +303,10 @@ impl Library {
     pub fn remove(&self, identity: &str) -> Result<(), String> {
         let game = self.ready(identity)?;
         if game.app_present {
-            return Err(format!("\u{201c}{}\u{201d} is still at {}.", game.game.title, game.game.app));
+            return Err(format!(
+                "\u{201c}{}\u{201d} is still installed at {}. We only remove the data of games whose app is gone.",
+                game.game.title, game.game.app
+            ));
         }
         if !self.root.is_absolute() {
             return Err(format!("{} is not an absolute path.", self.root.display()));
