@@ -379,7 +379,12 @@ def run_game_manifest() -> list[str]:
             archive.writestr("game.manifest", backup)
             archive.writestr("saves/Other.srm", "imported save")
         write(data / "saves" / "Plan Game.srm", "old save")
+        # And the request to start the game again, left by a player that
+        # ended before it could act on it.
+        write(data / "restart-after-import", "")
         launch(binary, home, root)
+        if (data / "restart-after-import").exists():
+            failures.append("a request to start the game again stayed from before the launch")
         if (data / "saves" / "Plan Game.srm").read_text() != "imported save":
             failures.append("the backup set aside was not imported, renamed to this game's file")
         if (data / "import.zip").exists():
