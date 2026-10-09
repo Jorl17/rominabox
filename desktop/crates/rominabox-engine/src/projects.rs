@@ -484,10 +484,9 @@ fn validate_choices(settings: &Game) -> Result<(), String> {
     if settings.theme.trim().is_empty() || settings.palette.trim().is_empty() {
         return Err("project theme and palette are required".to_string());
     }
-    let design = crate::themes::design_root(&settings.theme)?;
+    crate::themes::declared(&settings.theme)?;
     crate::themes::palette(&settings.palette)?;
-    crate::achievements::entries(
-        &design,
+    crate::achievements::check_explicit(
         settings.include_achievements,
         settings.show_menu,
         settings.menu_entries.as_deref(),

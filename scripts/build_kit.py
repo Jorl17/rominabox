@@ -22,11 +22,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import built  # noqa: E402
 import kit_assets  # noqa: E402
 import licences  # noqa: E402
 import native_build  # noqa: E402
@@ -34,6 +38,14 @@ import prepare_runtime  # noqa: E402
 import toolchain  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+# The pictures of the builder's Menu step, in the builder's resources.
+PICTURES = ROOT / "desktop/src-tauri/resources/menu-previews"
+# A picture takes under a second with a graphics card and with Mesa's
+# software OpenGL, so a render that takes this long has stopped.
+PICTURE_SECONDS = 120
+# The environment variable with the path of a folder with a software OpenGL
+# for Windows.
+OPENGL_LIBRARIES = "ROMINABOX_OPENGL_LIBRARIES"
 
 
 def source_of(reference: str, build: Path) -> Path | None:
@@ -156,8 +168,9 @@ def main() -> int:
     prepare_runtime.stage_joypad_autoconfig(kit, native_build.joypad_profile_drivers(platform))
     print(f"Made the {target} runtime kit in {kit} from {build}")
 
-    for part in native_build.slices(target):
-        install_preview(build if part == target else build / part, part)
+    renderer = install_preview(build, target)
+    if renderer:
+        render_menu_previews(kit, renderer, target)
     if missing:
         print(licences.warning(missing), file=sys.stderr)
     return 0
@@ -176,20 +189,28 @@ def empty_library_inventory(kit: Path, declared: dict) -> None:
                                         encoding="utf-8", newline="\n")
 
 
-def install_preview(build: Path, target: str) -> None:
+def install_preview(build: Path, target: str) -> Path | None:
     """The builder's menu preview renderer, which we build beside the player
-    for each target that has one in the recipe, in the folder we load it from
-    in the builder and the picture tests. We link only the system's libraries
-    into it, so we remove any library an earlier renderer left beside it."""
-    declared = native_build.recipe()["preview"].get(target)
-    if not declared:
-        return
-    built = build / "preview" / declared["output"]
-    if not built.is_file():
-        raise SystemExit(f"{build} has no menu preview renderer at {built}")
-    installed = native_build.preview_resource(target)
+    for each slice that has one in the recipe, in the folder we load it from
+    in the builder and the picture tests. For a universal target we join the
+    renderers of the slices into one file, as we join the players. We link
+    only the system's libraries into it, so we remove any library an earlier
+    renderer left beside it."""
+    parts = [part for part in native_build.slices(target) if native_build.recipe()["preview"].get(part)]
+    if not parts:
+        return None
+    built = [(build if part == target else build / part) / "preview" / native_build.recipe()["preview"][part]["output"]
+             for part in parts]
+    for path in built:
+        if not path.is_file():
+            raise SystemExit(f"{path.parent.parent} has no menu preview renderer at {path}")
+    installed = native_build.preview_resource(parts[0])
     installed.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(built, installed)
+    if len(built) == 1:
+        shutil.copy2(built[0], installed)
+    else:
+        native_build.run(["lipo", "-create", "-output", str(installed), *map(str, built)], build,
+                         native_build.build_environment(parts[0]))
     carried = installed.parent / "Frameworks"
     if carried.is_dir():
         for library in carried.iterdir():
@@ -197,6 +218,57 @@ def install_preview(build: Path, target: str) -> None:
                 library.unlink()
         carried.rmdir()
     print(f"Installed the menu preview renderer as {installed}")
+    return installed
+
+
+def render_menu_previews(kit: Path, renderer: Path, target: str) -> None:
+    """The pictures of the builder's Menu step, of every design in every
+    palette, from `kit` with `renderer`, in the builder's resources. Each file
+    name is a digest of what the picture is drawn from (menu::render_preview).
+    In the builder we show the file instead of rendering a picture with the
+    same name. We remove the pictures of an earlier kit.
+
+    On a Windows computer without a graphics card, such as a CI runner, the
+    environment variable OPENGL_LIBRARIES contains the path of a folder with a
+    software OpenGL (Mesa's opengl32.dll and libgallium_wgl.dll). We draw with a copy of the renderer
+    beside those libraries, because Windows loads opengl32.dll from the
+    program's own folder first, and the libraries stay out of the builder."""
+    declared = json.loads((ROOT / "desktop/designs.json").read_text(encoding="utf-8"))
+    PICTURES.mkdir(parents=True, exist_ok=True)
+    names = set()
+    print("Building rominabox-cli to render the Menu step pictures", flush=True)
+    cli = built.cli()
+    with tempfile.TemporaryDirectory() as scratch:
+        libraries = os.environ.get(OPENGL_LIBRARIES)
+        if libraries and native_build.is_windows(target):
+            drawing = Path(scratch) / "renderer"
+            drawing.mkdir()
+            for library in Path(libraries).glob("*.dll"):
+                shutil.copy2(library, drawing)
+            renderer = Path(shutil.copy2(renderer, drawing))
+        for design in declared["designs"]:
+            for palette in declared["palettes"]:
+                request = {"outputDir": str(Path(scratch) / f"{design['id']}-{palette['id']}"),
+                           "theme": design["id"], "palette": palette["id"],
+                           "design": str(kit / "designs" / design["id"]), "assets": str(kit / "menu-assets"),
+                           "renderer": str(renderer)}
+                print(f"Rendering {design['id']} in {palette['id']}", flush=True)
+                try:
+                    run = subprocess.run([str(cli), "preview"], input=json.dumps(request), capture_output=True,
+                                         text=True, encoding="utf-8", timeout=PICTURE_SECONDS)
+                except subprocess.TimeoutExpired:
+                    raise SystemExit(f"rendering {design['id']} in {palette['id']} took more than "
+                                     f"{PICTURE_SECONDS} seconds") from None
+                events = [json.loads(line) for line in run.stdout.splitlines() if line.startswith("{")]
+                result = next((event["result"] for event in events if event.get("type") == "result"), None)
+                if run.returncode != 0 or result is None:
+                    raise SystemExit(f"could not render {design['id']} in {palette['id']}: {run.stdout}{run.stderr}")
+                shutil.copy2(result["imagePath"], PICTURES / result["name"])
+                names.add(result["name"])
+    for stale in PICTURES.glob("*.png"):
+        if stale.name not in names:
+            stale.unlink()
+    print(f"Rendered {len(names)} menu pictures into {PICTURES}")
 
 
 if __name__ == "__main__":

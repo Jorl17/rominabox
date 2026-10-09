@@ -3,6 +3,7 @@
 #endif
 
 #include "../portable_fs.h"
+#include "portable_fs_windows.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -18,6 +19,10 @@
  * the last two, so a player could not sign out in one game while another game
  * reads the accounts folder. */
 #define SHARE_ALL (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+/* How long we wait for a virus scanner to close the files we move, and how
+ * often we try again meanwhile. */
+#define MOVE_WAIT_MS 15000
+#define MOVE_PAUSE_MS 50
 /* The path separator on Windows, where `/` is also accepted. */
 const char fs_separator = '\\';
 
@@ -239,13 +244,27 @@ static BOOL replace_posix(const wchar_t *source, const wchar_t *target) {
     return renamed;
 }
 
+BOOL fs_move_when_free(const wchar_t *source, const wchar_t *target, DWORD flags) {
+    DWORD waited = 0;
+    for (;;) {
+        DWORD error;
+        if (((flags & MOVEFILE_REPLACE_EXISTING) && replace_posix(source, target))
+            || MoveFileExW(source, target, flags))
+            return TRUE;
+        error = GetLastError();
+        if ((error != ERROR_ACCESS_DENIED && error != ERROR_SHARING_VIOLATION) || waited >= MOVE_WAIT_MS)
+            return FALSE;
+        Sleep(MOVE_PAUSE_MS);
+        waited += MOVE_PAUSE_MS;
+    }
+}
+
 int fs_replace(const char *from, const char *to) {
     wchar_t *source = wide(from);
     wchar_t *target = source ? wide(to) : NULL;
     BOOL moved = FALSE;
     if (source && target) {
-        moved = replace_posix(source, target)
-            || MoveFileExW(source, target, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+        moved = fs_move_when_free(source, target, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
         if (!moved)
             set_errno_from_windows();
     }
@@ -351,7 +370,6 @@ int fs_write_file(const char *path, const void *data, size_t size) {
     HANDLE file;
     DWORD wrote = 0;
     BOOL written;
-    int attempt;
     if (size > MAXDWORD) {
         errno = EFBIG;
         return -1;
@@ -380,13 +398,9 @@ int fs_write_file(const char *path, const void *data, size_t size) {
     if (!written)
         set_errno_from_windows();
     CloseHandle(file);
-    /* A virus scanner can keep the old file open for a moment. */
-    for (attempt = 0; written && attempt < 50; ++attempt) {
-        if (fs_replace(temporary, path) == 0) {
-            free(temporary);
-            return 0;
-        }
-        Sleep(10);
+    if (written && fs_replace(temporary, path) == 0) {
+        free(temporary);
+        return 0;
     }
     fs_remove(temporary);
     free(temporary);

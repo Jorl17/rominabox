@@ -115,7 +115,14 @@ int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const cha
 /* The number of frames after which the RetroArch run ends. */
 #define ROMINABOX_MAX_FRAMES_ENV "ROMINABOX_MAX_FRAMES"
 
+/* Stop the launch: write `message` to the error stream, and tell the person
+ * that the game could not start, that they can try opening it again, and
+ * `message`. */
 void rominabox_launch_die(const char *message);
+
+/* Stop the launch for a reason that the person can act on: write `sentence`,
+ * which is written for that person, to the error stream and tell it to them. */
+void rominabox_launch_refuse(const char *sentence);
 
 /* Tell a person who opened the game why it cannot start, where the platform
  * allows it. We define it in the launcher for each platform, and show the

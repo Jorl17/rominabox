@@ -242,10 +242,12 @@ def write_local(path: Path, suffix: str, offset: int) -> dict:
 COPIED_ARTIFACTS = [
     Path("desktop/src-tauri/resources/runtime"),
     # The same applies to these small files. In build_kit.py we install the
-    # preview renderer into resources/preview, and in build_builder.py we write
-    # the command line into resources/bin, so with links we would write into
-    # the canonical checkout.
+    # preview renderer into resources/preview and its pictures into
+    # resources/menu-previews, and in build_builder.py we write the command
+    # line into resources/bin, so with links we would write into the canonical
+    # checkout.
     Path("desktop/src-tauri/resources/preview"),
+    Path("desktop/src-tauri/resources/menu-previews"),
     Path("desktop/src-tauri/resources/bin"),
     # The cores that we run in the exporter, shipped and menu tests, and the
     # pinned archives with licences or sources for preparation. Neither is in

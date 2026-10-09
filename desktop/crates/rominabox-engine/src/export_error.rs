@@ -128,6 +128,10 @@ pub struct AuthorError {
     /// The app in the way, for `Exists`, so we can ask the author about it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub existing: Option<ExistingApp>,
+    /// The technical message of a failure that comes from a bug in
+    /// ROM-in-a-Box, for the author to send with a bug report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bug: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -228,15 +232,29 @@ impl ExportError {
                 "The app could not be written to its folder. Check that there is free space, then try again.".into()
             }
             ErrorStage::Dependencies | ErrorStage::Freeze => "This copy of ROM-in-a-Box is missing some of its own files. Reinstall it, then try again.".into(),
-            ErrorStage::Validate => "The app could not be created with these settings. Go back, check each step, and try again.".into(),
             ErrorStage::Sign => "The app could not be signed. Try creating it again.".into(),
             ErrorStage::Cancelled => "The export was cancelled, and no app was created.".into(),
-            ErrorStage::Export
+            ErrorStage::Validate
+            | ErrorStage::Export
             | ErrorStage::Stage
             | ErrorStage::Configure
             | ErrorStage::Measure
-            | ErrorStage::Cleanup => "The app could not be created. Try again; if it keeps failing, quit ROM-in-a-Box and open it again.".into(),
+            | ErrorStage::Cleanup => "The app could not be created, because of a bug in ROM-in-a-Box.".into(),
         }
+    }
+
+    /// Whether the failure comes from a bug in ROM-in-a-Box, and not from the
+    /// author's files or choices or from the computer. No choice in the
+    /// builder is one that the validation refuses, so a refusal there is a bug.
+    fn is_bug(&self) -> bool {
+        self.cause.is_none()
+            && match self.stage {
+                ErrorStage::Validate | ErrorStage::Export | ErrorStage::Dependencies | ErrorStage::Freeze => true,
+                ErrorStage::Stage | ErrorStage::Configure | ErrorStage::Measure | ErrorStage::Cleanup => {
+                    self.path.is_none()
+                }
+                _ => false,
+            }
     }
 
     pub fn for_author(&self) -> AuthorError {
@@ -254,6 +272,7 @@ impl ExportError {
             stage: self.stage,
             sentence: self.sentence(),
             existing,
+            bug: self.is_bug().then(|| self.message.clone()),
         }
     }
 }
@@ -342,6 +361,25 @@ mod tests {
         let picture = assert_sentence(&io_error(ErrorStage::Image, "/pictures/cover.webp"));
         assert!(picture.contains("cover.webp"), "{picture:?}");
         assert!(!picture.contains("/pictures"), "{picture:?}");
+    }
+
+    /// For a failure that only a bug can cause, the author error contains the
+    /// technical message, for a bug report. For any other failure it contains
+    /// none.
+    #[test]
+    fn a_bug_carries_its_details_for_a_report() {
+        let refused = ExportError::new(ErrorStage::Validate, "Menu design 'native' is declared but its package is missing at /kit/designs/native");
+        assert_eq!(refused.for_author().bug.as_deref(), Some(refused.message.as_str()));
+        assert!(ExportError::new(ErrorStage::Stage, "copy failed").for_author().bug.is_some());
+        for error in [
+            io_error(ErrorStage::Stage, "/out/.rominabox-export-1-0/Game.app"),
+            ExportError::new(ErrorStage::Refused, "Shaders need the in-game menu."),
+            ExportError::new(ErrorStage::Missing, "gone").about(Path::new("/games/sonic.md")),
+            ExportError::new(ErrorStage::Cores, "The Dreamcast core could not be downloaded. Try again later."),
+            ExportError::new(ErrorStage::Cancelled, "export cancelled"),
+        ] {
+            assert!(error.for_author().bug.is_none(), "{error}");
+        }
     }
 
     #[test]

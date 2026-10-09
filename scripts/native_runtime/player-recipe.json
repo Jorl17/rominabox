@@ -262,7 +262,7 @@
     ]
   },
   "preview": {
-    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its entry, which reads the program's arguments as that platform passes them, and its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. It links FreeType statically, as the player does, so it is copied into the builder's resources alone. It is built for the builder's own processor only, never joined into a universal file.",
+    "comment": "The builder's menu preview, rml-preview: the player's own RmlUi renderer drawing a composed menu into a picture, in an OpenGL context on a window never shown, built beside the player from the same fork, RmlUi and FreeType, and with the file layer above. 'sources' are the repository's, 'forkSources' the fork's; a target adds its entry, which reads the program's arguments as that platform passes them, and its OpenGL context. The menu GL probe (test_dcmenu.py) draws in the same context. It links FreeType statically, as the player does, so it is copied into the builder's resources alone. On macOS we build it for each slice and join the slices into one universal file in the kit, and in each builder we keep the processors it is built for.",
     "sources": [
       "desktop/src-tauri/preview/rml_preview.cpp"
     ],
@@ -282,6 +282,17 @@
       "libretro-common/lists/string_list.c"
     ],
     "macos-arm64": {
+      "output": "rml-preview",
+      "entry": "desktop/src-tauri/preview/posix/main.cpp",
+      "context": {
+        "sources": ["desktop/src-tauri/preview/gl_context_macos.mm"],
+        "forkSources": [],
+        "flags": ["-fobjc-arc", "-Wno-deprecated-declarations"],
+        "libraries": ["-framework", "OpenGL", "-framework", "Cocoa"]
+      },
+      "flags": []
+    },
+    "macos-x86_64": {
       "output": "rml-preview",
       "entry": "desktop/src-tauri/preview/posix/main.cpp",
       "context": {

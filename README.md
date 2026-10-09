@@ -19,6 +19,12 @@ ROM-in-a-Box is an app that bundles a ROM with a custom version of RetroArch int
 
 For the full list of features, see [rominabox.app](https://www.rominabox.app).
 
+## Downloading
+
+The [latest release](https://github.com/Jorl17/rominabox/releases/latest) has the builder for Macs with Apple silicon, for Intel Macs and for both, and an installer for Windows. Apple has notarized the Mac builders.
+
+The Windows installer is not signed with a code-signing certificate, so Microsoft Defender SmartScreen may warn that it comes from an unknown publisher and call it dangerous. It is safe to run: choose **More info**, then **Run anyway**. A game made for Windows is not signed either, and someone who downloads it may see the same warning.
+
 ## Getting the source
 
 RetroArch is in our fork, [rominabox-retroarch](https://github.com/Jorl17/rominabox-retroarch), included as a submodule:

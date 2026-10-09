@@ -636,7 +636,7 @@ fn install_bytes(directory: &Path, filename: &str, bytes: &[u8]) -> Result<(), C
     fs::create_dir_all(directory).map_err(|_| CoreFailure::Unreachable)?;
     let partial = directory.join(format!("{filename}.partial"));
     fs::write(&partial, bytes).map_err(|_| CoreFailure::Unreachable)?;
-    fs::rename(&partial, directory.join(filename)).map_err(|_| CoreFailure::Unreachable)?;
+    crate::files::rename(&partial, &directory.join(filename)).map_err(|_| CoreFailure::Unreachable)?;
     Ok(())
 }
 

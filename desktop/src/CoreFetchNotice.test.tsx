@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CoreDownloadFailed,
+  ExportBug,
   exportFailure,
   type ExportProgress,
 } from "./bridge";
@@ -132,5 +133,17 @@ describe("the export's core pop-up", () => {
     const other = exportFailure({ stage: "stage", sentence });
     expect(other).not.toBeInstanceOf(CoreDownloadFailed);
     expect((other as Error).message).toBe(sentence);
+    expect(other).not.toBeInstanceOf(ExportBug);
+  });
+
+  it("keeps the details of a bug for the report", () => {
+    const sentence =
+      "The app could not be created, because of a bug in ROM-in-a-Box.";
+    const details =
+      "Menu design 'native' is declared but its package is missing at /kit/designs/native";
+    const bug = exportFailure({ stage: "validate", sentence, bug: details });
+    expect(bug).toBeInstanceOf(ExportBug);
+    expect((bug as ExportBug).message).toBe(sentence);
+    expect((bug as ExportBug).details).toBe(details);
   });
 });

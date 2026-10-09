@@ -5,7 +5,11 @@
 # the kits as the release of their player commit (scripts/publish_kit.py),
 # from which builders download them. When someone starts the workflow by hand
 # (workflow_dispatch), we keep the results as workflow artifacts and publish
-# nothing.
+# nothing, and the run can be limited to one platform.
+#
+# On macOS we build three builders: for arm64 (ROM-in-a-Box-<version>-macos.zip,
+# the default download), for Intel (-macos-intel.zip) and universal
+# (-macos-universal.zip).
 #
 # Secrets: FORK_DEPLOY_KEY is a read-only key for the private RetroArch fork.
 # For the Mac builder's Developer ID signature and notarization, the secrets
@@ -20,6 +24,12 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: Which platforms to build
+        type: choice
+        options: [both, macos, windows]
+        default: both
 
 permissions:
   contents: write
@@ -29,11 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: windows-latest
-            platform: windows
-          - runner: macos-latest
-            platform: macos
+        include: ${{ fromJSON(inputs.platforms == 'macos' && '[{"runner":"macos-latest","platform":"macos"}]' || (inputs.platforms == 'windows' && '[{"runner":"windows-latest","platform":"windows"}]' || '[{"runner":"windows-latest","platform":"windows"},{"runner":"macos-latest","platform":"macos"}]')) }}
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -79,6 +85,18 @@ jobs:
         if: matrix.platform == 'windows'
         run: echo "ROMINABOX_MSYS2=$(cygpath -w '${{ steps.msys2.outputs.msys2-location }}')" >> "$GITHUB_ENV"
 
+      # The runner has no graphics card, and Windows alone offers OpenGL 1.1, so
+      # we draw the pictures of the builder's Menu step with Mesa's software
+      # OpenGL (scripts/build_kit.py).
+      - name: Install Mesa's software OpenGL
+        if: matrix.platform == 'windows'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/mesa.7z" https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
+          echo "351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695  $RUNNER_TEMP/mesa.7z" | sha256sum --check
+          7z e "$RUNNER_TEMP/mesa.7z" -o"$RUNNER_TEMP/mesa" x64/opengl32.dll x64/libgallium_wgl.dll
+          echo "ROMINABOX_OPENGL_LIBRARIES=$(cygpath -w "$RUNNER_TEMP/mesa")" >> "$GITHUB_ENV"
+          echo "GALLIUM_DRIVER=llvmpipe" >> "$GITHUB_ENV"
+
       - name: Install CMake, Ninja and pkg-config
         if: matrix.platform == 'macos'
         run: brew install cmake ninja pkgconf
@@ -88,6 +106,8 @@ jobs:
         with:
           node-version: 24
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Build the player and its runtime kit
         run: |
@@ -113,35 +133,49 @@ jobs:
           test -n "$identity" || { echo "MACOS_CERTIFICATE contains no Developer ID Application certificate"; exit 1; }
           echo "ROMINABOX_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
 
-      - name: Build the builder
+      - name: Build the Windows builder
+        if: matrix.platform == 'windows'
         run: |
           (cd desktop && npm ci)
           uv run python scripts/build_builder.py
+          mkdir -p release/installers
+          cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
 
-      - name: Notarize the Mac builder
-        if: matrix.platform == 'macos' && env.MACOS_CERTIFICATE != '' && env.NOTARY_KEY != ''
+      - name: Build, check and notarize the three Mac builders
+        if: matrix.platform == 'macos'
         env:
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
         run: |
-          app="desktop/target/release/bundle/macos/ROM-in-a-Box.app"
-          echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
-          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/notarize.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
-            --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
-          xcrun stapler staple "$app"
+          (cd desktop && npm ci)
+          version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
+          mkdir -p release/installers
+          for variant in arm64 x86_64 universal; do
+            case $variant in
+              arm64) triple=aarch64-apple-darwin; wanted="arm64"; name="ROM-in-a-Box-${version}-macos.zip" ;;
+              x86_64) triple=x86_64-apple-darwin; wanted="x86_64"; name="ROM-in-a-Box-${version}-macos-intel.zip" ;;
+              universal) triple=universal-apple-darwin; wanted="arm64 x86_64"; name="ROM-in-a-Box-${version}-macos-universal.zip" ;;
+            esac
+            uv run python scripts/build_builder.py --mac "$variant"
+            app="desktop/target/$triple/release/bundle/macos/ROM-in-a-Box.app"
+            for program in "$app"/Contents/MacOS/* "$app/Contents/Resources/bin/rominabox-cli" "$app/Contents/Resources/preview/rml-preview"; do
+              held=$(lipo -archs "$program" | tr ' ' '\n' | sort | xargs)
+              test "$held" = "$wanted" || { echo "$program holds $held, not $wanted"; exit 1; }
+            done
+            if [ -n "$MACOS_CERTIFICATE" ] && [ -n "$NOTARY_KEY" ]; then
+              echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
+              ditto -c -k --keepParent "$app" "$RUNNER_TEMP/notarize.zip"
+              xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
+                --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
+              xcrun stapler staple "$app"
+            fi
+            ditto -c -k --keepParent "$app" "release/installers/$name"
+          done
 
       - name: Collect the release files
         run: |
-          version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
-          mkdir -p release/installers release/kits
+          mkdir -p release/kits
           cp work/kits/*.zip release/kits/
-          if [ "${{ matrix.platform }}" = macos ]; then
-            ditto -c -k --keepParent desktop/target/release/bundle/macos/ROM-in-a-Box.app \
-              "release/installers/ROM-in-a-Box-${version}-macos.zip"
-          else
-            cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
-          fi
           ls -la release/installers release/kits
       - uses: actions/upload-artifact@v4
         with:
@@ -165,9 +199,35 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/installers/* --verify-tag \
-            --title "ROM-in-a-Box ${GITHUB_REF_NAME#v}" \
-            --notes "ROM-in-a-Box for macOS and Windows. The runtime kits for making games for the other platform are in the release named after the player commit, kit-<commit>."
+          kit=$(ls release/kits | head -1 | sed -E 's/^[a-z]+-([0-9a-f]+)\.zip$/kit-\1/')
+          setup=$(cd release/installers && ls *-setup.exe)
+          version=${GITHUB_REF_NAME#v}
+          {
+            echo "ROM-in-a-Box $version for macOS and Windows."
+            echo
+            echo "- \`ROM-in-a-Box-$version-macos.zip\`: for Macs with Apple silicon."
+            echo "- \`ROM-in-a-Box-$version-macos-intel.zip\`: for Intel Macs."
+            echo "- \`ROM-in-a-Box-$version-macos-universal.zip\`: for both kinds of Mac."
+            echo "- \`$setup\`: the installer for Windows."
+            echo
+            echo "The Windows installer is not signed with a code-signing certificate, so Microsoft Defender SmartScreen may warn that it comes from an unknown publisher and call it dangerous. It is safe to run: choose **More info**, then **Run anyway**."
+            echo
+            echo "Games for the other platform are made from the runtime kit of that platform in the release \`$kit\`, which is downloaded on first use."
+            echo
+            echo "Each file is also attached under a name without the version, so that a link to releases/latest/download/ always reaches the newest one."
+          } > "$RUNNER_TEMP/notes.md"
+          # The same files without the version in their names, for links to the
+          # latest release.
+          latest="$RUNNER_TEMP/latest"
+          mkdir -p "$latest"
+          for variant in macos macos-intel macos-universal; do
+            cp "release/installers/ROM-in-a-Box-$version-$variant.zip" "$latest/ROM-in-a-Box-$variant.zip"
+          done
+          cp "release/installers/$setup" "$latest/ROM-in-a-Box-windows-setup.exe"
+          # The version's release is the latest, which releases/latest/download/
+          # links reach. Kit releases are never the latest (publish_kit.py).
+          gh release create "$GITHUB_REF_NAME" release/installers/* "$latest"/* --verify-tag --latest \
+            --title "ROM-in-a-Box $version" --notes-file "$RUNNER_TEMP/notes.md"
       - name: Publish the kits in the player commit's release
         env:
           GH_TOKEN: ${{ github.token }}

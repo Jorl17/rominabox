@@ -10,6 +10,7 @@ pub mod discs;
 pub mod dumps;
 pub mod export_cores;
 pub mod export_error;
+mod files;
 pub mod game;
 mod helper;
 pub mod meta_binds;
@@ -58,6 +59,9 @@ mod measure;
 
 /// The ROM-in-a-Box web address, which is the engine package's homepage.
 pub const WEBSITE: &str = env!("CARGO_PKG_HOMEPAGE");
+
+/// Where a person reports a bug: a new issue in the engine package's repository.
+pub const BUG_REPORTS: &str = concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new");
 
 /// The web address without its scheme, `www.rominabox.app`.
 pub fn website_name() -> &'static str {

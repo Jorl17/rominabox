@@ -89,7 +89,7 @@ pub(crate) fn refuse_existing(path: &Path) -> Result<(), ExportError> {
 pub(crate) fn put_in_place(app: &Path, destination: &Path, replace: bool) -> Result<(), ExportError> {
     let saving = |error: io::Error| ExportError::io(ErrorStage::Complete, destination, error);
     if !occupied(destination) {
-        return fs::rename(app, destination).map_err(saving);
+        return crate::files::rename(app, destination).map_err(saving);
     }
     if !replace {
         return refuse_existing(destination);
@@ -102,8 +102,8 @@ pub(crate) fn put_in_place(app: &Path, destination: &Path, replace: bool) -> Res
         .about(destination));
     }
     let aside = set_aside_name(destination);
-    fs::rename(destination, &aside).map_err(saving)?;
-    if let Err(error) = fs::rename(app, destination) {
+    crate::files::rename(destination, &aside).map_err(saving)?;
+    if let Err(error) = crate::files::rename(app, destination) {
         return Err(put_back(&aside, destination, error));
     }
     remove_set_aside(&aside)
@@ -112,7 +112,7 @@ pub(crate) fn put_in_place(app: &Path, destination: &Path, replace: bool) -> Res
 /// Move the old app back where it was. When something else is there by now,
 /// we leave the old app aside and name its place in the error.
 fn put_back(aside: &Path, destination: &Path, error: io::Error) -> ExportError {
-    match fs::rename(aside, destination) {
+    match crate::files::rename(aside, destination) {
         Ok(()) => ExportError::io(ErrorStage::Complete, destination, error),
         Err(_) => ExportError::io(ErrorStage::Replace, aside, error),
     }

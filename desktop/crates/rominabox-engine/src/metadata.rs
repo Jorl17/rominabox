@@ -714,7 +714,7 @@ fn artwork_path(cache: &Path, catalog: &str, filename: &str) -> PathBuf {
 }
 
 /// The longest time we allow for a lookup download, from start to end.
-const WAIT: Duration = Duration::from_secs(5);
+const WAIT: Duration = Duration::from_secs(30);
 /// On GitHub, building the list of pictures for a console takes several
 /// seconds when nobody has asked for that list recently, and about a second
 /// otherwise.
@@ -749,7 +749,7 @@ fn write_cached(path: &Path, bytes: &[u8]) -> Result<(), InspectionError> {
     fs::create_dir_all(parent)?;
     let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
     fs::write(&temporary, bytes)?;
-    fs::rename(temporary, path)?;
+    crate::files::rename(&temporary, path)?;
     Ok(())
 }
 

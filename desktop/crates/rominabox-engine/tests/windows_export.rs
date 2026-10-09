@@ -259,14 +259,10 @@ fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
     }
 }
 
-/// When a game's program is damaged, we show an error and stop, and remove
-/// everything we unpacked in the per-user folder. Otherwise every launch would
-/// leave another partly unpacked copy there. The launcher is the real one,
-/// built from this tree, and the per-user folder is the test's own.
-#[test]
-fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
-    let root = workspace();
-    let kit = windows_kit(&root);
+/// A Windows game exported with the real launcher, built from this tree, and
+/// the folder in the per-user data that its launcher unpacks the game into.
+fn game_with_real_launcher(root: &Path) -> (rominabox_engine::packaging::ExportResult, String) {
+    let kit = windows_kit(root);
     let built = rominabox_engine::repo::python()
         .arg(rominabox_engine::repo::at("scripts/build_launcher.py"))
         .arg(root.join("launcher"))
@@ -276,11 +272,69 @@ fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
     // The output contains the path of the launcher from the last build.
     let launcher = String::from_utf8(built.stdout).unwrap();
     fs::copy(launcher.lines().last().unwrap().trim(), kit.join("bin/launcher.exe")).unwrap();
-    let mut request = export_request_from(&root, kit);
+    let mut request = export_request_from(root, kit);
     request.game.target = ExportTarget::Windows;
     let cancelled = AtomicBool::new(false);
     let result = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap();
     let runtime = unpack(&result.app_path, &root.join("unpacked"));
+    (result, runtime)
+}
+
+/// A virus scanner reads the files of a game that we have just unpacked, and
+/// while it has one open, Windows refuses to rename the folder they are in.
+/// The test holds the folder open for a second, as a scanner holds a file,
+/// and the game still starts once the folder is free.
+#[test]
+fn a_game_starts_when_a_scanner_holds_its_unpacked_files_for_a_moment() {
+    use std::os::windows::fs::OpenOptionsExt;
+    const FILE_SHARE_READ_WRITE: u32 = 0x1 | 0x2;
+    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+    let root = workspace();
+    let (result, runtime) = game_with_real_launcher(&root);
+    let user_data = root.join("user-data");
+    let runtimes = user_data.join(&runtime).parent().unwrap().to_path_buf();
+    fs::create_dir_all(&runtimes).unwrap();
+    let scanner = std::thread::spawn(move || {
+        let started = std::time::Instant::now();
+        while started.elapsed() < std::time::Duration::from_secs(30) {
+            let unpacking = fs::read_dir(&runtimes).into_iter().flatten().flatten().map(|entry| entry.path()).find(
+                |path| path.file_name().is_some_and(|name| name.to_string_lossy().contains(".unpacking-")),
+            );
+            let held = unpacking.and_then(|folder| {
+                fs::OpenOptions::new()
+                    .read(true)
+                    .share_mode(FILE_SHARE_READ_WRITE)
+                    .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+                    .open(folder)
+                    .ok()
+            });
+            if let Some(held) = held {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                drop(held);
+                return true;
+            }
+        }
+        false
+    });
+    let ran = Command::new(&result.app_path)
+        .env(sandboxes::declared("RIB_ENV_TEST_USER_DATA"), &user_data)
+        .env("ROMINABOX_QUIET", "1")
+        .env("ROMINABOX_PLAN_ONLY", "1")
+        .output()
+        .unwrap();
+    assert!(scanner.join().unwrap(), "the test never held the folder the game unpacks into");
+    assert!(ran.status.success(), "{}", String::from_utf8_lossy(&ran.stderr));
+    assert!(user_data.join(&runtime).is_dir(), "the game is not in place");
+}
+
+/// When a game's program is damaged, we show an error and stop, and remove
+/// everything we unpacked in the per-user folder. Otherwise every launch would
+/// leave another partly unpacked copy there. The launcher is the real one,
+/// built from this tree, and the per-user folder is the test's own.
+#[test]
+fn a_damaged_game_leaves_nothing_of_its_unpack_behind() {
+    let root = workspace();
+    let (result, runtime) = game_with_real_launcher(&root);
 
     // The last byte of the last packed file, which ends where the index starts.
     let mut bytes = fs::read(&result.app_path).unwrap();

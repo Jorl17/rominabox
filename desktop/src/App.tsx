@@ -28,6 +28,7 @@ import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
 import { ReplaceAppDialog } from "./ReplaceAppDialog";
+import { ErrorNotice } from "./ErrorNotice";
 import { AppHeader } from "./AppHeader";
 import { AddGameFiles, GameFilesList } from "./GameFilesList";
 import { StartupOptions } from "./StartupOptions";
@@ -110,6 +111,9 @@ export function App() {
   const [info, setInfo] = useState<bridge.GameInfo | null>(null);
   const [traveling, setTraveling] = useState<string[]>([]);
   const [draft, setDraft] = useState<Draft>(defaults);
+  // The draft of a new game on this computer: the declared defaults, with
+  // Intel Macs on for a builder on an Intel Mac.
+  const [newDraft, setNewDraft] = useState<Draft>(defaults);
   const [icon, setIcon] = useState<bridge.Picture | null>(null);
   const [background, setBackground] = useState<bridge.Picture | null>(null);
   const [online, setOnline] = useState(declared.online);
@@ -139,9 +143,13 @@ export function App() {
   const exporting = useRef(false);
   const [result, setResult] = useState<bridge.ExportResult | null>(null);
   const [error, setError] = useState("");
+  // The details of the last failure that came from a bug, which we show
+  // while its sentence is the error on screen.
+  const [bug, setBug] = useState<bridge.ExportBug | null>(null);
   const [savedProject, setSavedProject] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [preview, setPreview] = useState("/native-menu.png");
+  // The picture of the menu, or "" until there is one.
+  const [preview, setPreview] = useState("");
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const gameInput = useRef<HTMLInputElement>(null);
@@ -224,6 +232,7 @@ export function App() {
   function fail(reason: unknown) {
     const message = reason instanceof Error ? reason.message : String(reason);
     errorAfterStep.current = message;
+    setBug(reason instanceof bridge.ExportBug ? reason : null);
     setError(message);
   }
   function choose(value: Selection) {
@@ -234,7 +243,7 @@ export function App() {
     setSelection(value);
     setInfo(null);
     setTraveling([]);
-    setDraft(defaults);
+    setDraft(newDraft);
     setControls(emptyControls());
     setFirmware([]);
     setIcon(null);
@@ -396,7 +405,7 @@ export function App() {
       if (request !== generation.current) return;
       setInfo(data);
       setDraft({
-        ...defaults,
+        ...newDraft,
         title: data.title,
         system: data.system,
         files: { leftOut: [], added: traveled?.added ?? [] },
@@ -492,7 +501,7 @@ export function App() {
       const draftKeys = Object.keys(defaults) as (keyof Draft)[];
       setDraft(
         Object.fromEntries(
-          draftKeys.map((key) => [key, settings[key] ?? defaults[key]]),
+          draftKeys.map((key) => [key, settings[key] ?? newDraft[key]]),
         ) as Draft,
       );
       setPalette(settings.palette);
@@ -669,6 +678,14 @@ export function App() {
       .catch(fail);
     bridge.defaultDestination().then(setDestination).catch(fail);
     bridge.exportTarget().then(setHost).catch(fail);
+    bridge
+      .intelMacsDefault()
+      .then((intelMacs) => {
+        if (intelMacs === null) return;
+        setNewDraft((current) => ({ ...current, intelMacs }));
+        setDraft((current) => ({ ...current, intelMacs }));
+      })
+      .catch(fail);
     return () => {
       disposed = true;
       cleanups.forEach((fn) => fn());
@@ -1228,10 +1245,13 @@ export function App() {
                       </span>
                     </div>
                     <div className="menu-frame">
-                      <img
-                        src={preview}
-                        alt="Game menu with six save slots, Continue, Save, Load and Quit"
-                      />
+                      {preview && (
+                        <img
+                          src={preview}
+                          alt="Game menu with six save slots, Continue, Save, Load and Quit"
+                          onError={() => setPreview("")}
+                        />
+                      )}
                     </div>
                     {previewError && <p className="error">{previewError}</p>}
                   </div>
@@ -1489,11 +1509,7 @@ export function App() {
             </>
           )}
         </section>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
+        <ErrorNotice error={error} bug={bug} />
         <footer className="navigation">
           <MoreBelow area={stepArea} step={step} />
           <div>
@@ -1551,7 +1567,7 @@ export function App() {
                 setStep(0);
                 setSelection(null);
                 setInfo(null);
-                setDraft(defaults);
+                setDraft(newDraft);
                 setIcon(null);
                 setBackground(null);
                 setResult(null);

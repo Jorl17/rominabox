@@ -57,8 +57,16 @@ typedef struct {
 #define SETTING(key, value) key, SETTING_LINE(key, value)
 
 void rominabox_launch_die(const char *message) {
+    char said[1024];
     fprintf(stderr, ROMINABOX_NAME ": %s\n", message);
-    rominabox_launch_tell(message);
+    snprintf(said, sizeof said, "The game could not start. Try opening it again.\n\n%s", message);
+    rominabox_launch_tell(said);
+    exit(1);
+}
+
+void rominabox_launch_refuse(const char *sentence) {
+    fprintf(stderr, ROMINABOX_NAME ": %s\n", sentence);
+    rominabox_launch_tell(sentence);
     exit(1);
 }
 

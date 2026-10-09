@@ -3,6 +3,13 @@ its menu preview renderer and its command line inside. We only build here,
 and never start the builder or an emulator.
 
     uv run python scripts/build_builder.py
+    uv run python scripts/build_builder.py --mac x86_64      # or arm64, or universal
+
+On macOS, you choose the processors of the builder with --mac: arm64,
+x86_64, or universal for both. Without it, we build for this Mac's own processor. The
+builder program, its command line and its menu preview renderer are then
+built for those processors, and the runtime kit inside stays universal,
+because games made with any builder can run on Intel Macs.
 
 Build the kit and the preview renderer first: scripts/build_player.py for a
 player that ships, then scripts/build_kit.py with that build. What differs
@@ -23,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kit_assets  # noqa: E402
 import native_build  # noqa: E402
 from built import NAME as CLI_NAME, cli_build, target_dir  # noqa: E402
+from native_build import Architecture  # noqa: E402
 from core_source import host_target  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,6 +40,11 @@ KIT = RESOURCES / "runtime"
 # productName in desktop/src-tauri/tauri.conf.json, and the crate's program.
 PRODUCT = "ROM-in-a-Box"
 PROGRAM = "rominabox-desktop"
+# The Rust target of each Mac processor, and the processors of each choice of
+# --mac. Tauri builds a universal app itself from both targets.
+RUST_TARGETS = {Architecture.ARM64: "aarch64-apple-darwin", Architecture.X86_64: "x86_64-apple-darwin"}
+MAC_CHOICES = {"arm64": [Architecture.ARM64], "x86_64": [Architecture.X86_64],
+               "universal": [Architecture.ARM64, Architecture.X86_64]}
 
 
 def mach_o(path: Path) -> bool:
@@ -44,16 +57,41 @@ def mach_o(path: Path) -> bool:
     return kind.startswith("Mach-O")
 
 
-def macos_finish(built: Path) -> Path:
+def tauri_target(processors: list[Architecture] | None) -> str | None:
+    """The target we pass to Tauri for `processors`, or None for this
+    machine's own."""
+    if not processors:
+        return None
+    return RUST_TARGETS[processors[0]] if len(processors) == 1 else "universal-apple-darwin"
+
+
+def bundle_folder(built: Path, processors: list[Architecture] | None) -> Path:
+    """Where Cargo and Tauri write a release build for `processors`."""
+    target = tauri_target(processors)
+    return built / target / "release" if target else built / "release"
+
+
+def thin_preview(app: Path, processors: list[Architecture]) -> None:
+    """Keep only `processors` in the menu preview renderer inside `app`. The
+    renderer in the kit is universal. The player and launcher in the kit
+    stay universal for the games."""
+    renderer = app / "Contents/Resources/preview/rml-preview"
+    if len(processors) == 1:
+        subprocess.run(["lipo", "-thin", processors[0].value, "-output", str(renderer), str(renderer)], check=True)
+
+
+def macos_finish(built: Path, processors: list[Architecture] | None = None) -> Path:
     """The .app, signed after Tauri copied the resources in: each actual Mach-O
     leaf first, including libraries without the execute bit, then the bundle.
     --deep signing is no substitute. When ROMINABOX_SIGN_IDENTITY is set to a
     Developer ID certificate in the keychain, we sign with that certificate,
     the hardened runtime and a timestamp, as required for notarization. When
     it is unset, we sign ad hoc."""
-    app = built / "release/bundle/macos" / f"{PRODUCT}.app"
+    app = bundle_folder(built, processors) / "bundle/macos" / f"{PRODUCT}.app"
     if not app.is_dir():
         raise SystemExit(f"missing builder bundle: {app}")
+    if processors:
+        thin_preview(app, processors)
     identity = os.environ.get("ROMINABOX_SIGN_IDENTITY", "")
     sign = ["/usr/bin/codesign", "--force", "--sign", identity or "-"]
     if identity:
@@ -68,7 +106,7 @@ def macos_finish(built: Path) -> Path:
     return app
 
 
-def windows_finish(built: Path) -> Path:
+def windows_finish(built: Path, processors: list[Architecture] | None = None) -> Path:
     """The installer Tauri built: one setup program for installing the
     builder for the person, with its resources, and WebView2 only where
     Windows lacks it (tauri.conf.json). The program and the command line
@@ -115,12 +153,18 @@ def writable(folder: Path, pattern: str = "*") -> None:
 
 
 def main() -> int:
-    if len(sys.argv) > 1:
+    arguments = sys.argv[1:]
+    processors = None
+    if arguments[:1] == ["--mac"] and len(arguments) == 2 and arguments[1] in MAC_CHOICES:
+        processors = MAC_CHOICES[arguments[1]]
+    elif arguments:
         raise SystemExit(__doc__)
     target = host_target()
     platform = PLATFORMS.get(target.split("-", 1)[0])
     if platform is None:
         raise SystemExit(f"the builder is not built for {target}")
+    if processors and not target.startswith("macos-"):
+        raise SystemExit("--mac chooses the processors of a builder built on a Mac")
     if not (KIT / "manifest.json").is_file():
         raise SystemExit(f"prepare the runtime kit first: no {KIT / 'manifest.json'}")
     renderer = native_build.preview_resource(target)
@@ -136,15 +180,24 @@ def main() -> int:
             if (built / profile).is_dir():
                 writable(built / profile, platform["staged"])
 
-    subprocess.run(cli_build(), cwd=TAURI, check=True)
     (RESOURCES / "bin").mkdir(parents=True, exist_ok=True)
-    shutil.copy2(built / "release" / CLI_NAME, RESOURCES / "bin" / CLI_NAME)
+    if processors:
+        programs = []
+        for processor in processors:
+            subprocess.run([*cli_build(), "--target", RUST_TARGETS[processor]], cwd=TAURI, check=True)
+            programs.append(str(built / RUST_TARGETS[processor] / "release" / CLI_NAME))
+        subprocess.run(["lipo", "-create", "-output", str(RESOURCES / "bin" / CLI_NAME), *programs], check=True)
+    else:
+        subprocess.run(cli_build(), cwd=TAURI, check=True)
+        shutil.copy2(built / "release" / CLI_NAME, RESOURCES / "bin" / CLI_NAME)
 
     npm = shutil.which("npm")
     if not npm:
         raise SystemExit("npm is not installed")
-    subprocess.run([npm, "run", "tauri", "build", "--", *platform["bundle"]], cwd=ROOT / "desktop", check=True)
-    print(f"Built {platform['finish'](built)}")
+    target_arguments = ["--target", tauri_target(processors)] if processors else []
+    subprocess.run([npm, "run", "tauri", "build", "--", *platform["bundle"], *target_arguments],
+                   cwd=ROOT / "desktop", check=True)
+    print(f"Built {platform['finish'](built, processors)}")
     return 0
 
 

@@ -16,6 +16,7 @@
 #include <zstd.h>
 
 #include "../launch.h"
+#include "portable_fs_windows.h"
 #include "unpack.h"
 #include "unpack_dialog.h"
 
@@ -56,7 +57,7 @@ typedef struct {
 } Reader;
 
 static void broken(void) {
-    rominabox_launch_die("the game's program is damaged: download or export it again");
+    rominabox_launch_refuse("The game's program is damaged. Download or export the game again, then open it.");
 }
 
 static const unsigned char *take(Reader *reader, size_t size) {
@@ -365,7 +366,7 @@ static void close_written(HANDLE file) {
 static void write_all(HANDLE file, const void *bytes, size_t size) {
     DWORD wrote = 0;
     if (size && (!WriteFile(file, bytes, (DWORD)size, &wrote, NULL) || wrote != size))
-        rominabox_launch_die("could not unpack the game: is the disk full?");
+        rominabox_launch_refuse("The game could not be unpacked, because the disk is full. Free some space, then open the game again.");
 }
 
 /* The launcher: the bytes of this program before the pack. */
@@ -572,7 +573,7 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
         if (GetFileAttributesW(target) != INVALID_FILE_ATTRIBUTES) {
             swprintf(aside, sizeof aside / sizeof aside[0], L"%ls.damaged-%llu", target,
                      (unsigned long long)GetTickCount64());
-            MoveFileExW(target, aside, 0);
+            fs_move_when_free(target, aside, 0);
         }
         /* The folder itself, and every one on the way to it. */
         swprintf(fresh, sizeof fresh / sizeof fresh[0], L"%ls.unpacking-%lu\\", target, GetCurrentProcessId());
@@ -601,7 +602,7 @@ int unpack_game(const wchar_t *self, const char *local_app_data, int shown, char
         ZSTD_freeDCtx(context);
         /* Complete, so we move it into place. If another launch was first, the
          * same game is already there. */
-        if (!MoveFileExW(fresh, target, 0) && !unpacked(target, &pack))
+        if (!fs_move_when_free(fresh, target, 0) && !unpacked(target, &pack))
             rominabox_launch_die("could not put the unpacked game in place");
         unpacking.folder = NULL;
         unpack_dialog_close(progress.dialog);

@@ -116,7 +116,7 @@ fn current_project_round_trips_included_excluded_and_no_menu() {
             included && show_menu
         );
         if !show_menu {
-            let design = rominabox_engine::themes::design_root("native").unwrap();
+            let design = rominabox_engine::themes::design_in(&rominabox_engine::repo::at("integrations"), "native").unwrap();
             assert!(
                 achievements::entries(&design, included, show_menu, Some(&[]))
                     .unwrap()

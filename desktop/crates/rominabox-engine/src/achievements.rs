@@ -62,13 +62,8 @@ pub fn entries_in(
     if !show_menu {
         return Ok(Vec::new());
     }
+    check_explicit(requested, show_menu, explicit)?;
     if let Some(entries) = explicit {
-        if entries.iter().any(|entry| entry == SCREEN) != requested {
-            return Err(
-                "menuEntries must include achievements exactly when includeAchievements is true"
-                    .into(),
-            );
-        }
         return Ok(entries.to_vec());
     }
     Ok(screens
@@ -83,6 +78,18 @@ pub fn entries_in(
         })
         .map(|screen| screen.id.clone())
         .collect())
+}
+
+/// Check an explicit list of entries, for which no design is required: the
+/// list includes the achievements screen exactly when achievements are
+/// requested.
+pub fn check_explicit(requested: bool, show_menu: bool, explicit: Option<&[String]>) -> Result<(), String> {
+    match explicit {
+        Some(entries) if show_menu && entries.iter().any(|entry| entry == SCREEN) != requested => Err(
+            "menuEntries must include achievements exactly when includeAchievements is true".into(),
+        ),
+        _ => Ok(()),
+    }
 }
 
 /// The live screen may be empty, because sign-in comes before any rows.
@@ -143,7 +150,7 @@ mod tests {
     use super::*;
     #[test]
     fn capability_and_explicit_entry_agree() {
-        let design = crate::themes::design_root("native").unwrap();
+        let design = crate::themes::design_in(&crate::repo::at("integrations"), "native").unwrap();
         assert!(entries(&design, true, true, None)
             .unwrap()
             .iter()

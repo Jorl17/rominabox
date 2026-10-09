@@ -120,8 +120,10 @@ pub mod unstated {
     pub fn advanced_emulator_access() -> bool {
         defaults().advanced_emulator_access
     }
+    /// On an Intel Mac a game without Intel code would not run on the Mac it
+    /// was made on, so there the default is on.
     pub fn intel_macs() -> bool {
-        defaults().intel_macs
+        defaults().intel_macs || crate::target::Target::host() == Some(crate::target::Target::MacosX86_64)
     }
     pub fn theme() -> String {
         defaults().theme.clone()

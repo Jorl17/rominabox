@@ -553,6 +553,13 @@ def file_layer(platform: str) -> list[Path]:
     return [source for source in launcher_sources(platform) if source.name == "portable_fs.c"]
 
 
+def file_layer_headers(platform: str) -> list[Path]:
+    """The headers of the launcher's file layer on `platform`: portable_fs.h,
+    and the headers beside the platform's sources of the layer."""
+    folders = {LAUNCHER, *(source.parent for source in file_layer(platform))}
+    return sorted(header for folder in folders for header in folder.glob("portable_fs*.h"))
+
+
 def copy_accounts(destination: Path, target: str) -> Path:
     """The ROM-in-a-Box sources we compile into the player (the QUICK SIGN IN
     store) and the file layer below it, in their folders under
@@ -560,7 +567,7 @@ def copy_accounts(destination: Path, target: str) -> Path:
     accounts = destination / "rominabox-accounts"
     sources = [*accounts_sources(platform_of(target)), *sorted(accounts_folder().glob("*.h"))]
     copies = set()
-    for source in [*sources, LAUNCHER / "portable_fs.h", *file_layer(platform_of(target))]:
+    for source in [*sources, *file_layer_headers(platform_of(target)), *file_layer(platform_of(target))]:
         copy = accounts / source.relative_to(DESKTOP)
         write_if_changed(copy, source.read_bytes())
         copies.add(copy)
