@@ -212,19 +212,14 @@ export function GameData() {
                 <span className="game-data-heading">
                   App
                   <Help label="About the App column">
+                    <p>Found: the game's app is installed.</p>
                     <p>
-                      Found: the game's app is where it was the last time the
-                      game started.
+                      Running: the game is open now. Quit it to change its data.
                     </p>
                     <p>
-                      Running: the game is open now. Quit it before importing or
-                      removing its data.
-                    </p>
-                    <p>
-                      Not found: the app is no longer where the game last
-                      started. It may have been deleted, moved or renamed, or be
-                      on a drive that is not connected. If you moved it, open it
-                      once and it will show as Found again.
+                      Not found: the app was not found. It may have been
+                      uninstalled, or be on a drive that is not connected. If
+                      possible, open it once and it will show as Found again.
                     </p>
                   </Help>
                 </span>
