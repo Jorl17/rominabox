@@ -47,10 +47,12 @@ npm run dev
 
 Then open <http://127.0.0.1:1420/>.
 
-To build the whole builder (the player, its runtime kit, the menu renderer and the builder itself), from the repository root:
+To build the builder, build the player into a folder given as an absolute path, then the runtime kit from that build, then the builder, from the repository root. On Windows, leave out `--target macos-universal`.
 
 ```sh
 cd desktop && npm ci && cd ..
+uv run python scripts/build_player.py --target macos-universal "$PWD/work/player"
+uv run python scripts/build_kit.py "$PWD/work/player"
 uv run python scripts/build_builder.py
 ```
 
@@ -65,7 +67,7 @@ uv run python scripts/test.py --all        # everything, including the slow scop
 uv run python scripts/test.py --list       # what each scope covers, and what it leaves out
 ```
 
-The slow scopes need a built player and runtime kit, so run `scripts/build_builder.py` once first. The games they start run with a hidden window.
+In most scopes we read the runtime kit, so build the player and the kit first, as in [Building](#building). You do not need the builder itself. In the slow scopes we start games with a hidden window.
 
 **SLOW next to a scope.** Its run took more than twice as long as its last recorded time (`scripts/fixtures/scope-budgets.json`). It is a note about speed, not a failure.
 
