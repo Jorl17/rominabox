@@ -88,6 +88,17 @@ int main(int argc, char **argv) {
    put(target, "states/Sonic Patched.state9", "newer state");
    expect(rib_game_data_check(zip, 0, target, NULL, error, sizeof error) == RIB_GAME_DATA_OTHER_GAME,
          "another game's data is for the same console");
+   games = rib_games_new(1);
+   expect(rib_game_data_choose(zip, target, games, error, sizeof error) == RIB_GAME_DATA_OTHER_GAME
+         && !strcmp(rib_game_get(games, "identity"), "aaaaaaaaaaaaaaaaaaaaaaaa"),
+         "the menu chooses the zip's only game");
+   {
+      char name[256];
+      rib_game_set(games, "title", "Sonic: 3/Knuckles");
+      rib_game_data_file_name(games, name, sizeof name);
+      expect(!strcmp(name, "Sonic- 3-Knuckles data.zip"), "we suggest a file name every system allows");
+   }
+   rib_games_free(games);
    expect(rib_game_data_set_aside(zip, target, error, sizeof error) == 0, "the menu sets the zip aside");
    expect(exists(target, "import.zip"), "beside the game's data");
    expect(rib_game_data_apply_pending(target, error, sizeof error) == 1, "the launcher imports it");

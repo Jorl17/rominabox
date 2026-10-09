@@ -407,9 +407,9 @@ static int add_game(mz_zip_archive *zip, const char *data_dir, const char *prefi
    return 0;
 }
 
-/* The folder of a game in a bulk backup: its title, with anything a file
- * system may refuse replaced, and the start of its identity. */
-static void game_folder(const rib_game_t *game, char *out, size_t size) {
+/* The title of `game`, with anything a file system may refuse in a name
+ * replaced, in at most 63 bytes. */
+static void safe_title(const rib_game_t *game, char *out, size_t size) {
    char title[64];
    size_t at = 0;
    const char *from = game->title[0] ? game->title : "Game";
@@ -418,7 +418,21 @@ static void game_folder(const rib_game_t *game, char *out, size_t size) {
    while (at && (title[at - 1] == ' ' || title[at - 1] == '.'))
       at--;
    title[at] = '\0';
-   snprintf(out, size, "%s [%.8s]/", title[0] ? title : "Game", game->identity);
+   snprintf(out, size, "%s", title[0] ? title : "Game");
+}
+
+/* The folder of a game in a bulk backup: its title and the start of its
+ * identity. */
+static void game_folder(const rib_game_t *game, char *out, size_t size) {
+   char title[64];
+   safe_title(game, title, sizeof title);
+   snprintf(out, size, "%s [%.8s]/", title, game->identity);
+}
+
+void rib_game_data_file_name(const rib_game_t *game, char *out, size_t size) {
+   char title[64];
+   safe_title(game, title, sizeof title);
+   snprintf(out, size, "%s data.zip", title);
 }
 
 int rib_game_data_export(const char *const *data_dirs, size_t count, const char *zip_path,
@@ -834,31 +848,52 @@ int rib_game_data_set_aside(const char *zip_path, const char *data_dir, char *er
    return 0;
 }
 
+/* The game in `opened` whose data a player who chose this zip in `target`'s
+ * menu means: in a bulk backup, this game's, and else the zip's only game. */
+static int pick_opened(const Opened *opened, const rib_game_t *target, char *error, size_t error_size) {
+   size_t which;
+   for (which = 0; which < opened->count; which++)
+      if (!strcmp(opened->games[which].identity, target->identity))
+         return (int)which;
+   if (opened->count == 1)
+      return 0;
+   say(error, error_size, "This zip contains the data of several games, and none of them is “%s”.", target->title);
+   return -1;
+}
+
+rib_game_data_check_t rib_game_data_choose(const char *zip_path, const char *data_dir, rib_game_t *source,
+      char *error, size_t error_size) {
+   rib_game_t target;
+   Opened *opened;
+   rib_game_data_check_t result = RIB_GAME_DATA_REFUSED;
+   int which;
+   if (target_of(data_dir, &target, error, error_size) != 0)
+      return RIB_GAME_DATA_REFUSED;
+   opened = open_zip(zip_path, error, error_size);
+   if (!opened)
+      return RIB_GAME_DATA_REFUSED;
+   which = pick_opened(opened, &target, error, error_size);
+   if (which >= 0) {
+      result = check_opened(opened, (size_t)which, &target, error, error_size);
+      if (source)
+         *source = opened->games[which];
+   }
+   close_zip(opened);
+   return result;
+}
+
 int rib_game_data_apply_pending(const char *data_dir, char *error, size_t error_size) {
    char path[RIB_GAME_DATA_PATH_SIZE];
    rib_game_t target;
    Opened *opened;
-   size_t which;
-   size_t chosen;
-   int result;
+   int which;
+   int result = -1;
    if (fs_join(path, sizeof path, data_dir, game_file_PendingImport) != 0 || !fs_is_file(path))
       return 0;
    opened = open_zip(path, error, error_size);
-   result = -1;
-   if (opened && target_of(data_dir, &target, error, error_size) == 0) {
-      /* In a bulk backup, this game's data, and else the zip's only game. */
-      chosen = opened->count;
-      for (which = 0; which < opened->count; which++)
-         if (!strcmp(opened->games[which].identity, target.identity))
-            chosen = which;
-      if (chosen == opened->count && opened->count == 1)
-         chosen = 0;
-      if (chosen == opened->count)
-         say(error, error_size, "This zip contains the data of several games, and none of them is “%s”.",
-               target.title);
-      else
-         result = import_opened(opened, chosen, data_dir, error, error_size) == 0 ? 1 : -1;
-   }
+   if (opened && target_of(data_dir, &target, error, error_size) == 0
+         && (which = pick_opened(opened, &target, error, error_size)) >= 0)
+      result = import_opened(opened, (size_t)which, data_dir, error, error_size) == 0 ? 1 : -1;
    if (opened)
       close_zip(opened);
    fs_remove(path);

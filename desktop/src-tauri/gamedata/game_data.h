@@ -114,6 +114,16 @@ int rib_game_data_list(const char *zip_path, rib_game_t *games, size_t capacity,
 rib_game_data_check_t rib_game_data_check(const char *zip_path, size_t which, const char *data_dir,
       rib_game_t *source, char *error, size_t error_size);
 
+/* For a zip a player chose in the menu of the game whose data is in
+ * `data_dir`: in a bulk backup the game's own data, and else the zip's only
+ * game, checked as in rib_game_data_check. */
+rib_game_data_check_t rib_game_data_choose(const char *zip_path, const char *data_dir, rib_game_t *source,
+      char *error, size_t error_size);
+
+/* The name we suggest for an export of `game`'s data: its title, with
+ * anything a file system may refuse in a name replaced, and " data.zip". */
+void rib_game_data_file_name(const rib_game_t *game, char *out, size_t size);
+
 /* Replace the player's files in `data_dir` with those of the `which`th game
  * in the zip, renaming saves, states and screenshots named after the
  * backup's file to the name this game's saves have. We check the whole zip
