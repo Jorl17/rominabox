@@ -550,3 +550,89 @@ export function openWebsite(): Promise<void> {
   window.open(__WEBSITE__, "_blank", "noopener");
   return Promise.resolve();
 }
+
+/** What a game's manifest says about it (`game_data::Game`). */
+export type DataGame = {
+  identity: string;
+  title: string;
+  system: string;
+  console: string;
+  content: string;
+  app: string;
+  madeWith: string;
+  playerFiles: string[];
+};
+/** A game on this computer (`game_library::InstalledGame`). */
+export type InstalledGame = DataGame & {
+  icon: string | null;
+  appPresent: boolean;
+  running: boolean;
+  data: string;
+};
+/** A game in a backup, and whether it is on this computer. */
+export type BackupGame = DataGame & { here: boolean };
+/** Whether a backup can go into a game (`game_data::Check`). */
+export type DataCheck =
+  | { kind: "sameGame" }
+  | { kind: "otherGame"; detail: DataGame }
+  | { kind: "refused"; detail: string };
+export type BulkImport = {
+  imported: DataGame[];
+  notHere: DataGame[];
+  refused: { game: DataGame; reason: string }[];
+};
+/** The games on this computer. The browser preview has none. */
+export function games(): Promise<InstalledGame[]> {
+  return native ? invoke("games") : Promise.resolve([]);
+}
+/** Export the data of the games `identities`, or of every game, to `zip`. */
+export function exportGameData(
+  identities: string[] | null,
+  zip: string,
+): Promise<DataGame[]> {
+  if (!native) return Promise.resolve([]);
+  return invoke("game_data_export", { identities, zip });
+}
+export function openGameData(zip: string): Promise<BackupGame[]> {
+  return native ? invoke("game_data_open", { zip }) : Promise.resolve([]);
+}
+export function checkGameData(
+  zip: string,
+  which: number,
+  identity: string,
+): Promise<DataCheck> {
+  if (!native) return Promise.resolve({ kind: "sameGame" });
+  return invoke("game_data_check", { zip, which, identity });
+}
+export function importGameData(
+  zip: string,
+  which: number,
+  identity: string,
+): Promise<void> {
+  if (!native) return Promise.resolve();
+  return invoke("game_data_import", { zip, which, identity });
+}
+export function importAllGameData(zip: string): Promise<BulkImport> {
+  if (!native)
+    return Promise.resolve({ imported: [], notHere: [], refused: [] });
+  return invoke("game_data_import_all", { zip });
+}
+export function removeGameData(identity: string): Promise<void> {
+  return native ? invoke("game_data_remove", { identity }) : Promise.resolve();
+}
+export async function pickDataSave(name: string): Promise<string | null> {
+  return save({
+    title: "Export game data",
+    defaultPath: `${name.replace(/[\\/:*?"<>|]/g, "-")}.zip`,
+    filters: [{ name: "Zip", extensions: ["zip"] }],
+  });
+}
+export async function pickDataOpen(): Promise<string | null> {
+  const path = await open({
+    title: "Import game data",
+    multiple: false,
+    directory: false,
+    filters: [{ name: "Zip", extensions: ["zip"] }],
+  });
+  return typeof path === "string" ? path : null;
+}
