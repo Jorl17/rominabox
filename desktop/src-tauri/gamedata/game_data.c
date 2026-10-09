@@ -415,6 +415,13 @@ static void safe_title(const rib_game_t *game, char *out, size_t size) {
    const char *from = game->title[0] ? game->title : "Game";
    for (; *from && at + 1 < sizeof title; from++)
       title[at++] = (strchr("/\\:*?\"<>|", *from) || (unsigned char)*from < 0x20) ? '-' : *from;
+   /* When we stop inside a character of UTF-8, we leave all of it out. */
+   if (((unsigned char)*from & 0xC0) == 0x80) {
+      while (at && ((unsigned char)title[at - 1] & 0xC0) == 0x80)
+         at--;
+      if (at)
+         at--;
+   }
    while (at && (title[at - 1] == ' ' || title[at - 1] == '.'))
       at--;
    title[at] = '\0';
