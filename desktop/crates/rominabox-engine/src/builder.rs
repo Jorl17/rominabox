@@ -376,6 +376,31 @@ pub fn kit_for(platform: &ExportTarget, own: &Path, places: &Places) -> Result<P
     crate::kits::for_export(platform, own, &places.kit_store()?, &crate::cores::UreqTransport)
 }
 
+/// What we ask the author about on Create app, before we make anything.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BeforeExport {
+    /// The shaders that will not load on the platforms of the export.
+    pub notice: Vec<crate::shaders::NoticeSection>,
+    /// The app or zip already at the export's place, which we would replace.
+    pub existing: Option<crate::export_error::ExistingApp>,
+}
+
+/// What to ask before exporting `request`. `library` is the shader library
+/// of the builder's kit, the same in every kit, so we need not download the
+/// other platform's kit first.
+pub fn before_export(request: &ExportRequest, library: &Path) -> Result<BeforeExport, String> {
+    let platforms = if request.game.both_platforms {
+        ExportTarget::ALL.to_vec()
+    } else {
+        vec![request.game.target]
+    };
+    Ok(BeforeExport {
+        notice: crate::shaders::notice(&request.game.shaders, &platforms, library)?,
+        existing: crate::publish::existing(request),
+    })
+}
+
 /// Make the game `request` describes, as with Create app in the builder: from
 /// the request's kit, or, for both platforms, each platform's game from its
 /// own kit (`kit_for`, beside `own_kit`) and core cache, in one zip.

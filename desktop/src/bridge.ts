@@ -173,14 +173,20 @@ export function customShaderName(path: string): Promise<string> {
   if (!native) return Promise.resolve(baseName(path));
   return invoke("custom_shader_name", { path });
 }
-export type ShaderWarning = { path: string; sentence: string };
+/** What will happen to shaders that will not load, and in the tooltip of the
+ * help button beside it, why and what to do about it (`shaders::Warning`). */
+export type Warning = { text: string; detail: string };
+/** What we show on the Menu step about the author's shaders: the files of
+ * those that will not load on a platform, and one warning for each problem
+ * on each platform (`shaders::ShaderWarnings`). */
+export type ShaderWarnings = { warned: string[]; warnings: Warning[] };
 // The browser walkthrough has no desktop shell, so we show none.
 export function shaderWarnings(selection: {
   bundled: string[];
   custom: { name: string; path: string }[];
   initial: string | null;
-}): Promise<ShaderWarning[]> {
-  if (!native) return Promise.resolve([]);
+}): Promise<ShaderWarnings> {
+  if (!native) return Promise.resolve({ warned: [], warnings: [] });
   return invoke("shader_warnings", { selection });
 }
 /** What a file is to the game (content::FileRole). */
@@ -376,6 +382,28 @@ export async function exportGame(
   } catch (reason) {
     throw exportFailure(reason);
   }
+}
+/** One part of the pop-up on Create app (`shaders::NoticeSection`). */
+export type NoticeSection = { heading: string | null; warnings: Warning[] };
+/** What we ask about on Create app before exporting `request`
+ * (`builder::BeforeExport`). In the browser walkthrough nobody can export,
+ * so there we ask nothing. */
+export async function beforeExport(request: ExportRequest): Promise<{
+  notice: NoticeSection[];
+  existing: { app: string; folder: string } | null;
+}> {
+  if (!native) return { notice: [], existing: null };
+  const answer = await invoke<{
+    notice: NoticeSection[];
+    existing: { name: string; folder: string } | null;
+  }>("before_export", { request });
+  return {
+    notice: answer.notice,
+    existing: answer.existing && {
+      app: answer.existing.name,
+      folder: answer.existing.folder,
+    },
+  };
 }
 /**
  * The `{stage, sentence}` from the exporter (`export_error::AuthorError`). We

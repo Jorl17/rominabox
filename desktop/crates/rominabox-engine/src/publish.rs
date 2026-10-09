@@ -60,6 +60,24 @@ pub(crate) fn app_name(target: &ExportTarget, title: &str) -> String {
     }
 }
 
+/// Where we put what we make for `request` on Create app: the app or its
+/// zip, or for both platforms, the one zip with both games
+/// (`packaging::both`).
+pub(crate) fn final_destination(request: &ExportRequest) -> PathBuf {
+    if request.game.both_platforms {
+        request.output_dir.join(download_name(&request.game.title))
+    } else {
+        destination(request)
+    }
+}
+
+/// The app or zip already at the place of an export of `request`, which we
+/// replace only when the author agrees.
+pub fn existing(request: &ExportRequest) -> Option<crate::export_error::ExistingApp> {
+    let path = final_destination(request);
+    occupied(&path).then(|| crate::export_error::ExistingApp::at(&path))
+}
+
 /// Before doing anything, refuse an export to the place of an existing app,
 /// unless the request includes replacing it.
 pub(crate) fn refuse_unless_replacing(request: &ExportRequest) -> Result<(), ExportError> {

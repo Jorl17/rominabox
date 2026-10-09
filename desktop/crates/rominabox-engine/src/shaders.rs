@@ -224,6 +224,10 @@ pub struct ResolvedShader {
     files: Vec<(PathBuf, String)>,
     /// The brightness parameter, when there is one in the shader.
     brightness: Option<BrightnessControl>,
+    /// In a GLSL game, the newest GLSL version among its passes. We know it
+    /// for the author's shaders and ours, and for a libretro preset when we
+    /// know the game's destination.
+    glsl_version: Option<u32>,
     /// Files we write into it, as (path within it, text), which are the pass
     /// of a catalog preset and the one-pass preset we make for a single pass.
     written: Vec<(String, String)>,
@@ -420,6 +424,7 @@ fn unfiltered() -> ResolvedShader {
         library: None,
         files: Vec::new(),
         brightness: None,
+        glsl_version: None,
         written: Vec::new(),
     }
 }
@@ -429,51 +434,6 @@ fn unfiltered() -> ResolvedShader {
 /// a platform only when every libretro preset in the game has a slang version.
 pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, String> {
     Ok(resolved(selection, None)?.1)
-}
-
-/// A filter from the author that a Windows game may fail to load, because one
-/// of its files would be at a path longer than Windows can open. The player
-/// then sees the game without a filter.
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ShaderWarning {
-    /// The filter, as the selection names it.
-    pub path: PathBuf,
-    pub sentence: String,
-}
-
-/// The author's filters in `selection` with files too deep for Windows, at
-/// the paths they have in an unpacked game under the longest per-user data
-/// folder. We only warn, and make the game either way.
-pub fn windows_warnings(selection: &ShaderSelection) -> Result<Vec<ShaderWarning>, String> {
-    let mut warnings = Vec::new();
-    for item in resolve(selection)? {
-        // A filter from the author is one that has files. The file in
-        // the selection comes first.
-        let Some((own, _)) = item.files.first() else {
-            continue;
-        };
-        let deepest = item
-            .files
-            .iter()
-            .map(|(_, name)| {
-                let read = crate::packaging::longest_menu_asset_path(&item.folder().join(name));
-                (name, read.encode_utf16().count())
-            })
-            .max_by_key(|(_, length)| *length);
-        if let Some((name, length)) = deepest {
-            if length > crate::packaging::LONGEST_PATH {
-                warnings.push(ShaderWarning {
-                    path: own.clone(),
-                    sentence: format!(
-                        "On Windows this filter may not load, and the game would run without it: \
-                         \u{201c}{name}\u{201d} sits too deep among its folders."
-                    ),
-                });
-            }
-        }
-    }
-    Ok(warnings)
 }
 
 /// The video driver for a game with this selection. We choose it from the
@@ -601,17 +561,17 @@ fn resolved(
     let mut resolved = vec![unfiltered()];
     for preset in chosen {
         let id = &preset.id;
-        let (relative_preset, library, written) = match &preset.made {
+        let (relative_preset, library, written, glsl_version) = match &preset.made {
             Made::Fragment(fragment) => {
                 let pass = format!("{id}.{pass_extension}");
                 let preset_file = format!("{id}.{preset_extension}");
+                let source = crate::shader_source::pass(language, fragment);
+                let glsl_version = (language == Language::Glsl).then(|| crate::shader_format::glsl_version(&source));
                 (
                     format!("shaders/{id}/{preset_file}"),
                     None,
-                    vec![
-                        (pass.clone(), crate::shader_source::pass(language, fragment)),
-                        (preset_file, crate::shader_source::preset(&pass)),
-                    ],
+                    vec![(pass.clone(), source), (preset_file, crate::shader_source::preset(&pass))],
+                    glsl_version,
                 )
             }
             Made::Files(files) => {
@@ -639,6 +599,7 @@ fn resolved(
                     format!("shaders/{}/{path}", library_folder(language)),
                     Some(format!("{}/{path}", library_folder(language))),
                     vec![(CREDITS.to_string(), credits)],
+                    library_version(id).filter(|_| language == Language::Glsl),
                 )
             }
         };
@@ -650,6 +611,7 @@ fn resolved(
             library,
             files: Vec::new(),
             brightness: preset.brightness.as_ref().and_then(|entry| entry.control(language)),
+            glsl_version,
             written,
         });
     }
@@ -663,6 +625,10 @@ fn resolved(
             .chain(LIBRARY_FOLDERS.map(String::from))
             .collect();
         let id = unique_id(&slug(&name)?, &taken);
+        let glsl_version = match language {
+            Language::Glsl => Some(author.layout.glsl_version()?),
+            Language::Slang => None,
+        };
         // We keep the author's file at its place among the files it lists.
         let layout = author.layout;
         let at = |name: String| match layout.folder.as_str() {
@@ -707,6 +673,7 @@ fn resolved(
             detail: String::new(),
             files,
             brightness: control,
+            glsl_version,
             written,
         });
     }
@@ -965,3 +932,5 @@ pub fn unpack_selection(mut selection: ShaderSelection, root: &Path) -> ShaderSe
 mod brightness;
 #[cfg(test)]
 mod tests;
+mod warnings;
+pub use warnings::{notice, shader_warnings, NoticeSection, ShaderWarnings, Warning};

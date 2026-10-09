@@ -634,12 +634,25 @@ fn run() -> Result<(), String> {
             );
             Ok(())
         }
+        // The shaders as in the builder: the warnings on the Menu step, and
+        // with `platforms`, the pop-up on Create app.
         "shaders-check" => {
             let input = read_request()?;
-            let selection: shaders::ShaderSelection = serde_json::from_str(&input)
+            #[derive(Deserialize)]
+            struct Request {
+                #[serde(flatten)]
+                selection: shaders::ShaderSelection,
+                #[serde(default)]
+                platforms: Vec<packaging::ExportTarget>,
+            }
+            let Request { selection, platforms } = serde_json::from_str(&input)
                 .map_err(|error| format!("invalid shader selection: {error}"))?;
             let resolved = shaders::resolve(&selection)?;
-            let warnings = shaders::windows_warnings(&selection)?;
+            let library = builder::runtime_kit()
+                .map(|kit| shaders::kit_library(&kit))
+                .unwrap_or_default();
+            let warnings = shaders::shader_warnings(&selection, &library)?;
+            let notice = shaders::notice(&selection, &platforms, &library)?;
             let presets: Vec<_> = resolved
                 .iter()
                 .map(|item| {
@@ -653,7 +666,7 @@ fn run() -> Result<(), String> {
                 .collect();
             println!(
                 "{}",
-                json!({ "type": "result", "result": { "shaders": presets, "warnings": warnings } })
+                json!({ "type": "result", "result": { "shaders": presets, "warnings": warnings, "notice": notice } })
             );
             Ok(())
         }

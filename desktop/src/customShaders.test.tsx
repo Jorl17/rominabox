@@ -6,7 +6,10 @@ import { CustomShaderCards } from "./customShaders";
 
 const checked = vi.hoisted(() => ({
   selections: [] as unknown[],
-  answer: [] as { path: string; sentence: string }[],
+  answer: {
+    warned: [] as string[],
+    warnings: [] as { text: string; detail: string }[],
+  },
 }));
 
 vi.mock("./bridge", async (importOriginal) => {
@@ -32,7 +35,7 @@ beforeEach(() => {
   document.body.append(container);
   root = createRoot(container);
   checked.selections = [];
-  checked.answer = [];
+  checked.answer = { warned: [], warnings: [] };
 });
 
 afterEach(() => {
@@ -52,10 +55,17 @@ function Cards({ custom }: { custom: { name: string; path: string }[] }) {
   );
 }
 
-it("an author's filter a Windows game may not load says so on its card", async () => {
-  checked.answer = [
-    { path: deep.path, sentence: "On Windows this filter may not load." },
-  ];
+it("an author's filter that will not load on a platform is marked, with the reason after the cards", async () => {
+  checked.answer = {
+    warned: [deep.path],
+    warnings: [
+      { text: "The shader “PAL” won’t load on a Mac.", detail: "Mac reason." },
+      {
+        text: "The shader “PAL” may not load on Windows.",
+        detail: "Windows reason.",
+      },
+    ],
+  };
   const custom = [deep, shallow];
   await act(async () => root.render(<Cards custom={custom} />));
 
@@ -64,11 +74,18 @@ it("an author's filter a Windows game may not load says so on its card", async (
     { bundled: ["crt-royale"], custom, initial: null },
   ]);
   const cards = [...container.querySelectorAll(".shader-card")];
+  expect(cards.map((card) => !!card.querySelector(".shader-warned"))).toEqual([
+    true,
+    false,
+  ]);
   expect(
-    cards.map(
-      (card) => card.querySelector(".shader-warning")?.textContent ?? null,
+    [...container.querySelectorAll(".shader-warnings p")].map(
+      (line) => line.textContent,
     ),
-  ).toEqual(["On Windows this filter may not load.", null]);
+  ).toEqual([
+    "The shader “PAL” won’t load on a Mac.",
+    "The shader “PAL” may not load on Windows.",
+  ]);
 });
 
 it("with no filter of the author's the shell is not asked", async () => {

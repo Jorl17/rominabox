@@ -261,23 +261,26 @@ fn project_open_refuses_a_palette_this_build_lacks() {
     assert!(!root.path().join("opened").exists(), "the project was extracted");
 }
 
-/// For the same selection, we show the same warnings in the builder for an
-/// author's filter that a Windows game may not load as in `shaders-check`.
+/// For the same selection, we print the same warnings in `shaders-check` as
+/// the builder shows on the Menu step and on Create app: here for a shader in
+/// GLSL version 130, too new for a Mac, with a file too deep for Windows.
 #[test]
-fn shaders_check_prints_the_builders_filter_warnings() {
+fn shaders_check_prints_the_builders_shader_warnings() {
     let root = Scratch::dir("rominabox-cli-shader-warnings");
     let deep = format!("{}/pass.glsl", ["a-folder-of-twenty-c"; 8].join("/"));
     fs::create_dir_all(root.join(&deep).parent().unwrap()).unwrap();
-    fs::write(root.join(&deep), "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n").unwrap();
+    fs::write(root.join(&deep), "#version 130\n#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n").unwrap();
     fs::write(root.join("pal.glslp"), format!("shaders = 1\nshader0 = {deep}\n")).unwrap();
-    let request = json!({ "custom": [{ "name": "PAL", "path": root.join("pal.glslp") }] });
+    let request = json!({ "custom": [{ "name": "PAL", "path": root.join("pal.glslp") }], "platforms": ["macos", "windows"] });
     let selection: rominabox_engine::shaders::ShaderSelection = serde_json::from_value(request.clone()).unwrap();
-    let builder = rominabox_engine::shaders::windows_warnings(&selection).unwrap();
-    assert_eq!(builder.len(), 1, "the filter is deep enough to be warned about");
-    assert_eq!(
-        result("shaders-check", Some(&request))["warnings"],
-        serde_json::to_value(&builder).unwrap()
-    );
+    let library = rominabox_engine::shaders::kit_library(&rominabox_engine::builder::runtime_kit().unwrap());
+    let beside = rominabox_engine::shaders::shader_warnings(&selection, &library).unwrap();
+    assert_eq!(beside.warnings.len(), 2, "the shader is warned about on both platforms");
+    let platforms = rominabox_engine::packaging::ExportTarget::ALL;
+    let notice = rominabox_engine::shaders::notice(&selection, &platforms, &library).unwrap();
+    let printed = result("shaders-check", Some(&request));
+    assert_eq!(printed["warnings"], serde_json::to_value(&beside).unwrap());
+    assert_eq!(printed["notice"], serde_json::to_value(&notice).unwrap());
     let _ = fs::remove_dir_all(&root);
 }
 

@@ -26,9 +26,9 @@ fn an_empty_selection_is_no_shaders() {
 }
 
 /// A GLSL pass for the OpenGL driver of RetroArch, as far as we check it.
-const PASS: &str = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
+pub(super) const PASS: &str = "#if defined(VERTEX)\n#elif defined(FRAGMENT)\n#endif\n";
 /// A slang pass, as far as we check it.
-const SLANG: &str = "#version 450\n#pragma stage vertex\n#pragma stage fragment\n";
+pub(super) const SLANG: &str = "#version 450\n#pragma stage vertex\n#pragma stage fragment\n";
 /// A lookup texture, as far as we check it, which is a PNG header.
 const PICTURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 
@@ -228,7 +228,7 @@ fn a_preset_keeps_its_folders_so_every_file_it_names_is_there() {
 
 /// A preset from the author at `folder/name`, with the other files listed,
 /// as the only custom shader of a selection.
-fn custom_preset(folder: &Path, name: &str, files: &[(&str, &str)]) -> ShaderSelection {
+pub(super) fn custom_preset(folder: &Path, name: &str, files: &[(&str, &str)]) -> ShaderSelection {
     for (path, text) in files {
         let path = folder.join(path);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -565,7 +565,7 @@ fn library() -> std::path::PathBuf {
 }
 
 /// A game for `platform`, with the shader library in the repository.
-fn on(platform: ExportTarget) -> Destination {
+pub(super) fn on(platform: ExportTarget) -> Destination {
     Destination { platform, library: library() }
 }
 
@@ -773,38 +773,6 @@ fn an_added_filter_shows_a_pixel_s() {
     // The middle of the S's top bar, and the open space right of its middle.
     assert_eq!(picture.get_pixel(128, 44).0, [232, 232, 232, 255]);
     assert_eq!(picture.get_pixel(128, 100).0, [16, 18, 24, 255]);
-}
-
-/// When a file of the author's filter would be at a path longer than Windows
-/// can open in an unpacked game, we warn and name the file. We give no warning
-/// for a filter whose files all fit, and we make the game in either case.
-#[test]
-fn an_authors_filter_too_deep_for_windows_is_a_warning() {
-    let deep_source = rominabox_scratch::Scratch::dir("rominabox-shader-deep");
-    let deep = format!("{}/pass.glsl", ["a-folder-of-twenty-c"; 8].join("/"));
-    let preset = format!("shaders = 1\nshader0 = {deep}\n");
-    let selection = custom_preset(&deep_source, "pal.glslp", &[("pal.glslp", &preset), (&deep, PASS)]);
-    assert_eq!(
-        windows_warnings(&selection).unwrap(),
-        [ShaderWarning {
-            path: deep_source.join("pal.glslp"),
-            sentence: format!(
-                "On Windows this filter may not load, and the game would run without it: \
-                 \u{201c}{deep}\u{201d} sits too deep among its folders."
-            ),
-        }]
-    );
-    assert!(resolve(&selection).is_ok(), "a deep filter must still be accepted");
-
-    let shallow_source = rominabox_scratch::Scratch::dir("rominabox-shader-shallow");
-    let shallow = custom_preset(
-        &shallow_source,
-        "pal.glslp",
-        &[("pal.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
-    );
-    assert_eq!(windows_warnings(&shallow).unwrap(), []);
-    let _ = fs::remove_dir_all(&deep_source);
-    let _ = fs::remove_dir_all(&shallow_source);
 }
 
 /// We call a file nobody named by its file name without a shader extension,

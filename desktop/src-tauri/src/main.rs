@@ -299,12 +299,25 @@ fn traveling_files(
     traveling::files_with(&path, system.as_deref(), &files.unwrap_or_default())
 }
 
-/// The author's filters that a Windows game cannot load, as in `shaders-check`.
+/// What we show on the Menu step about the shaders the author added, on
+/// every platform, as in `shaders-check`.
 #[tauri::command]
 fn shader_warnings(
+    app: tauri::AppHandle,
     selection: rominabox_engine::shaders::ShaderSelection,
-) -> Result<Vec<rominabox_engine::shaders::ShaderWarning>, String> {
-    rominabox_engine::shaders::windows_warnings(&selection)
+) -> Result<rominabox_engine::shaders::ShaderWarnings, String> {
+    let library = rominabox_engine::shaders::kit_library(&resource(&app, "runtime")?);
+    rominabox_engine::shaders::shader_warnings(&selection, &library)
+}
+
+/// What we ask the author about on Create app, before the export.
+#[tauri::command]
+fn before_export(
+    app: tauri::AppHandle,
+    request: packaging::ExportRequest,
+) -> Result<builder::BeforeExport, String> {
+    let library = rominabox_engine::shaders::kit_library(&resource(&app, "runtime")?);
+    builder::before_export(&request, &library)
 }
 
 /// The name of a shader file that the author adds, as in `shaders-check` and
@@ -498,6 +511,7 @@ fn main() {
             open_project,
             traveling_files,
             shader_warnings,
+            before_export,
             custom_shader_name,
             capture_pad_position,
             cancel_pad_capture

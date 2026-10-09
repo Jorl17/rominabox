@@ -143,6 +143,19 @@ pub struct ExistingApp {
     pub folder: String,
 }
 
+impl ExistingApp {
+    /// The app or zip at `path`, by the names the author sees.
+    pub fn at(path: &Path) -> ExistingApp {
+        ExistingApp {
+            name: path
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            folder: path.parent().map(name_of).unwrap_or_default(),
+        }
+    }
+}
+
 impl ExportError {
     pub fn new(stage: ErrorStage, message: impl Into<String>) -> Self {
         Self {
@@ -259,13 +272,7 @@ impl ExportError {
 
     pub fn for_author(&self) -> AuthorError {
         let existing = match (self.stage, self.path.as_deref()) {
-            (ErrorStage::Exists, Some(app)) => Some(ExistingApp {
-                name: app
-                    .file_stem()
-                    .map(|stem| stem.to_string_lossy().into_owned())
-                    .unwrap_or_default(),
-                folder: app.parent().map(name_of).unwrap_or_default(),
-            }),
+            (ErrorStage::Exists, Some(app)) => Some(ExistingApp::at(app)),
             _ => None,
         };
         AuthorError {

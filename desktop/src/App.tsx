@@ -27,7 +27,7 @@ import { hotkeysForConsole } from "./hotkeys";
 import { ControlsSection } from "./ControlsSection";
 import { Help, Checkbox } from "./Help";
 import { MenuSoundPreview } from "./MenuSoundPreview";
-import { ReplaceAppDialog } from "./ReplaceAppDialog";
+import { askFirst, Asking, CreateAppDialog } from "./CreateAppDialog";
 import { ErrorNotice } from "./ErrorNotice";
 import { AppHeader } from "./AppHeader";
 import { AddGameFiles, GameFilesList } from "./GameFilesList";
@@ -136,7 +136,7 @@ export function App() {
     null,
   );
   const [progress, setProgress] = useState<bridge.ExportProgress | null>(null);
-  const [replacing, setReplacing] = useState<bridge.AppExists | null>(null);
+  const [asking, setAsking] = useState<Asking | null>(null);
   const [coreNotice, setCoreNotice] = useState<CoreNotice | null>(null);
   // Progress events arrive on a separate channel. One that arrives after the
   // export has ended must not reopen the pop-up.
@@ -570,7 +570,7 @@ export function App() {
     } catch (e) {
       // We did nothing. The author chooses, and on Replace we export again.
       if (e instanceof bridge.AppExists) {
-        setReplacing(e);
+        setAsking({ notice: [], existing: e });
         return;
       }
       const notice = afterExport(e);
@@ -1583,7 +1583,9 @@ export function App() {
               disabled={
                 !!busy || !bridge.native || !destination || firmwareBlocked
               }
-              onClick={() => packageGame()}
+              onClick={() =>
+                askFirst(exportRequest(), setAsking, packageGame).catch(fail)
+              }
             >
               {busy === "export" ? (
                 <LoaderCircle className="spin" size={18} />
@@ -1595,14 +1597,12 @@ export function App() {
           )}
         </footer>
       </main>
-      {replacing && (
-        <ReplaceAppDialog
-          existing={replacing}
-          onCancel={() => setReplacing(null)}
-          onReplace={() => {
-            setReplacing(null);
-            packageGame(true);
-          }}
+      {asking && (
+        <CreateAppDialog
+          title={draft.title}
+          asking={asking}
+          close={() => setAsking(null)}
+          create={packageGame}
         />
       )}
       {coreNotice && (

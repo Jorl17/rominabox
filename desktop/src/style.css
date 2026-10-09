@@ -879,7 +879,8 @@ progress::-webkit-progress-value {
 .export-progress > .text-button {
   margin-top: 14px;
 }
-/* The pop-ups of the export step: cores being fetched, an app in the way.
+/* The pop-ups of the export step: cores being fetched, and what we ask on
+   Create app.
    Small, over the export step. */
 .pop-up-layer {
   position: fixed;
@@ -1004,6 +1005,25 @@ progress::-webkit-progress-value {
 }
 .pop-up-sizes span {
   white-space: nowrap;
+}
+/* The parts of the pop-up on Create app, each under a platform heading
+   when more than one platform has shaders that will not load. */
+.pop-up-section + .pop-up-section {
+  margin-top: 14px;
+}
+.pop-up h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pop-up-section p + p {
+  margin-top: 8px;
+}
+/* In the pop-up, we draw the help button in the colour of the words beside
+   it. */
+.pop-up .shader-warning .help-button {
+  color: inherit;
 }
 .pop-up-actions {
   display: flex;
@@ -1556,11 +1576,25 @@ select {
   margin-top: 6px;
 }
 /* An author's filter a Windows game may not load. */
+/* The warnings about the author's filters, after every card, across the
+   whole grid, in the style of the other notes in the builder. */
+.shader-warnings {
+  grid-column: 1 / -1;
+  order: 1;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
 .shader-warning {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--warning);
+  margin: 0;
+}
+.shader-warning .help {
+  margin-left: 2px;
+}
+.shader-warned {
+  margin-left: 6px;
+  vertical-align: -2px;
+  color: var(--muted);
 }
 
 .shader-detail {
