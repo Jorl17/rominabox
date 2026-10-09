@@ -369,6 +369,56 @@ fn home_on_any_pad_that_plays_as_player_one_is_the_menus() {
     assert_eq!(held(1, false), "held 1");
 }
 
+/// What a capture for a hotkey reads as the pad input of a stand-in pad
+/// with a profile from the kit, the pad changing frame by frame as `frames`
+/// list (`scripts/native_runtime/pad_capture.c`). We run RetroArch's own
+/// capture in the menu (menu_driver.c) with the fork's reader.
+fn captured_on(probe: &crate::retroarch_probe::Probe, profile: &str, frames: &[&str]) -> String {
+    let staged = crate::repo::builder_resources().join("runtime/autoconfig").join(profile);
+    assert!(staged.is_file(), "the kit stages {}", staged.display());
+    let mut arguments = vec![staged.to_str().unwrap()];
+    arguments.extend_from_slice(frames);
+    probe.lines(&arguments).join("\n")
+}
+
+fn pad_capture() -> crate::retroarch_probe::Probe {
+    use crate::retroarch_probe::{Probe, INPUT_LAYER};
+    let sources = [
+        INPUT_LAYER,
+        &[
+            "menu/menu_driver.c",
+            "menu/drivers/rmlui/pad_inputs.c",
+            "libretro-common/file/config_file_userdata.c",
+            "libretro-common/lists/string_list.c",
+            "libretro-common/time/rtime.c",
+        ],
+    ]
+    .concat();
+    Probe::build_defining("pad_capture", &["HAVE_CONFIGFILE", "HAVE_MENU"], &sources)
+}
+
+/// Through DirectInput each trigger of a DualSense is a button, down at the
+/// lightest touch, and an axis, which rests at its negative end. Its profile
+/// maps L2 and R2 to the axes only. A trigger pulled all the way for a hotkey
+/// is L2 or R2, as R1 pressed is R1.
+#[test]
+#[cfg(windows)]
+fn a_dualsense_trigger_pulled_for_a_hotkey_is_l2_or_r2() {
+    let probe = pad_capture();
+    let dualsense = "dinput/DualSense5.cfg";
+    let rest = "a3:-32768 a4:-32768";
+    let pulled = |button: &str, held: &str, pulling: &str, full: &str| {
+        captured_on(
+            &probe,
+            dualsense,
+            &[rest, rest, &format!("{button} {held} {pulling}"), &format!("{button} {held} {full}")],
+        )
+    };
+    assert_eq!(pulled("b6", "a4:-32768", "a3:-20000", "a3:32767"), "captured l2");
+    assert_eq!(pulled("b7", "a3:-32768", "a4:-20000", "a4:32767"), "captured r2");
+    assert_eq!(captured_on(&probe, dualsense, &[rest, rest, &format!("b5 {rest}")]), "captured r");
+}
+
 #[test]
 #[cfg(windows)]
 fn a_dualsense_and_an_xbox_pad_each_have_home() {
