@@ -55,10 +55,24 @@ static void set_errno_from_windows(void) {
     }
 }
 
-/* A UTF-8 path as UTF-16, or NULL with errno set. The caller frees it. */
+/* The long form of a path, in which Windows allows more than MAX_PATH
+ * characters. */
+#define LONG_FORM L"\\\\?\\"
+#define LONG_FORM_LENGTH 4
+
+/* A UTF-8 path as UTF-16, or NULL with errno set. The caller frees it. We
+ * write an absolute path with a drive letter in the long form, so that a
+ * game's data deep in its sandbox, under a long user name and with a long
+ * game file name, stays within reach. Windows takes a path in the long form
+ * as it is, so we first let GetFullPathNameW resolve `.` and `..` and write
+ * the separators as backslashes, as Windows does for any other path. */
 static wchar_t *wide(const char *path) {
     int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
+    int drive = ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) && path[1] == ':'
+        && (path[2] == '\\' || path[2] == '/');
     wchar_t *result;
+    wchar_t *full;
+    DWORD needed;
     if (length <= 0) {
         errno = EINVAL;
         return NULL;
@@ -69,7 +83,19 @@ static wchar_t *wide(const char *path) {
         return NULL;
     }
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, result, length);
-    return result;
+    if (!drive)
+        return result;
+    needed = GetFullPathNameW(result, 0, NULL, NULL);
+    full = needed ? malloc((LONG_FORM_LENGTH + (size_t)needed) * sizeof *full) : NULL;
+    if (!full) {
+        free(result);
+        errno = needed ? ENOMEM : EINVAL;
+        return NULL;
+    }
+    memcpy(full, LONG_FORM, LONG_FORM_LENGTH * sizeof *full);
+    GetFullPathNameW(result, needed, full + LONG_FORM_LENGTH, NULL);
+    free(result);
+    return full;
 }
 
 static char *narrow(const wchar_t *name) {
