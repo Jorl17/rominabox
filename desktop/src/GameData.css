@@ -73,7 +73,7 @@
   background: color-mix(in srgb, var(--muted) 18%, var(--paper));
 }
 .game-data-gone {
-  color: var(--warning);
+  color: var(--muted);
 }
 .game-data-pop-up {
   max-width: 420px;
@@ -98,7 +98,7 @@
   background: var(--paper);
 }
 .game-data-warning {
-  color: var(--warning);
+  color: inherit;
 }
 .game-data-names {
   margin: 0;
