@@ -108,7 +108,8 @@ fn disc_inherits_achievements_and_retains_its_explicit_screen_contracts() {
             "restart",
             "uninstall",
             "reset",
-            "about"
+            "about",
+            "data"
         ]
     );
     // The QUICK SIGN IN accounts also come from Native, and BACK leads to the
@@ -542,10 +543,11 @@ fn a_designs_words_name_the_settings_and_mark_the_lists() {
 }
 
 /// UNINSTALL on Windows and RESET on a Mac remove the game's data, so in
-/// every design, on both, the entry is the last row of Options, after the
-/// design's other entries and after the switches we add after those.
+/// every design, on both, the entry is the last row of Options but DATA,
+/// after the design's other entries and after the switches we add after
+/// those. DATA, where the player keeps the data in a zip, is the last.
 #[test]
-fn forgetting_the_game_is_the_last_options_row() {
+fn forgetting_the_game_is_the_last_options_row_before_data() {
     let root = rominabox_scratch::Scratch::dir("rominabox-forget-last");
     let kit = support::kit(&root);
     for design in support::designs() {
@@ -574,9 +576,14 @@ fn forgetting_the_game_is_the_last_options_row() {
                     tag.split("id=\"").nth(1)?.split('"').next()
                 })
                 .collect();
+            let data = menu::declared_screens(&staged)
+                .unwrap()
+                .into_iter()
+                .find(|screen| screen.role == Some(menu::ScreenRole::Data))
+                .unwrap_or_else(|| panic!("{design} has no DATA"));
             assert_eq!(
-                rows.last().copied(),
-                Some(forget.button.as_str()),
+                rows[rows.len().saturating_sub(2)..],
+                [forget.button.as_str(), data.button.as_str()],
                 "{design} on {target:?}: the Options rows are {rows:?}"
             );
         }

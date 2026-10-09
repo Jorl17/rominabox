@@ -9,6 +9,8 @@ type Settings = Pick<
   | "advancedEmulatorAccess"
   | "fastForward"
   | "fastForwardSpeed"
+  | "showMenu"
+  | "gameData"
 >;
 
 /** The Advanced section of the Menu step: choices most authors leave alone. */
@@ -36,6 +38,13 @@ export function AdvancedOptions({
         checked={settings.advancedEmulatorAccess}
         onChange={(value) => update("advancedEmulatorAccess", value)}
         help="Restore RetroArch's native menus."
+      />
+      <Checkbox
+        label="Export and import data"
+        checked={settings.showMenu && settings.gameData}
+        disabled={!settings.showMenu}
+        onChange={(value) => update("gameData", value)}
+        help="Let the player keep the game's saves and settings in a zip."
       />
       <Checkbox
         label="Fast forward"

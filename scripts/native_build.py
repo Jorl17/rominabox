@@ -576,21 +576,25 @@ def file_layer_headers(platform: str) -> list[Path]:
     return sorted(header for folder in folders for header in folder.glob("portable_fs*.h"))
 
 
-def copy_accounts(destination: Path, target: str) -> Path:
+def copy_sources(destination: Path, target: str) -> Path:
     """The ROM-in-a-Box sources we compile into the player (the QUICK SIGN IN
-    store) and the file layer below it, in their folders under
-    desktop/src-tauri."""
-    accounts = destination / "rominabox-accounts"
-    sources = [*accounts_sources(platform_of(target)), *sorted(accounts_folder().glob("*.h"))]
-    copies = set()
-    for source in [*sources, *file_layer_headers(platform_of(target)), *file_layer(platform_of(target))]:
-        copy = accounts / source.relative_to(DESKTOP)
+    store and the zips of a game's data) and the file layer below them, in
+    their folders under desktop/src-tauri, with the launcher's declarations
+    they read, and miniz at the top of the folder, where the fork compiles it
+    only through gamedata/zip_library.c."""
+    handed = destination / "rominabox-sources"
+    platform = platform_of(target)
+    ours = [*accounts_sources(platform), *sorted(accounts_folder().glob("*.h")), GAMEDATA / "game_data.c",
+            ZIP_LIBRARY, *sorted(GAMEDATA.glob("*.h")), LAUNCHER / "launch_contract.inc",
+            *file_layer_headers(platform), *file_layer(platform)]
+    copies = {handed / source.relative_to(DESKTOP): source for source in ours}
+    copies.update({handed / source.name: source for source in (MINIZ / "miniz.c", MINIZ / "miniz.h")})
+    for copy, source in copies.items():
         write_if_changed(copy, source.read_bytes())
-        copies.add(copy)
-    # In the fork's makefile we compile every source in the folder.
-    for left in [path for path in accounts.rglob("*") if path.is_file() and path not in copies]:
+    # In the fork's makefile we compile every source in the folders.
+    for left in [path for path in handed.rglob("*") if path.is_file() and path not in copies]:
         left.unlink()
-    return accounts
+    return handed
 
 
 def build_launcher(destination: Path, target: str, environment: dict[str, str]) -> Path | None:

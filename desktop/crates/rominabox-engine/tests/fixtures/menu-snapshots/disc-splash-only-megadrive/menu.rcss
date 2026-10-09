@@ -372,3 +372,15 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .confirm-actions button { position: absolute; top: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
 #forget-back, #restart-back { left: 0; }
 #forget-confirm, #restart-confirm { left: 200dp; }
+/* DATA: EXPORT DATA and IMPORT DATA where the confirm screens have their
+ * buttons, the line where we say how it went, and the dialog where we ask
+ * before an import, over the page. */
+#data-export { left: 0; }
+#data-import { left: 200dp; }
+.data-status { position: absolute; left: 24dp; top: 260dp; width: 700dp; font-size: 13dp; color: #fff13d; }
+.data-dialog { position: absolute; box-sizing: border-box; left: 0; top: 0; width: 100%; height: 100%; padding: 64dp 24dp; z-index: 120; background-color: #1049c3; }
+.data-dialog-title { font-size: 18dp; color: #fff13d; margin-bottom: 18dp; }
+.data-dialog-copy { font-size: 14dp; line-height: 26dp; max-width: 700dp; color: #ffffff; }
+.data-dialog-actions { margin-top: 32dp; }
+.data-dialog-actions button { display: inline-block; box-sizing: border-box; width: 176dp; height: 36dp; margin-right: 24dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
+.data-dialog-actions button.disabled { opacity: 0.4; }

@@ -19,7 +19,11 @@
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 
+#include <objbase.h>
+
+#include "game_data_requests.h"
 #include "pad_relay.h"
+#include "../launch.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "../../../../vendor/retroarch/rominabox_pad_relay.h"
 
@@ -28,6 +32,8 @@
  * controllers, copy each request once, and check that copy before we act on
  * it. */
 struct PadRelay {
+    /* The game's data folder, for its export and import. */
+    char data_dir[LAUNCH_PATH_CAP];
     HANDLE block;
     rib_pad_relay *view;
     HANDLE request;
@@ -325,6 +331,11 @@ static HRESULT do_ask(PadRelay *relay, const rib_pad_relay_ask *ask, DWORD *slot
             return DIERR_INVALIDPARAM;
         drop_effect(relay, ask->pad, ask->item);
         return DI_OK;
+    case RIB_PAD_RELAY_EXPORT_DATA:
+    case RIB_PAD_RELAY_CHOOSE_IMPORT:
+    case RIB_PAD_RELAY_CONFIRM_IMPORT:
+        /* The game's data, which answer_ask handles before this. */
+        break;
     }
     return DIERR_UNSUPPORTED;
 }
@@ -335,6 +346,12 @@ static void answer_ask(PadRelay *relay) {
     DWORD slot = 0;
     HRESULT answered;
     memcpy(&ask, &relay->view->ask, sizeof ask);
+    if (ask.what == RIB_PAD_RELAY_EXPORT_DATA || ask.what == RIB_PAD_RELAY_CHOOSE_IMPORT
+        || ask.what == RIB_PAD_RELAY_CONFIRM_IMPORT) {
+        game_data_request(ask.what, relay->data_dir, relay->window, &relay->view->data);
+        relay->view->ask.answer = DI_OK;
+        return;
+    }
     answered = do_ask(relay, &ask, &slot);
     if (ask.what == RIB_PAD_RELAY_MAKE_EFFECT)
         relay->view->ask.item = slot;
@@ -348,6 +365,8 @@ static DWORD WINAPI answer(void *context) {
     HANDLE waits[2];
     DWORD index;
     DWORD slot;
+    /* The file dialogs of the game's data need COM on this thread. */
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     kind.lpfnWndProc = DefWindowProcW;
     kind.hInstance = instance;
     kind.lpszClassName = L"ROM-in-a-Box controllers";
@@ -392,6 +411,7 @@ static DWORD WINAPI answer(void *context) {
         IDirectInput8_Release(relay->input);
     if (relay->window)
         DestroyWindow(relay->window);
+    CoUninitialize();
     return 0;
 }
 
@@ -413,7 +433,7 @@ static void close_relay(PadRelay *relay) {
     free(relay);
 }
 
-PadRelay *pad_relay_start(void) {
+PadRelay *pad_relay_start(const char *data_dir) {
     /* Inheritable, so they reach the game through the launcher inside the
      * sandbox, where the named objects on this side cannot be opened. */
     SECURITY_ATTRIBUTES inherit = {sizeof inherit, NULL, TRUE};
@@ -422,6 +442,7 @@ PadRelay *pad_relay_start(void) {
     HANDLE started[2];
     if (!relay)
         return NULL;
+    snprintf(relay->data_dir, sizeof relay->data_dir, "%s", data_dir);
     relay->block = CreateFileMappingW(INVALID_HANDLE_VALUE, &inherit, PAGE_READWRITE, 0, sizeof(rib_pad_relay), NULL);
     relay->view = relay->block
         ? MapViewOfFile(relay->block, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(rib_pad_relay)) : NULL;

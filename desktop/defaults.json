@@ -16,6 +16,7 @@
   "fastForward": false,
   "fastForwardSpeed": 2.0,
   "video": true,
+  "gameData": true,
   "brightness": 1.0,
   "contrast": 1.0,
   "fastForwardHold": true,

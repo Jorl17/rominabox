@@ -56,6 +56,27 @@
       }
     },
     {
+      "name": "DATA, last in Options, opens on EXPORT DATA, Right is IMPORT DATA, and Back is Options again on DATA",
+      "menu": "md3-with-data",
+      "steps": [
+        "options",
+        "data",
+        "key:right",
+        "key:cancel"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "data-export",
+          "data-import",
+          "data"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      }
+    },
+    {
       "name": "Back from Options is Pause again, on the button that opened it",
       "steps": [
         "options",

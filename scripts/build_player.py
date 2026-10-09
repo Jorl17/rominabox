@@ -90,7 +90,7 @@ def build_slice(destination: Path, target: str, commit: str, switches: dict[str,
     native_build.checkout_fork(commit, destination, target)
     rmlui_build = native_build.build_rmlui(destination, target, jobs)
     retroarch = destination / "retroarch"
-    accounts = native_build.copy_accounts(destination, target)
+    sources = native_build.copy_sources(destination, target)
     binary = retroarch / native_build.binary_name(target)
     # We link the player unstripped with make, and read its symbols there in
     # the capability check.
@@ -99,7 +99,7 @@ def build_slice(destination: Path, target: str, commit: str, switches: dict[str,
     settings = {"RIB_ACHIEVEMENTS_TEST": switches["achievements_test"],
                 "RIB_MENU_SCRIPT": switches["menu_script"],
                 "RMLUI_SOURCE_DIR": f"../{rmlui['source']}", "RMLUI_BUILD_DIR": f"../{rmlui_build.name}",
-                "RIB_ACCOUNTS_DIR": native_build.make_path(accounts, target),
+                "RIB_SOURCES_DIR": native_build.make_path(sources, target),
                 "TARGET": linked.stem,
                 **native_build.make_variables(target)}
     native_build.write_if_changed(retroarch / "Makefile.local",

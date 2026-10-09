@@ -33,6 +33,7 @@ pub fn menu_request(
         discs,
         settings: request.game.player_defaults(),
         sound_pack: request.game.menu_sounds != "off",
+        game_data: request.game.game_data,
         target: request.game.target,
         licences: licences.to_vec(),
         // Controller artwork is not part of a design. We show the same pads in

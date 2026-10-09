@@ -1051,6 +1051,29 @@
         }
       }
     },
+    "data": {
+      "describes": "DATA, with EXPORT DATA and IMPORT DATA, as the player opens it",
+      "screen": "data",
+      "set": {}
+    },
+    "data-exported": {
+      "describes": "DATA after an export, with the status line saying so",
+      "screen": "data",
+      "set": {"data-status": {"text": "DATA EXPORTED"}, "data-export": {"class": "focused"}}
+    },
+    "data-import-asking": {
+      "describes": "the dialog before an import of another game's data, on KEEP MY DATA",
+      "screen": "data",
+      "set": {"data-import-dialog": {"display": "block"}, "data-import-cancel": {"class": "focused"},
+              "data-import-message": {"text": "THIS DATA IS FROM SONIC 3. IT REPLACES THE SAVES, STATES, SCREENSHOTS AND SETTINGS OF THIS GAME. THE GAME THEN RESTARTS."}}
+    },
+    "data-import-refused": {
+      "describes": "the dialog for a zip we cannot import, with IMPORT disabled",
+      "screen": "data",
+      "set": {"data-import-dialog": {"display": "block"}, "data-import-cancel": {"class": "focused"},
+              "data-import-confirm": {"class": "disabled"},
+              "data-import-message": {"text": "THIS IS THE DATA OF \u201cPOKEMON GOLD\u201d, A GAME BOY COLOR GAME, AND THIS GAME IS FOR THE MEGA DRIVE / GENESIS."}}
+    },
     "hotkeys-refused": {
       "describes": "a removal refused, the status saying why, the chip still focused",
       "screen": "hotkeys",

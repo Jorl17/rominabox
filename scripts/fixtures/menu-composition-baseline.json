@@ -60,7 +60,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -190,7 +192,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -351,7 +355,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -404,7 +410,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -592,7 +600,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -775,7 +785,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -957,7 +969,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1087,7 +1101,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1248,7 +1264,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1301,7 +1319,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1489,7 +1509,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1672,7 +1694,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1854,7 +1878,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -1984,7 +2010,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -2145,7 +2173,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -2198,7 +2228,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -2386,7 +2418,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -2569,7 +2603,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -2751,7 +2787,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -2881,7 +2919,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3042,7 +3082,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3095,7 +3137,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3283,7 +3327,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3466,7 +3512,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3648,7 +3696,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3778,7 +3828,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3939,7 +3991,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -3992,7 +4046,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4180,7 +4236,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],
@@ -4363,7 +4421,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [],
+        "disabled": [
+          "options-prev"
+        ],
         "focused": [
           "achievements"
         ],

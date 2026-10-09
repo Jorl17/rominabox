@@ -151,7 +151,7 @@ file is a complete example.
 
 ## Screens and roles
 
-Ten screens have a **role**, which the player code handles specially:
+Eleven screens have a **role**, which the player code handles specially:
 
 | Role | Screen | Contains |
 |---|---|---|
@@ -165,6 +165,7 @@ Ten screens have a **role**, which the player code handles specially:
 | `hotkeys` | HOTKEYS | a row of bindings for each hotkey |
 | `forget` | UNINSTALL on Windows, RESET on a Mac | the question, then `forget-back` and `forget-confirm` |
 | `restart` | RESTART | the question, then `restart-back` and `restart-confirm` |
+| `data` | DATA, the last Options entry | `data-export`, `data-import` and the status line `data-status`, then the dialog `data-import-dialog`, where we write the question or the reason we cannot import in `data-import-message`, with `data-import-cancel` and `data-import-confirm`, which we disable when we cannot import |
 
 Native assigns the roles. Your design keeps a role by keeping the id of the
 screen: a `screen-pause.rml` is still Pause, whatever it looks like and

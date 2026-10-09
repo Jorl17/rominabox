@@ -23,6 +23,7 @@
 #include "../portable_fs.h"
 #include "pad_relay.h"
 #include "unpack.h"
+#include "../../../../vendor/retroarch/rominabox_game_data.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 
 /* The longest path Windows takes, in UTF-16 units, with its terminator. */
@@ -338,9 +339,46 @@ static void let_sandbox(PSID sid, const char *folder, DWORD rights) {
     free(path);
 }
 
+/* The folder of the game's sandbox, which Windows gives, or NULL. Free it
+ * with CoTaskMemFree. */
+static PWSTR sandbox_folder(const LaunchGame *game) {
+    char name[sizeof RIB_GAME_APP_ID_PREFIX + sizeof game->identity];
+    wchar_t *wide_name;
+    PWSTR container = NULL;
+    PSID sid = NULL;
+    snprintf(name, sizeof name, RIB_GAME_APP_ID_PREFIX "%s", game->identity);
+    wide_name = wide(name);
+    if (game->sandbox && SUCCEEDED(DeriveAppContainerSidFromAppContainerName(wide_name, &sid))) {
+        LPWSTR sid_text = NULL;
+        if (ConvertSidToStringSidW(sid, &sid_text)) {
+            if (FAILED(GetAppContainerFolderPath(sid_text, &container)))
+                container = NULL;
+            LocalFree(sid_text);
+        }
+        FreeSid(sid);
+    }
+    free(wide_name);
+    return container;
+}
+
+/* The game's data folder as the game sees it inside its sandbox, which is in
+ * the sandbox's folder, or in the per-user folder for a game without one. */
+static void game_data_folder_inside(const LaunchGame *game, char *out, size_t out_cap) {
+    char *user_data = local_application_data();
+    PWSTR container = sandbox_folder(game);
+    char *container_utf8 = container ? utf8(container) : NULL;
+    rominabox_game_data_folder(game, container_utf8 ? container_utf8 : user_data, out, out_cap);
+    if (container)
+        CoTaskMemFree(container);
+    free(container_utf8);
+    free(user_data);
+}
+
 /* Outside the sandbox: set it up, start this program inside it, and wait
- * for it, so the game still opens and closes as one program. */
-static int start_in_sandbox(const char *folder, const LaunchGame *game) {
+ * for it, so the game still opens and closes as one program. `restart`
+ * becomes 1 when the player imported data in the menu, after which we start
+ * the game again (RIB_DATA_RESTART_MARKER). */
+static int start_in_sandbox(const char *folder, const LaunchGame *game, int *restart) {
     char accounts[LAUNCH_PATH_CAP];
     char previous[LAUNCH_PATH_CAP];
     char *user_data = local_application_data();
@@ -358,6 +396,8 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     HANDLE job;
     PadRelay *pads;
     DWORD code = 1;
+    char data[LAUNCH_PATH_CAP];
+    char marker[LAUNCH_PATH_CAP];
 
     game_program(program, sizeof program / sizeof program[0]);
     capabilities.AppContainerSid = sandbox_of(game);
@@ -398,7 +438,8 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
         own_path(opened, sizeof opened / sizeof opened[0]);
         SetEnvironmentVariableW(outside_program, opened);
     }
-    pads = pad_relay_start();
+    game_data_folder_inside(game, data, sizeof data);
+    pads = pad_relay_start(data);
     InitializeProcThreadAttributeList(NULL, 1, 0, &size);
     attributes = HeapAlloc(GetProcessHeap(), 0, size);
     if (!line || !attributes || !InitializeProcThreadAttributeList(attributes, 1, 0, &size)
@@ -428,6 +469,8 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game) {
     GetExitCodeProcess(process.hProcess, &code);
     CloseHandle(process.hProcess);
     pad_relay_stop(pads);
+    rominabox_launch_join(marker, sizeof marker, data, RIB_DATA_RESTART_MARKER);
+    *restart = fs_exists(marker) && fs_remove(marker) == 0;
     if (job)
         CloseHandle(job);
     DeleteProcThreadAttributeList(attributes);
@@ -455,20 +498,12 @@ static void forget_if_asked(const LaunchGame *game) {
     char *user_data = local_application_data();
     char *container_utf8 = NULL;
     wchar_t *wide_name;
-    PWSTR container = NULL;
-    PSID sid = NULL;
+    /* Inside its sandbox the game's per-user folder is the sandbox's own. */
+    PWSTR container = sandbox_folder(game);
     snprintf(name, sizeof name, RIB_GAME_APP_ID_PREFIX "%s", game->identity);
     wide_name = wide(name);
-    /* Inside its sandbox the game's per-user folder is the sandbox's own. */
-    if (game->sandbox && SUCCEEDED(DeriveAppContainerSidFromAppContainerName(wide_name, &sid))) {
-        LPWSTR sid_text = NULL;
-        if (ConvertSidToStringSidW(sid, &sid_text)) {
-            if (SUCCEEDED(GetAppContainerFolderPath(sid_text, &container)))
-                container_utf8 = utf8(container);
-            LocalFree(sid_text);
-        }
-        FreeSid(sid);
-    }
+    if (container)
+        container_utf8 = utf8(container);
     rominabox_game_data_folder(game, container_utf8 ? container_utf8 : user_data, data, sizeof data);
     rominabox_launch_join(marker, sizeof marker, data, RIB_FORGET_MARKER);
     if (fs_exists(marker)) {
@@ -680,8 +715,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
         rominabox_launch_join(resources, sizeof resources, folder, part_Resources);
         rominabox_read_game(resources, &game);
         {
-            int code = game.sandbox ? start_in_sandbox(folder, &game)
+            int code;
+            int restart;
+            /* After the player imports data in the menu, we start the game
+             * again, and its launcher inside imports the zip. */
+            do {
+                restart = 0;
+                code = game.sandbox ? start_in_sandbox(folder, &game, &restart)
                                     : run(local_application_data(), NULL, opened_by_explorer());
+            } while (restart);
             forget_if_asked(&game);
             return code;
         }

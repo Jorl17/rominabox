@@ -230,10 +230,12 @@ pub enum ScreenRole {
     Forget,
     /// RESTART, to start the game again from the beginning after asking.
     Restart,
+    /// DATA, to export the game's data or import it after asking.
+    Data,
 }
 
 impl ScreenRole {
-    pub const ALL: [ScreenRole; 10] = [
+    pub const ALL: [ScreenRole; 11] = [
         ScreenRole::Pause,
         ScreenRole::Options,
         ScreenRole::Controls,
@@ -244,6 +246,7 @@ impl ScreenRole {
         ScreenRole::Hotkeys,
         ScreenRole::Forget,
         ScreenRole::Restart,
+        ScreenRole::Data,
     ];
 
     /// The word in `design.json` and `design.cfg`, as in the contract.
@@ -333,8 +336,8 @@ impl Screen {
 
     /// Where this entry goes among the last rows of Options, after the
     /// switches: an entry with its button on the pause screen (in a design
-    /// without that button), then ABOUT, then UNINSTALL or RESET. None for an
-    /// entry that goes in its declared place.
+    /// without that button), then ABOUT, then UNINSTALL or RESET, then DATA.
+    /// None for an entry that goes in its declared place.
     pub fn options_end(&self) -> Option<u8> {
         if self.entry_place == EntryPlace::Pause {
             Some(0)
@@ -342,6 +345,8 @@ impl Screen {
             Some(1)
         } else if self.role == Some(ScreenRole::Forget) {
             Some(2)
+        } else if self.role == Some(ScreenRole::Data) {
+            Some(3)
         } else {
             None
         }

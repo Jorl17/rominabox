@@ -73,6 +73,7 @@ const everySetting = {
   fastForward: true,
   fastForwardSpeed: 4,
   video: true,
+  gameData: false,
   brightness: 1.2,
   contrast: 0.9,
   fastForwardHold: false,

@@ -209,7 +209,8 @@ impl Packager for MacosPackager {
                 nested.push(object.clone());
             }
         }
-        let entitlements = sandbox_entitlements(identity, accounts_folder(request)?.as_deref());
+        let entitlements =
+            sandbox_entitlements(identity, accounts_folder(request)?.as_deref(), request.game.show_menu);
         bundle::sign_app(
             &bundle::AppSeal {
                 app: &self.app,
@@ -244,8 +245,11 @@ fn bundle_identifier(identity: &str) -> String {
 }
 
 /// `accounts` is the QUICK SIGN IN folder, present exactly when the game has
-/// achievements. We grant the network and that folder together.
-fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> Entitlements {
+/// achievements. We grant the network and that folder together. With `menu`,
+/// the game has a menu, where DATA may be, and we grant the one file the
+/// player chooses in a system panel there, to export the game's data to or
+/// import it from.
+fn sandbox_entitlements(identity: &str, accounts: Option<&str>, menu: bool) -> Entitlements {
     let mut entitlements = Entitlements::default().with("com.apple.security.app-sandbox", Value::Bool(true));
     if accounts.is_some() {
         entitlements = entitlements.with("com.apple.security.network.client", Value::Bool(true));
@@ -257,6 +261,9 @@ fn sandbox_entitlements(identity: &str, accounts: Option<&str>) -> Entitlements 
             "com.apple.security.temporary-exception.files.home-relative-path.read-only",
             Value::Strings(vec![format!("/Library/Application Support/{}/", game_data_folder(identity))]),
         );
+    if menu {
+        entitlements = entitlements.with("com.apple.security.files.user-selected.read-write", Value::Bool(true));
+    }
     if let Some(folder) = accounts {
         entitlements = entitlements.with(
             "com.apple.security.temporary-exception.files.home-relative-path.read-write",

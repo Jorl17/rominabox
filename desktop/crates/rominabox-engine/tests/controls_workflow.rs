@@ -281,7 +281,7 @@ fn a_document_is_only_told_about_what_it_draws() {
         None => panic!("no platform the builder exports for"),
     };
     assert!(
-        declared.contains(&format!("screens = \"pause options controls hotkeys video restart {forget}\"")),
+        declared.contains(&format!("screens = \"pause options controls hotkeys video restart {forget} data\"")),
         "{declared}"
     );
     assert!(

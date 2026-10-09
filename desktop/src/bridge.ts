@@ -38,6 +38,9 @@ export type ExportRequest = {
   keepPlayingInBackground: boolean;
   fastForward: boolean;
   video: boolean;
+  /** DATA in the game's Options, where the player exports and imports the
+   * game's data. */
+  gameData: boolean;
   brightness: number;
   contrast: number;
   fastForwardSpeed: number;

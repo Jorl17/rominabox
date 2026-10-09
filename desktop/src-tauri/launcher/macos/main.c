@@ -16,10 +16,12 @@
 #include <unistd.h>
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
 
 #include "../launch.h"
 #include "../portable_fs.h"
 #include "../posix/log_output.h"
+#include "../../../../vendor/retroarch/rominabox_game_data.h"
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "arguments.h"
 
@@ -83,6 +85,30 @@ static void forget_if_asked(void) {
     if (fs_exists(marker))
         /* Deepest first. We remove a link itself and never follow it. */
         nftw(forget_folder, remove_entry, FORGET_OPEN_FOLDERS, FTW_DEPTH | FTW_PHYS);
+}
+
+/* When the player imports data in the menu, we set the zip aside, leave
+ * RIB_DATA_RESTART_MARKER in the game's data folder and close the game. When
+ * the player process ends, we start the app again through Launch Services,
+ * as a new instance, and its launcher imports the zip before the game
+ * starts. */
+static char restart_marker[LAUNCH_PATH_CAP];
+static char restart_app[LAUNCH_PATH_CAP];
+
+static void restart_if_asked(void) {
+    CFURLRef app;
+    LSLaunchURLSpec opening = {0};
+    if (!restart_marker[0] || !fs_exists(restart_marker) || fs_remove(restart_marker) != 0)
+        return;
+    app = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)restart_app,
+                                                  (CFIndex)strlen(restart_app), true);
+    if (!app)
+        return;
+    opening.appURL = app;
+    opening.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
+    if (LSOpenFromURLSpec(&opening, NULL) != noErr)
+        fprintf(stderr, ROMINABOX_NAME ": could not start the game again after the import\n");
+    CFRelease(app);
 }
 
 static char *forwarded_argv[LAUNCH_ARGUMENTS_CAP + 1];
@@ -192,6 +218,9 @@ static void prepare(void) {
         if (rominabox_game_folder_to_forget(&game, user_data, forget_folder, sizeof forget_folder) == 0)
             atexit(forget_if_asked);
     }
+    rominabox_launch_join(restart_marker, sizeof restart_marker, launch.data_dir, RIB_DATA_RESTART_MARKER);
+    snprintf(restart_app, sizeof restart_app, "%s", bundle);
+    atexit(restart_if_asked);
 
     forwarded_argv[0] = strdup(executable);
     if (!forwarded_argv[0])

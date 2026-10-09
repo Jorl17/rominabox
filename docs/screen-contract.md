@@ -64,8 +64,9 @@ fragments.
 **Roles.** The screens with special handling in the player have a role:
 Pause, Options, Controls, Shaders, Achievements, the disc list, the
 accounts of QUICK SIGN IN, HOTKEYS, the screen where we ask before we
-forget the game (UNINSTALL or RESET) and the screen where we ask before
-RESTART. Only Native assigns roles, and a design takes one
+forget the game (UNINSTALL or RESET), the screen where we ask before
+RESTART, and DATA, where the player exports the game's data to a zip and
+imports one after we ask. Only Native assigns roles, and a design takes one
 over by replacing the screen with that id. The roles and the word for each
 are declared once, as `RIB_ROLE` in `document_contract.inc`, and we read that
 file in both the player and the exporter. In the player we find a screen by
