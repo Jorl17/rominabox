@@ -120,6 +120,8 @@ pub struct InstalledGame {
     pub app_present: bool,
     /// Whether the game is running now.
     pub running: bool,
+    /// The name we suggest for an export of its data alone.
+    pub file_name: String,
     /// The game's data folder.
     pub data: PathBuf,
 }
@@ -200,7 +202,8 @@ impl Library {
         let app = Path::new(&game.app);
         let app_present = !game.app.is_empty() && app.exists();
         let running = app_present && running(app);
-        Some(InstalledGame { game, icon, app_present, running, data })
+        let file_name = game_data::file_name(&game);
+        Some(InstalledGame { game, icon, app_present, running, file_name, data })
     }
 
     /// Every game on this computer, by title.

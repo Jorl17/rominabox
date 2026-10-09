@@ -96,7 +96,9 @@ export function GameData() {
         ? games?.find((game) => game.identity === identities[0])
         : undefined;
     void act(async () => {
-      const zip = await bridge.pickDataSave(only ? only.title : "Game data");
+      const zip = await bridge.pickDataSave(
+        only ? only.fileName : "Game data.zip",
+      );
       if (!zip) return null;
       const exported = await bridge.exportGameData(identities, zip);
       return `Exported the data of ${counted(exported.length)}.`;

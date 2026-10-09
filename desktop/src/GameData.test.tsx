@@ -63,6 +63,7 @@ function game(
     icon: null,
     appPresent: true,
     running: false,
+    fileName: `${title} data.zip`,
     data: `/data/${identity}`,
     ...more,
   };
@@ -145,7 +146,7 @@ describe("the Game data section", () => {
       )!,
     );
     await click(button("Export chosen"));
-    expect(asked("pickDataSave")).toEqual([["Sonic 3"]]);
+    expect(asked("pickDataSave")).toEqual([["Sonic 3 data.zip"]]);
     expect(asked("exportGameData")).toEqual([[["aaaa"], "/backups/out.zip"]]);
     expect(container.textContent).toContain("Exported the data of 1 game.");
 

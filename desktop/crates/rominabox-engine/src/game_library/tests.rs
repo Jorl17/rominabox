@@ -62,12 +62,20 @@ fn the_games_with_a_manifest_in_a_sandbox_of_ours_are_listed() {
         assert_eq!(
             games,
             [
-                InstalledGame { game: gold, icon: None, app_present: false, running: false, data: gold_data },
+                InstalledGame {
+                    file_name: "Pokemon Gold data.zip".into(),
+                    game: gold,
+                    icon: None,
+                    app_present: false,
+                    running: false,
+                    data: gold_data,
+                },
                 InstalledGame {
                     game: sonic,
                     icon: Some(sonic_data.join("game-icon.png")),
                     app_present: true,
                     running: false,
+                    file_name: "Sonic 3 data.zip".into(),
                     data: sonic_data,
                 },
             ],

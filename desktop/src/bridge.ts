@@ -570,6 +570,8 @@ export type InstalledGame = DataGame & {
   icon: string | null;
   appPresent: boolean;
   running: boolean;
+  /** The name we suggest for an export of its data alone, as in its menu. */
+  fileName: string;
   data: string;
 };
 /** A game in a backup, and whether it is on this computer. */
@@ -626,7 +628,7 @@ export function removeGameData(identity: string): Promise<void> {
 export async function pickDataSave(name: string): Promise<string | null> {
   return save({
     title: "Export game data",
-    defaultPath: `${name.replace(/[\\/:*?"<>|]/g, "-")}.zip`,
+    defaultPath: name,
     filters: [{ name: "Zip", extensions: ["zip"] }],
   });
 }

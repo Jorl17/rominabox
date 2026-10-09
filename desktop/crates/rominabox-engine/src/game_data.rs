@@ -30,6 +30,7 @@ extern "C" {
     fn rib_games_at(games: *mut RawGame, which: usize) -> *mut RawGame;
     fn rib_games_free(games: *mut RawGame);
     fn rib_game_manifest_write(data_dir: *const c_char, game: *const RawGame) -> c_int;
+    fn rib_game_data_file_name(game: *const RawGame, out: *mut c_char, size: usize);
     fn rib_game_manifest_read(data_dir: *const c_char, game: *mut RawGame) -> c_int;
     fn rib_game_data_export(
         data_dirs: *const *const c_char,
@@ -179,6 +180,17 @@ fn sentence(error: &[c_char; ERROR_SIZE], fallback: &str) -> String {
     } else {
         written
     }
+}
+
+/// The name we suggest for an export of `game`'s data, as in the game's menu:
+/// its title, with anything a file system may refuse in a name replaced, and
+/// " data.zip".
+pub fn file_name(game: &Game) -> String {
+    let games = Games::new(1);
+    games.write(0, game);
+    let mut name = [0 as c_char; 256];
+    unsafe { rib_game_data_file_name(games.at(0), name.as_mut_ptr(), name.len()) };
+    text(name.as_ptr())
 }
 
 /// The manifest in a game's data folder, when there is one we can read.
