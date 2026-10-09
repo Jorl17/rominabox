@@ -519,6 +519,42 @@ fn copy_tree(from: &Path, to: &Path) {
     }
 }
 
+/// Put the menu designs, their parts and the controller artwork in `kit`,
+/// for a game with a menu.
+fn with_menu(kit: &Path) {
+    for (from, to) in [
+        ("integrations/designs", "designs"),
+        ("integrations/parts", "parts"),
+        ("desktop/assets/controllers", "menu-assets"),
+    ] {
+        copy_tree(&rominabox_engine::repo::at(from), &kit.join(to));
+    }
+}
+
+/// In the OpenGL 2.1 context of RetroArch's OpenGL driver on a Mac, GLSL
+/// above version 120 does not compile, and most GLSL passes of CRT Royale
+/// are version 130. So we export a Mac game with CRT Royale in slang, for
+/// the core-profile driver.
+#[test]
+fn we_export_a_mac_game_in_slang_where_the_glsl_does_not_compile_on_a_mac() {
+    let root = workspace();
+    let mut request = export_request(&root);
+    with_menu(&request.runtime_kit);
+    copy_tree(
+        &rominabox_engine::repo::at("integrations/shaders/library"),
+        &request.runtime_kit.join("shaders"),
+    );
+    request.game.show_menu = true;
+    request.game.shaders.bundled = vec!["crt-royale".into()];
+    request.game.shaders.initial = Some("crt-royale".into());
+    let result =
+        rominabox_engine::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
+            .unwrap();
+    let plan = fs::read_to_string(result.app_path.join("Contents/Resources/launch.plan")).unwrap();
+    assert_eq!(config_value(&embedded_runtime_config(&plan), "video_driver"), Some("glcore"));
+    assert!(plan.contains("shaders/slang/crt/crt-royale.slangp"), "{plan}");
+}
+
 #[test]
 fn achievements_require_a_capable_artifact_before_export_staging() {
     let root = workspace();
@@ -570,18 +606,7 @@ fn included_achievements_export_an_account_screen_and_network_permission() {
         serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
     value["components"][0]["capabilities"] = serde_json::json!({"achievements": true});
     fs::write(manifest, serde_json::to_vec(&value).unwrap()).unwrap();
-    copy_tree(
-        &rominabox_engine::repo::at("integrations/designs"),
-        &request.runtime_kit.join("designs"),
-    );
-    copy_tree(
-        &rominabox_engine::repo::at("integrations/parts"),
-        &request.runtime_kit.join("parts"),
-    );
-    copy_tree(
-        &rominabox_engine::repo::at("desktop/assets/controllers"),
-        &request.runtime_kit.join("menu-assets"),
-    );
+    with_menu(&request.runtime_kit);
     let result =
         rominabox_engine::packaging::export_game(&request, &AtomicBool::new(false), |_| {})
             .unwrap();
