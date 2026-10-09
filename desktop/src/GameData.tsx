@@ -134,8 +134,8 @@ export function GameData() {
         <h1 id="game-data-title">
           Game data
           <Help label="About game data">
-            The saves, states, controls and settings of your games. A game is
-            listed once it has started on this computer.
+            The data (saves, states, settings, etc.) of your games. To appear, a
+            game has to have been started at least once.
           </Help>
         </h1>
         <div className="game-data-actions">

@@ -44,7 +44,7 @@ export function AdvancedOptions({
         checked={settings.showMenu && settings.gameData}
         disabled={!settings.showMenu}
         onChange={(value) => update("gameData", value)}
-        help="Let the player keep the game's saves and settings in a zip."
+        help="Let the player export and import their data (saves, settings, etc.) within the game itself. If off, the ROM-in-a-Box app can always be used to do the same."
       />
       <Checkbox
         label="Fast forward"

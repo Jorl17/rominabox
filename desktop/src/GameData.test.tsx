@@ -162,10 +162,10 @@ describe("the Game data section", () => {
     expect(document.querySelector("select")?.value).toBe("aaaa");
     expect(asked("checkGameData")).toEqual([["/backups/in.zip", 0, "aaaa"]]);
     expect(popUp()).toContain(
-      "It replaces the saves, states and settings of “Sonic 3”.",
+      "Importing this data will permanently replace the saves, states and settings of “Sonic 3”.",
     );
     expect(popUp()).not.toContain("This data is from");
-    await click(button("Replace"));
+    await click(button("Yes, import and replace my data"));
     expect(asked("importGameData")).toEqual([["/backups/in.zip", 0, "aaaa"]]);
     expect(container.textContent).toContain(
       "Imported the data into “Sonic 3”.",
@@ -178,14 +178,14 @@ describe("the Game data section", () => {
     engine.check = { kind: "otherGame", detail: other };
     await shown();
     await click(button("Import"));
-    expect(button("Replace").disabled).toBe(true);
+    expect(button("Yes, import and replace my data").disabled).toBe(true);
     const select = document.querySelector("select")!;
     await act(async () => {
       select.value = "aaaa";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
     expect(popUp()).toContain("This data is from “Sonic 3 (patched)”.");
-    await click(button("Replace"));
+    await click(button("Yes, import and replace my data"));
     expect(asked("importGameData")).toEqual([["/backups/in.zip", 0, "aaaa"]]);
   });
 
@@ -198,8 +198,8 @@ describe("the Game data section", () => {
     await shown();
     await click(button("Import"));
     expect(popUp()).toContain("“Sonic 3” is open. Quit it, then try again.");
-    expect(button("Replace").disabled).toBe(true);
-    await click(button("Cancel"));
+    expect(button("Yes, import and replace my data").disabled).toBe(true);
+    await click(button("No, keep my existing data"));
     expect(document.querySelector(".pop-up")).toBeNull();
     expect(asked("importGameData")).toEqual([]);
   });
@@ -214,9 +214,11 @@ describe("the Game data section", () => {
     };
     await shown();
     await click(button("Import"));
-    expect(popUp()).toContain("Replaces the data ofSonic 3");
+    expect(popUp()).toContain(
+      "Importing this data will permanently replace the saves, states and settings ofSonic 3",
+    );
     expect(popUp()).toContain("Not on this computerStreets of Rage");
-    await click(button("Replace"));
+    await click(button("Yes, import and replace my data"));
     expect(asked("importAllGameData")).toEqual([["/backups/in.zip"]]);
     const said = container.querySelector(".game-data-said")?.textContent;
     expect(said).toBe(

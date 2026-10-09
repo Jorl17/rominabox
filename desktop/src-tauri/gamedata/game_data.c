@@ -887,7 +887,7 @@ int rib_game_data_set_aside(const char *zip_path, const char *data_dir, char *er
    written = fs_write_file(path, data, size);
    free(data);
    if (written != 0) {
-      say(error, error_size, "We could not keep the zip for the next start: %s.", strerror(errno));
+      say(error, error_size, "We could not copy the zip into the game's data, to import it when the game starts again: %s.", strerror(errno));
       return -1;
    }
    return 0;

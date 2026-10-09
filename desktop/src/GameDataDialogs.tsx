@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import * as bridge from "./bridge";
 
-/** A pop-up with Cancel and a button labelled `action`, which we turn off
- * while `ready` is false. Pressing it calls `confirm`. */
+/** A pop-up with a button labelled `keep`, which closes it, and one labelled
+ * `action`, which we turn off while `ready` is false. Pressing it calls
+ * `confirm`. */
 function Confirm({
   title,
   action,
+  keep = "Cancel",
   ready = true,
   close,
   confirm,
@@ -13,6 +15,7 @@ function Confirm({
 }: {
   title: string;
   action: string;
+  keep?: string;
   ready?: boolean;
   close: () => void;
   confirm: () => void;
@@ -33,7 +36,7 @@ function Confirm({
         {children}
         <div className="pop-up-actions">
           <button className="secondary" onClick={close} autoFocus>
-            Cancel
+            {keep}
           </button>
           <button className="primary" disabled={!ready} onClick={confirm}>
             {action}
@@ -46,6 +49,13 @@ function Confirm({
 
 /** A game's title in quotation marks. */
 export const quoted = (title: string) => `“${title}”`;
+
+/** The words of both import pop-ups, as in the game's own question. */
+const importing = {
+  title: "Are you sure?",
+  keep: "No, keep my existing data",
+  action: "Yes, import and replace my data",
+};
 
 /** The pop-up for importing a backup of one game. The person picks the game
  * it goes into, and we pick the game with the same identity first when that
@@ -84,8 +94,7 @@ export function ImportOne({
   const chosen = games.find((game) => game.identity === target);
   return (
     <Confirm
-      title="Import game data"
-      action="Replace"
+      {...importing}
       ready={!!chosen && !!check && check.kind !== "refused"}
       close={close}
       confirm={() => chosen && imported(chosen)}
@@ -112,7 +121,8 @@ export function ImportOne({
       {check?.kind === "refused" && <p className="error">{check.detail}</p>}
       {chosen && check && check.kind !== "refused" && (
         <p>
-          It replaces the saves, states and settings of {quoted(chosen.title)}.
+          Importing this data will permanently replace the saves, states and
+          settings of {quoted(chosen.title)}.
         </p>
       )}
     </Confirm>
@@ -134,15 +144,17 @@ export function ImportAll({
   const elsewhere = backups.filter((game) => !game.here);
   return (
     <Confirm
-      title="Import game data"
-      action="Replace"
+      {...importing}
       ready={here.length > 0}
       close={close}
       confirm={confirm}
     >
       {here.length > 0 && (
         <section className="pop-up-section">
-          <h3>Replaces the data of</h3>
+          <h3>
+            Importing this data will permanently replace the saves, states and
+            settings of
+          </h3>
           <ul className="game-data-names">
             {here.map((game) => (
               <li key={game.identity}>{game.title}</li>
