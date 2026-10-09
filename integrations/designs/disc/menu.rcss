@@ -382,5 +382,5 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 .data-dialog-title { font-size: 18dp; color: design(highlight); margin-bottom: 18dp; }
 .data-dialog-copy { font-size: 14dp; line-height: 26dp; max-width: 700dp; color: design(ink); }
 .data-dialog-actions { margin-top: 32dp; }
-.data-dialog-actions button { display: inline-block; box-sizing: border-box; width: 176dp; height: 36dp; margin-right: 24dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
+.data-dialog-actions button { display: inline-block; box-sizing: border-box; height: 36dp; margin-right: 24dp; line-height: 36dp; text-align: left; padding: 0 12dp; white-space: nowrap; font-family: Silkscreen; font-size: 14dp; }
 .data-dialog-actions button.disabled { opacity: 0.4; }

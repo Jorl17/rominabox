@@ -1065,7 +1065,7 @@
       "describes": "the dialog before an import of another game's data, on KEEP MY DATA",
       "screen": "data",
       "set": {"data-import-dialog": {"display": "block"}, "data-import-cancel": {"class": "focused"},
-              "data-import-message": {"text": "THIS DATA IS FROM SONIC 3. IT REPLACES THE SAVES, STATES AND SETTINGS OF THIS GAME. THE GAME THEN RESTARTS."}}
+              "data-import-message": {"text": "THIS DATA IS FROM SONIC 3. IMPORTING IT WILL PERMANENTLY REPLACE YOUR SAVES, STATES AND SETTINGS. THE GAME WILL THEN IMMEDIATELY RESTART."}}
     },
     "data-import-refused": {
       "describes": "the dialog for a zip we cannot import, with IMPORT disabled",
