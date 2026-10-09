@@ -15,7 +15,7 @@
 //! game with no author's shader uses GLSL, unless a preset is only in slang.
 
 use crate::shader_format::{Language, VideoDriver};
-use brightness::BrightnessControl;
+use brightness::{BrightnessControl, CatalogBrightness};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -68,7 +68,7 @@ struct CatalogPreset {
     authors: Option<String>,
     /// The brightness parameter of the preset, if there is one.
     #[serde(default)]
-    brightness: Option<BrightnessControl>,
+    brightness: Option<CatalogBrightness>,
 }
 
 /// How a catalog preset is made.
@@ -599,7 +599,7 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             relative_preset,
             library,
             files: Vec::new(),
-            brightness: preset.brightness.clone().filter(|control| !control.table.is_empty()),
+            brightness: preset.brightness.as_ref().and_then(|entry| entry.control(language)),
             written,
         });
     }

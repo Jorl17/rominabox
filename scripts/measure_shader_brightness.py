@@ -18,11 +18,20 @@ We measure the slang version of a preset where there is one, because on a
 Mac we cannot run the GLSL of some presets with the gl driver (`#version
 130`). A table contains the light of the pictures from one GPU and one card,
 so we keep it as measured and do not check it in a test. In a game in which
-no shader is only in slang, we run the GLSL of each preset. With `--check` we
-write nothing. We measure the presets in `--language` and print how far
-their light is from the table in the catalogue at each value, so that on
-Windows, where we can run that GLSL with the gl driver, someone can confirm
-that one table is right for both languages.
+no shader is only in slang, we run the GLSL of each preset, with the same
+table, unless the preset also has a `glslTable`.
+
+With `--language glsl`, on Windows, where we can run that GLSL with the gl
+driver, we measure the GLSL of each preset that also has a slang version.
+When the GLSL light of a preset differs from its table by more than OWN_TABLE
+at some value, we write the GLSL light into its `glslTable`. We leave every
+`table`, and the presets that have only GLSL, as they are.
+
+With `--check` we write nothing. We measure the presets in `--language` and
+print how far their light is, at each value, from the table for a game in
+that language.
+
+    uv run python scripts/measure_shader_brightness.py --language glsl
 """
 
 from __future__ import annotations
@@ -49,6 +58,9 @@ SETTINGS = ROOT / "vendor/retroarch/menu/drivers/rmlui/settings.inc"
 STEPS = 15
 # We count a rise in light smaller than this as none, and end the table there.
 LEAST_RISE = 0.01
+# When the light of a GLSL version differs from the preset's table by more
+# than this at some value, we give that version a table of its own.
+OWN_TABLE = 0.05
 
 
 def light(picture: Path) -> float:
@@ -190,13 +202,26 @@ def measure(player: Path, card: Path, preset: dict, language: str, work: Path) -
     return table
 
 
-def compare(preset: dict, table: list[tuple[float, float]]) -> str:
-    """How far the light in `table` is from the table of `preset` in the
-    catalogue, at the values in both."""
-    recorded = {value: light for light, value in preset["brightness"]["table"]}
-    differences = [abs(light - recorded[value]) for light, value in table if value in recorded]
+def used(preset: dict, language: str) -> list:
+    """The table of `preset` in the catalogue for a game in `language`."""
+    entry = preset["brightness"]
+    return entry.get("glslTable", entry["table"]) if language == "glsl" else entry["table"]
+
+
+def apart(recorded: list, table: list[tuple[float, float]]) -> list[float]:
+    """How far the light in `table` is from the light in `recorded`, at each
+    value in both."""
+    lights = {value: light for light, value in recorded}
+    return [abs(light - lights[value]) for light, value in table if value in lights]
+
+
+def compare(preset: dict, table: list[tuple[float, float]], language: str) -> str:
+    """How far the light in `table` is from the table of `preset` for a game
+    in `language`, at the values in both."""
+    recorded = used(preset, language)
+    differences = apart(recorded, table)
     if len(differences) < 2:
-        return f"{preset['id']}: rises to {table[-1][0]}x, the table to {max(recorded.values())}x"
+        return f"{preset['id']}: rises to {table[-1][0]}x, the table to {max(light for light, _ in recorded)}x"
     return f"{preset['id']}: at most {max(differences):.3f}x apart over {len(differences)} values"
 
 
@@ -220,9 +245,18 @@ def main() -> int:
             language = arguments.language or ("slang" if files.get("slang") else "glsl")
             if not files.get(language):
                 continue
+            # A GLSL table is for a preset that also has a slang version.
+            own_glsl = arguments.language == "glsl" and bool(files.get("slang"))
+            if arguments.language == "glsl" and not own_glsl and not arguments.check:
+                continue
             table = measure(player, card, preset, language, work)
             if arguments.check:
-                report.append(compare(preset, table))
+                report.append(compare(preset, table, language))
+            elif own_glsl:
+                if len(table) > 1 and max(apart(preset["brightness"]["table"], table), default=0.0) > OWN_TABLE:
+                    preset["brightness"]["glslTable"] = table
+                else:
+                    preset["brightness"].pop("glslTable", None)
             elif len(table) > 1:
                 preset["brightness"]["table"] = table
             else:
@@ -233,7 +267,8 @@ def main() -> int:
     if arguments.check:
         print("\n".join(report))
     else:
-        previews.CATALOG.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        previews.CATALOG.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
+                                    newline="\n")
     return 0
 
 

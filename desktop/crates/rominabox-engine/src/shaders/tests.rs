@@ -805,6 +805,32 @@ fn a_preset_that_adds_light_tells_the_game_how_much() {
     assert!(config.contains("video_pass = \"shaders/video/video.glslp\""), "{config}");
 }
 
+/// A preset with other light in its GLSL version has a table for each
+/// language in the catalogue. We give a GLSL game the GLSL table, and a slang
+/// game, here one with a preset that exists only in slang, the other.
+#[test]
+fn a_game_gets_the_brightness_table_of_its_language() {
+    let catalog: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(crate::repo::at("integrations/shaders/catalog.json")).unwrap())
+            .unwrap();
+    let ntsc = catalog["presets"].as_array().unwrap().iter().find(|preset| preset["id"] == "ntsc-adaptive").unwrap();
+    let line = |key: &str| {
+        let pairs: Vec<String> = ntsc["brightness"][key]
+            .as_array()
+            .unwrap_or_else(|| panic!("ntsc-adaptive has no {key}"))
+            .iter()
+            .map(|pair| format!("{}:{}", pair[0].as_f64().unwrap() as f32, pair[1].as_f64().unwrap() as f32))
+            .collect();
+        format!("shader_brightness_ntsc-adaptive = \"ntsc_bright {}\"", pairs.join(" "))
+    };
+    let glsl_game = composed_from_library(&["ntsc-adaptive"]);
+    let glsl = glsl_game.text("shaders.cfg").unwrap();
+    assert!(glsl.lines().any(|found| found == line("glslTable")), "{glsl}");
+    let slang_game = composed_from_library(&["ntsc-adaptive", "crt-guest-advanced"]);
+    let slang = slang_game.text("shaders.cfg").unwrap();
+    assert!(slang.lines().any(|found| found == line("table")), "{slang}");
+}
+
 /// For an author's shader, we give the game the brightness parameter from its
 /// passes, a plain "brightness" first, at its value in the author's preset,
 /// with the light rising in proportion to the value up to the maximum.

@@ -2,6 +2,7 @@
 //! 100 %, we raise this parameter first and add the rest of the light with our
 //! pass (`crate::video`).
 
+use crate::shader_format::Language;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -26,6 +27,35 @@ impl BrightnessControl {
             .chain(self.table.iter().map(|(light, value)| format!("{light}:{value}")))
             .collect::<Vec<_>>()
             .join(" ")
+    }
+}
+
+/// The brightness parameter of a bundled preset, as the catalogue declares
+/// it: the table we measured from the slang version where there is one, and,
+/// for a preset with other light in its GLSL version, the table we measured
+/// from that version.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct CatalogBrightness {
+    pub(super) parameter: String,
+    #[serde(default)]
+    table: Vec<(f32, f32)>,
+    #[serde(default)]
+    glsl_table: Option<Vec<(f32, f32)>>,
+}
+
+impl CatalogBrightness {
+    /// The control for a game in `language`, or None when the preset has no
+    /// table.
+    pub(super) fn control(&self, language: Language) -> Option<BrightnessControl> {
+        let table = match (language, &self.glsl_table) {
+            (Language::Glsl, Some(glsl)) => glsl,
+            _ => &self.table,
+        };
+        (!table.is_empty()).then(|| BrightnessControl {
+            parameter: self.parameter.clone(),
+            table: table.clone(),
+        })
     }
 }
 
