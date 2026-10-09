@@ -1080,6 +1080,13 @@
     "reset": {
       "describes": "RESET, asking before it removes the game's saves and settings",
       "screen": "reset",
+      "needs": "reset-panel",
+      "set": {}
+    },
+    "uninstall": {
+      "describes": "UNINSTALL, asking before it removes the game and its data",
+      "screen": "uninstall",
+      "needs": "uninstall-panel",
       "set": {}
     },
     "data-import-refused": {
