@@ -5,12 +5,11 @@
 ; Uninstalling removes everything the builder and the games made with it
 ; keep on this computer, saves included, only when the person ticks "Delete
 ; the application data" in the uninstaller. The box starts unticked, and it
-; is not shown in a passive uninstall. A new version's installer uninstalls
-; the old version before installing, with /UPDATE only when the installer
-; itself runs as an update, so the box, not /UPDATE, keeps the games' data
-; through an upgrade. The builder program does each step, before it opens any
-; window (src/installation.rs): it edits the PATH whatever its length, and
-; names what it removes as the builder and the games declare it.
+; is not shown in a passive uninstall. Our installer template (installer.nsi)
+; installs a new version over the same or an older one without uninstalling
+; it. The builder program does each step, before it opens any window
+; (src/installation.rs): it edits the PATH whatever its length, and names
+; what it removes as the builder and the games declare it.
 
 ; The command line's own folder: rominabox-cli and nothing else, so no other
 ; program of the builder answers by name in a terminal. The command line
