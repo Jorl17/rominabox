@@ -9,6 +9,7 @@
 //! we build the installer with, has a string limit of 1,023 characters, so
 //! a longer Path would come back truncated.
 
+use crate::game_library::{forget_sandbox, sandbox_identity};
 use crate::launch_contract::user_folder;
 use std::{
     fs, io,
@@ -16,7 +17,6 @@ use std::{
 };
 use windows_sys::Win32::{
     Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS},
-    Security::Isolation::DeleteAppContainerProfile,
     System::Registry::{
         RegCloseKey, RegCreateKeyExW, RegOpenKeyExW, RegQueryValueExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER,
         KEY_QUERY_VALUE, KEY_SET_VALUE, REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE,
@@ -44,16 +44,6 @@ pub struct Installation {
 
 fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(std::iter::once(0)).collect()
-}
-
-/// We name a game's sandbox with this and the game's identity
-/// (vendor/retroarch/rominabox_launch.h). Its folder in Packages has the
-/// same name, in lower case.
-fn sandbox_prefix() -> &'static str {
-    include_str!("../../../../vendor/retroarch/rominabox_launch.h")
-        .lines()
-        .find_map(|line| line.strip_prefix("#define RIB_GAME_APP_ID_PREFIX \"")?.strip_suffix('"'))
-        .expect("rominabox_launch.h declares RIB_GAME_APP_ID_PREFIX")
 }
 
 /// `path` with `folder` as one more entry, or None when it is already there.
@@ -209,19 +199,13 @@ impl Installation {
             )]);
         }
         let mut failures = Vec::new();
-        let prefix = sandbox_prefix();
         let packages = self.local.join("Packages");
         for entry in fs::read_dir(&packages).into_iter().flatten().flatten() {
             let name = entry.file_name().to_string_lossy().into_owned();
-            let Some(identity) = name
-                .get(..prefix.len())
-                .filter(|start| start.eq_ignore_ascii_case(prefix))
-                .map(|_| &name[prefix.len()..])
-            else {
+            let Some(identity) = sandbox_identity(&name) else {
                 continue;
             };
-            let sandbox = wide(&format!("{prefix}{identity}"));
-            unsafe { DeleteAppContainerProfile(sandbox.as_ptr()) };
+            forget_sandbox(identity);
             remove_tree(&entry.path(), &mut failures);
         }
         for folder in [user_folder!(Games), user_folder!(Runtimes)] {

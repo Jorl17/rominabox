@@ -243,13 +243,13 @@ fn game_data_template(identity: &str) -> String {
 }
 
 /// The game's data folder, below the per-user data folder.
-pub(super) fn game_data_folder(identity: &str) -> String {
+pub(crate) fn game_data_folder(identity: &str) -> String {
     format!("{}/{identity}", user_folder!(Games))
 }
 
 /// Where we unpack a game made into one program (a Windows game,
 /// `windows_pack`), under the per-user data folder.
-pub(super) fn runtime_folder(identity: &str) -> String {
+pub(crate) fn runtime_folder(identity: &str) -> String {
     format!("{}/{identity}", user_folder!(Runtimes))
 }
 

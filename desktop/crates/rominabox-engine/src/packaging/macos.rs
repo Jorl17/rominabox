@@ -239,9 +239,13 @@ impl Packager for MacosPackager {
     }
 }
 
+/// The start of every game's bundle identifier, which ends with the game's
+/// identity. A game's container folder on a Mac has the same name.
+pub(crate) const BUNDLE_PREFIX: &str = "app.rominabox.game.";
+
 /// The identifier in the bundle and the signature of a game.
-fn bundle_identifier(identity: &str) -> String {
-    format!("app.rominabox.game.{identity}")
+pub(crate) fn bundle_identifier(identity: &str) -> String {
+    format!("{BUNDLE_PREFIX}{identity}")
 }
 
 /// `accounts` is the QUICK SIGN IN folder, present exactly when the game has

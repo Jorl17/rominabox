@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use rominabox_engine::export_error::{AuthorError, ErrorStage};
+use rominabox_engine::game_library::{self, Library};
 use rominabox_engine::{
-    builder, controls, hotkeys, icons, menu, metadata, packaging, pads, projects, systems, traveling,
+    builder, controls, game_data, hotkeys, icons, menu, metadata, packaging, pads, projects, systems,
+    traveling,
 };
 use serde_json::json;
 use std::{
@@ -327,6 +329,51 @@ fn custom_shader_name(path: PathBuf) -> String {
     rominabox_engine::shaders::named_after_file(&path)
 }
 
+/// Run `work` on the games on this computer, away from the window's thread.
+/// We call the same functions in the game-data commands of the command line.
+async fn with_library<T: Send + 'static>(
+    work: impl FnOnce(Library) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(move || work(Library::here()?))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn games() -> Result<Vec<game_library::InstalledGame>, String> {
+    with_library(|library| Ok(library.games())).await
+}
+
+#[tauri::command]
+async fn game_data_export(identities: Option<Vec<String>>, zip: PathBuf) -> Result<Vec<game_data::Game>, String> {
+    with_library(move |library| library.export(identities.as_deref(), &zip)).await
+}
+
+#[tauri::command]
+async fn game_data_open(zip: PathBuf) -> Result<Vec<game_library::BackupGame>, String> {
+    with_library(move |library| library.open(&zip)).await
+}
+
+#[tauri::command]
+async fn game_data_check(zip: PathBuf, which: usize, identity: String) -> Result<game_data::Check, String> {
+    with_library(move |library| Ok(library.check(&zip, which, &identity))).await
+}
+
+#[tauri::command]
+async fn game_data_import(zip: PathBuf, which: usize, identity: String) -> Result<(), String> {
+    with_library(move |library| library.import(&zip, which, &identity)).await
+}
+
+#[tauri::command]
+async fn game_data_import_all(zip: PathBuf) -> Result<game_library::BulkImport, String> {
+    with_library(move |library| library.import_all(&zip)).await
+}
+
+#[tauri::command]
+async fn game_data_remove(identity: String) -> Result<(), String> {
+    with_library(move |library| library.remove(&identity)).await
+}
+
 /// Wait for a press on a controller and return its pad position.
 #[tauri::command]
 async fn capture_pad_position(seconds: u64) -> Result<Option<String>, String> {
@@ -514,7 +561,14 @@ fn main() {
             before_export,
             custom_shader_name,
             capture_pad_position,
-            cancel_pad_capture
+            cancel_pad_capture,
+            games,
+            game_data_export,
+            game_data_open,
+            game_data_check,
+            game_data_import,
+            game_data_import_all,
+            game_data_remove
         ])
         .run(context)
         .expect("failed to run ROM-in-a-Box desktop shell");

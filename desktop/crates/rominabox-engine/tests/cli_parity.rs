@@ -3,10 +3,13 @@
 //! controller variants in the Controls step, a lookup in the builder's cache,
 //! the preview in the Menu step, the refusal of a project with a palette this
 //! build lacks, the warnings on an author's filter that a Windows game may not
-//! load, and the name of a filter nobody named.
+//! load, the name of a filter nobody named, and the games on this computer
+//! with their data in the Game data section.
 
 use rominabox_engine::builder::{self, defaults, Places};
 use rominabox_engine::game::Game;
+use rominabox_engine::game_data::Game as GameData;
+use rominabox_engine::game_library::{Layout, Library};
 use rominabox_engine::packaging::ExportTarget;
 use rominabox_engine::projects::{save_project, ProjectSaveRequest};
 use rominabox_scratch::Scratch;
@@ -307,4 +310,66 @@ fn a_custom_shader_without_a_name_is_named_after_its_file() {
     assert!(names.contains(&"pal-r57shell"), "{listed}");
     // We call the same function in the builder when the author adds a file.
     assert_eq!(rominabox_engine::shaders::named_after_file(&root.join("pal-r57shell.GLSL")), "pal-r57shell");
+}
+
+/// A game in `library`, with a manifest and a save, whose app is at `app`.
+fn installed_game(library: &Library, identity: &str, title: &str, app: &Path) -> GameData {
+    let game = GameData {
+        identity: identity.into(),
+        title: title.into(),
+        system: "megadrive".into(),
+        console: "Mega Drive / Genesis".into(),
+        content: title.into(),
+        app: app.to_string_lossy().into_owned(),
+        ..GameData::default()
+    };
+    let data = library.data_dir(identity);
+    fs::create_dir_all(data.join("saves")).unwrap();
+    rominabox_engine::game_data::write_manifest(&data, &game).unwrap();
+    fs::write(data.join(format!("saves/{title}.srm")), title).unwrap();
+    game
+}
+
+/// In the Game data section and in the game-data commands we list the same
+/// games, read the same zip, check and import the same backup, import the
+/// same bulk backup and remove the same game, and give the same refusal.
+#[test]
+fn game_data_commands_print_what_the_builders_section_shows() {
+    let root = Scratch::dir("rominabox-cli-game-data");
+    let library = Library::at(root.join("games"), Layout::of_host().unwrap());
+    let request = |more: Value| {
+        let mut request = json!({ "root": root.join("games") });
+        request.as_object_mut().unwrap().extend(more.as_object().unwrap().clone());
+        request
+    };
+    let sonic = installed_game(&library, "aaaaaaaaaaaaaaaaaaaaaaaa", "Sonic 3", &root.join("Sonic 3.app"));
+    let knuckles = installed_game(&library, "bbbbbbbbbbbbbbbbbbbbbbbb", "Knuckles", &root.join("Knuckles.app"));
+    fs::create_dir_all(&knuckles.app).unwrap();
+
+    let listed = result("games", Some(&request(json!({}))));
+    assert_eq!(listed["games"], serde_json::to_value(library.games()).unwrap());
+
+    let zip = root.join("every.zip");
+    let exported = result("game-data-export", Some(&request(json!({ "zip": zip }))));
+    assert_eq!(exported["games"], json!([knuckles, sonic]));
+    let opened = result("game-data-open", Some(&request(json!({ "zip": zip }))));
+    assert_eq!(opened["games"], serde_json::to_value(library.open(&zip).unwrap()).unwrap());
+
+    let one = root.join("sonic.zip");
+    result("game-data-export", Some(&request(json!({ "zip": one, "identities": [sonic.identity] }))));
+    let check = result("game-data-check", Some(&request(json!({ "zip": one, "identity": knuckles.identity }))));
+    assert_eq!(check, serde_json::to_value(library.check(&one, 0, &knuckles.identity)).unwrap());
+    assert_eq!(check["kind"], "otherGame", "{check}");
+    result("game-data-import", Some(&request(json!({ "zip": one, "identity": knuckles.identity }))));
+    let saves = library.data_dir(&knuckles.identity).join("saves");
+    assert_eq!(fs::read_to_string(saves.join("Knuckles.srm")).unwrap(), "Sonic 3");
+
+    let bulk = result("game-data-import-all", Some(&request(json!({ "zip": zip }))));
+    assert_eq!(bulk, serde_json::to_value(library.import_all(&zip).unwrap()).unwrap());
+
+    let (removed, lines, printed) = run("game-data-remove", Some(&request(json!({ "identity": knuckles.identity }))));
+    assert!(!removed, "{printed}");
+    assert_eq!(lines.last().unwrap()["message"], library.remove(&knuckles.identity).unwrap_err());
+    result("game-data-remove", Some(&request(json!({ "identity": sonic.identity }))));
+    assert_eq!(library.games().len(), 1);
 }
