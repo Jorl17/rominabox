@@ -1067,6 +1067,11 @@
       "set": {"data-import-dialog": {"display": "block"}, "data-import-cancel": {"class": "focused"},
               "data-import-message": {"text": "THIS DATA IS FROM SONIC 3. IMPORTING IT WILL PERMANENTLY REPLACE YOUR SAVES, STATES AND SETTINGS. THE GAME WILL THEN IMMEDIATELY RESTART."}}
     },
+    "video": {
+      "describes": "VIDEO, with brightness, contrast, SHADERS and BACK",
+      "screen": "video",
+      "set": {}
+    },
     "restart": {
       "describes": "RESTART, asking before it starts the game over",
       "screen": "restart",
