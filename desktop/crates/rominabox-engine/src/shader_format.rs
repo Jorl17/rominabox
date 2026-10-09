@@ -11,6 +11,7 @@
 //! of each language, and a preset by its count of passes or by the preset it
 //! builds on.
 
+use crate::packaging::ExportTarget;
 use std::fs;
 use std::path::Path;
 
@@ -91,6 +92,27 @@ impl Language {
             Language::Glsl => "GLSL",
             Language::Slang => "slang",
         }
+    }
+}
+
+/// The GLSL version of a pass: the number on its `#version` line, or 110,
+/// the version of a GLSL pass without that line.
+pub fn glsl_version(text: &str) -> u32 {
+    text.lines()
+        .filter_map(|line| line.trim().strip_prefix('#'))
+        .find_map(|directive| directive.trim_start().strip_prefix("version"))
+        .and_then(|rest| rest.split_whitespace().next()?.parse().ok())
+        .unwrap_or(110)
+}
+
+/// The newest GLSL version that compiles in a game on `platform`, or none
+/// when every version in libretro's passes compiles there. On a Mac,
+/// RetroArch's OpenGL driver has an OpenGL 2.1 context, in which GLSL above
+/// version 120 does not compile.
+pub fn newest_glsl(platform: ExportTarget) -> Option<u32> {
+    match platform {
+        ExportTarget::Macos => Some(120),
+        ExportTarget::Windows => None,
     }
 }
 
@@ -252,6 +274,16 @@ mod tests {
     fn each_language_runs_on_its_own_driver() {
         assert_eq!(Language::Glsl.video_driver().name(), "gl");
         assert_eq!(Language::Slang.video_driver().name(), "glcore");
+    }
+
+    /// libretro's crt-royale passes start with `#version 130`, and a GLSL
+    /// pass without a `#version` line is version 110.
+    #[test]
+    fn the_glsl_version_of_a_pass_is_on_its_version_line() {
+        assert_eq!(glsl_version("#version 130\n\n// crt-royale\n"), 130);
+        assert_eq!(glsl_version("// notice\n  # version 120\nvoid main() {}\n"), 120);
+        assert_eq!(glsl_version("#version 300 es\n"), 300);
+        assert_eq!(glsl_version(GLSL), 110);
     }
 
     #[test]

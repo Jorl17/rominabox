@@ -103,9 +103,17 @@ pub const MANAGED_DATA_DIRECTORIES: &[&str] = &[
     "filters/audio",
 ];
 
+/// The platform of `request` and the shader library of its kit.
+fn shader_destination(request: &ExportRequest) -> crate::shaders::Destination {
+    crate::shaders::Destination {
+        platform: request.game.target,
+        library: crate::shaders::kit_library(&request.runtime_kit),
+    }
+}
+
 pub(super) fn isolated_runtime_config(request: &ExportRequest) -> Result<String, ExportError> {
     // We choose the video driver by the shader language of the game.
-    let video = crate::shaders::video_driver(&request.game.shaders)
+    let video = crate::shaders::video_driver(&request.game.shaders, &shader_destination(request))
         .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
         .name();
     let menu_driver = if request.game.show_menu || request.game.splash {
@@ -288,7 +296,7 @@ pub(super) fn write_launch_plan(
         ));
     }
     let shader_initial = if request.game.show_menu {
-        crate::shaders::launch_preset(&request.game.shaders)
+        crate::shaders::launch_preset(&request.game.shaders, &shader_destination(request))
             .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
             .unwrap_or_default()
     } else {

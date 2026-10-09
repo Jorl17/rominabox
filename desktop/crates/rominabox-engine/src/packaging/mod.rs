@@ -67,6 +67,8 @@ pub enum ExportTarget {
 }
 
 impl ExportTarget {
+    pub const ALL: [ExportTarget; 2] = [ExportTarget::Macos, ExportTarget::Windows];
+
     /// The platform for exports from a builder on the host, or `None` on a
     /// host that we do not build for.
     pub fn of_host() -> Option<ExportTarget> {

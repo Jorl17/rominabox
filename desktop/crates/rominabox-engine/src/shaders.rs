@@ -11,9 +11,12 @@
 //! libretro presets in the shader library of the runtime kit as their packs
 //! lay them out, one folder per language, and copy the files of a preset into
 //! a game at the same paths in the same folder. So every path in the preset
-//! still leads to its file, and we copy a file that presets share once. A
-//! game with no author's shader uses GLSL, unless a preset is only in slang.
+//! still leads to its file, and we copy a file that presets share once. We
+//! make a game with no author's shader in GLSL, unless a preset is only in
+//! slang, or its GLSL does not compile on the game's platform and it has a
+//! slang version (`shader_format::newest_glsl`).
 
+use crate::packaging::ExportTarget;
 use crate::shader_format::{Language, VideoDriver};
 use brightness::{BrightnessControl, CatalogBrightness};
 use serde::{Deserialize, Serialize};
@@ -193,6 +196,15 @@ impl ShaderSelection {
     pub fn is_empty(&self) -> bool {
         self.bundled.iter().all(|id| id == UNFILTERED_ID) && self.custom.is_empty()
     }
+}
+
+/// Where we make a game: its platform, and the shader library of its runtime
+/// kit, from which we read the GLSL version of the libretro presets. Every
+/// kit has the same shader library.
+#[derive(Clone, Debug)]
+pub struct Destination {
+    pub platform: ExportTarget,
+    pub library: PathBuf,
 }
 
 /// One item in a bundled list, after we have checked catalog ids and custom
@@ -413,8 +425,10 @@ fn unfiltered() -> ResolvedShader {
 }
 
 /// Check a selection. Return nothing for an empty one, which is the usual case.
+/// The checks do not depend on the destination, because we choose slang for
+/// a platform only when every libretro preset in the game has a slang version.
 pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, String> {
-    Ok(resolved(selection)?.1)
+    Ok(resolved(selection, None)?.1)
 }
 
 /// A filter from the author that a Windows game may fail to load, because one
@@ -464,8 +478,15 @@ pub fn windows_warnings(selection: &ShaderSelection) -> Result<Vec<ShaderWarning
 
 /// The video driver for a game with this selection. We choose it from the
 /// language of the shaders, and use the GLSL driver for a game with none.
-pub fn video_driver(selection: &ShaderSelection) -> Result<VideoDriver, String> {
-    Ok(resolved(selection)?.0.video_driver())
+pub fn video_driver(selection: &ShaderSelection, destination: &Destination) -> Result<VideoDriver, String> {
+    Ok(resolved(selection, Some(destination))?.0.video_driver())
+}
+
+/// The newest GLSL version among the passes of a libretro preset, by its path
+/// in the GLSL folder of `library`.
+fn library_glsl_version(library: &Path, path: &str) -> Result<u32, String> {
+    let preset = library.join(library_folder(Language::Glsl)).join(path);
+    crate::shader_preset::preset(&preset)?.1.glsl_version()
 }
 
 /// A shader the author added: whether it is a preset or a single pass,
@@ -500,7 +521,13 @@ fn authored(path: &Path) -> Result<Authored, String> {
 }
 
 /// The language of every shader in a selection, and each shader resolved.
-fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader>), String> {
+/// With a destination, we choose slang for a game without an author's shader
+/// when the GLSL of a libretro preset does not compile on its platform and
+/// every libretro preset in the game has a slang version.
+fn resolved(
+    selection: &ShaderSelection,
+    destination: Option<&Destination>,
+) -> Result<(Language, Vec<ResolvedShader>), String> {
     if selection.is_empty() {
         if selection.initial.is_some() {
             return Err("Choose a shader before setting which one starts.".into());
@@ -533,13 +560,36 @@ fn resolved(selection: &ShaderSelection) -> Result<(Language, Vec<ResolvedShader
             chosen.push(preset);
         }
     }
+    // The GLSL version of each libretro preset, when a version does not
+    // compile on the destination's platform.
+    let newest = destination.and_then(|destination| crate::shader_format::newest_glsl(destination.platform));
+    let mut library_versions: Vec<(&str, u32)> = Vec::new();
+    if let (Some(destination), Some(_)) = (destination, newest) {
+        for preset in &chosen {
+            if let Made::Files(LibraryPreset { glsl: Some(path), .. }) = &preset.made {
+                library_versions.push((&preset.id, library_glsl_version(&destination.library, path)?));
+            }
+        }
+    }
+    let library_version = |id: &str| library_versions.iter().find(|(seen, _)| *seen == id).map(|(_, version)| *version);
+    let every_preset_in_slang = chosen.iter().all(|preset| match &preset.made {
+        Made::Files(files) => files.slang.is_some(),
+        Made::Fragment(_) => true,
+    });
     // We take the language of the author's shader, or slang when a preset
-    // exists only in slang, or else GLSL.
+    // exists only in slang or its GLSL does not compile on the platform, or
+    // else GLSL.
     let named = authors.iter().map(|(name, _, author)| (name.as_str(), author.language));
     let decided = match crate::shader_format::one_language(named)? {
         Some(language) => Some((authors[0].0.as_str(), language)),
         None => chosen.iter().find_map(|preset| match &preset.made {
             Made::Files(files) if files.glsl.is_none() => {
+                Some((preset.name.as_str(), Language::Slang))
+            }
+            Made::Files(_)
+                if every_preset_in_slang
+                    && library_version(&preset.id).zip(newest).is_some_and(|(version, newest)| version > newest) =>
+            {
                 Some((preset.name.as_str(), Language::Slang))
             }
             _ => None,
@@ -733,19 +783,20 @@ fn icon_png(id: &str) -> Result<Vec<u8>, String> {
 /// We return the rows and do not write them, because every list goes in at one
 /// marker in the menu, which we replace once with all the lists together.
 ///
-/// `library` is the shader library of the runtime kit, from which we take the
-/// files of a libretro preset.
+/// In `destination` is the shader library of the runtime kit, from which we
+/// take the files of a libretro preset.
 ///
 /// In a game with VIDEO (`video`) we add our pass for the light and contrast
 /// of the picture, in the game's shader language (`crate::video`).
 pub fn stage(
     manifest: &crate::menu::Manifest,
     selection: &ShaderSelection,
-    library: &Path,
+    destination: &Destination,
     video: bool,
 ) -> Result<StagedShaders, String> {
     use crate::menu::Content;
-    let (language, resolved) = resolved(selection)?;
+    let library = &destination.library;
+    let (language, resolved) = resolved(selection, Some(destination))?;
     let (video_files, video_config) = if video {
         let (files, preset) = crate::video::files(language);
         (
@@ -849,8 +900,8 @@ pub fn stage(
 
 /// The preset to pass to RetroArch at launch, relative to the menu assets.
 /// For the unfiltered choice and an empty selection, we leave shaders off.
-pub fn launch_preset(selection: &ShaderSelection) -> Result<Option<String>, String> {
-    let resolved = resolve(selection)?;
+pub fn launch_preset(selection: &ShaderSelection, destination: &Destination) -> Result<Option<String>, String> {
+    let (_, resolved) = resolved(selection, Some(destination))?;
     if resolved.is_empty() {
         return Ok(None);
     }

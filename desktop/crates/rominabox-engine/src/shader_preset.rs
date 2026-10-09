@@ -88,6 +88,19 @@ pub struct Layout {
     /// The files the shader names, each as (source, its path from there with
     /// `/` between parts).
     pub files: Vec<(PathBuf, String)>,
+    /// Its passes, which are the author's own file for a lone pass.
+    pub passes: Vec<PathBuf>,
+}
+
+impl Layout {
+    /// The newest GLSL version among its passes (`shader_format::glsl_version`).
+    pub fn glsl_version(&self) -> Result<u32, String> {
+        let mut newest = 0;
+        for pass in &self.passes {
+            newest = newest.max(crate::shader_format::glsl_version(&crate::shader_format::text(pass)?));
+        }
+        Ok(newest)
+    }
 }
 
 /// A preset's layout, and the language its passes share.
@@ -96,11 +109,13 @@ pub fn preset(path: &Path) -> Result<(Language, Layout), String> {
     let mut files = Vec::new();
     let mut passes = Vec::new();
     collect_files(&path, 0, &mut files, &mut passes)?;
-    let languages = passes
-        .iter()
-        .map(|(name, language)| (name.as_str(), *language));
+    let names: Vec<String> = passes.iter().map(|(pass, _)| crate::shader_format::name(pass)).collect();
+    let languages = names.iter().zip(&passes).map(|(name, (_, language))| (name.as_str(), *language));
     match one_language(languages)? {
-        Some(language) => Ok((language, laid_out(&path, &files)?)),
+        Some(language) => {
+            let passes = passes.into_iter().map(|(pass, _)| pass).collect();
+            Ok((language, laid_out(&path, &files, passes)?))
+        }
         None => Err("a shader preset names no shader pass".into()),
     }
 }
@@ -113,16 +128,16 @@ pub fn pass(path: &Path, language: Language) -> Result<Layout, String> {
         Language::Slang => includes(&path)?,
         Language::Glsl => Vec::new(),
     };
-    laid_out(&path, &included)
+    laid_out(&path, &included, vec![path.clone()])
 }
 
-/// Add the files `preset` lists to `files`, and its passes, by name and
+/// Add the files `preset` lists to `files`, and its passes, with their
 /// language, to `passes`.
 fn collect_files(
     preset: &Path,
     depth: usize,
     files: &mut Vec<PathBuf>,
-    passes: &mut Vec<(String, Language)>,
+    passes: &mut Vec<(PathBuf, Language)>,
 ) -> Result<(), String> {
     if depth > REFERENCE_DEPTH {
         return Err("shader presets reference each other too deeply".into());
@@ -180,7 +195,7 @@ fn collect_files(
             .map_err(|error| format!("shader preset line {line_number} {error}"))?;
         if is_pass {
             let language = require_runnable_pass(&source)?;
-            passes.push((crate::shader_format::name(&source), language));
+            passes.push((source.clone(), language));
             if language == Language::Slang {
                 for included in includes(&source)? {
                     add_file(files, included);
@@ -254,8 +269,9 @@ fn included(line: &str) -> Option<&str> {
     Some(value)
 }
 
-/// `own` and the files it lists, below the lowest folder that contains them.
-fn laid_out(own: &Path, files: &[PathBuf]) -> Result<Layout, String> {
+/// `own` and the files it lists, below the lowest folder that contains them,
+/// with its passes.
+fn laid_out(own: &Path, files: &[PathBuf], passes: Vec<PathBuf>) -> Result<Layout, String> {
     let folder_of = |file: &Path| file.parent().unwrap_or(file).to_path_buf();
     let mut root = folder_of(own);
     for file in files {
@@ -272,6 +288,7 @@ fn laid_out(own: &Path, files: &[PathBuf]) -> Result<Layout, String> {
             .iter()
             .map(|file| Ok((file.clone(), from(&root, file)?)))
             .collect::<Result<_, String>>()?,
+        passes,
     })
 }
 

@@ -285,12 +285,11 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     if request.discs > 1 {
         lists.extend(crate::disc_menu::list(&manifest));
     }
-    let shaders = crate::shaders::stage(
-        &manifest,
-        &request.shaders,
-        &request.shader_library,
-        settings.video.is_some(),
-    )?;
+    let destination = crate::shaders::Destination {
+        platform: request.target,
+        library: request.shader_library.clone(),
+    };
+    let shaders = crate::shaders::stage(&manifest, &request.shaders, &destination, settings.video.is_some())?;
     for (name, content) in shaders.files {
         composition.put(name, content);
     }

@@ -224,7 +224,11 @@ fn launch_state(request: &packaging::ExportRequest, assets: &Path, data: &Path) 
             relative => assets.join(relative).display().to_string(),
         });
     let initial = if request.game.show_menu {
-        shaders::launch_preset(&request.game.shaders)
+        let destination = shaders::Destination {
+            platform: request.game.target,
+            library: shaders::kit_library(&request.runtime_kit),
+        };
+        shaders::launch_preset(&request.game.shaders, &destination)
             .unwrap()
             .map(|relative| assets.join(relative).display().to_string())
     } else {

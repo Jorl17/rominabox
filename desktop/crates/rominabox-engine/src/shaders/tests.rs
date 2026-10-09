@@ -45,14 +45,14 @@ fn a_slang_preset_is_staged_as_slang_and_runs_on_glcore() {
     );
     let resolved = resolve(&selection).unwrap();
     assert_eq!(resolved[1].relative_preset, "shaders/pal/crt.slangp");
-    assert_eq!(video_driver(&selection).unwrap(), VideoDriver::Glcore);
-    assert_eq!(video_driver(&ShaderSelection::default()).unwrap(), VideoDriver::Gl);
+    assert_eq!(video_driver(&selection, &on(ExportTarget::Windows)).unwrap(), VideoDriver::Glcore);
+    assert_eq!(video_driver(&ShaderSelection::default(), &on(ExportTarget::Windows)).unwrap(), VideoDriver::Gl);
     let glsl = custom_preset(
         &root,
         "pal.glslp",
         &[("pal.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
     );
-    assert_eq!(video_driver(&glsl).unwrap(), VideoDriver::Gl);
+    assert_eq!(video_driver(&glsl, &on(ExportTarget::Windows)).unwrap(), VideoDriver::Gl);
     let _ = fs::remove_dir_all(&root);
 }
 
@@ -111,7 +111,7 @@ fn catalog_presets_are_written_in_a_slang_game_s_language() {
     assert!(preset.contains("shader0 = scanlines.slang"), "{preset}");
     assert!(staged.join("shaders/crt/crt.slang").is_file());
     assert_eq!(
-        launch_preset(&selection).unwrap().as_deref(),
+        launch_preset(&selection, &on(ExportTarget::Windows)).unwrap().as_deref(),
         Some("shaders/scanlines/scanlines.slangp")
     );
     let _ = fs::remove_dir_all(&root);
@@ -165,7 +165,7 @@ fn bundling_a_preset_uses_the_row_and_writes_glsl() {
             bundled: vec!["scanlines".into(), "phosphor".into()],
             initial: Some("phosphor".into()),
             custom: Vec::new(),
-        })
+        }, &on(ExportTarget::Windows))
         .unwrap()
         .as_deref(),
         Some("shaders/phosphor/phosphor.glslp")
@@ -293,7 +293,7 @@ fn a_preset_takes_the_files_it_names_from_a_neighbouring_folder() {
         ["crt/royale-pal.glslp", "icon.png", "pal/resources/lut.png", "pal/shaders/pal.glsl"]
     );
     assert_eq!(
-        launch_preset(&selection).unwrap().as_deref(),
+        launch_preset(&selection, &on(ExportTarget::Windows)).unwrap().as_deref(),
         Some("shaders/pal/crt/royale-pal.glslp")
     );
 }
@@ -350,7 +350,7 @@ fn a_staged_preset_resolves_inside_its_own_folder() {
     let root = rominabox_scratch::Scratch::dir("rominabox-shader-walk-staged");
     composed(selection.clone()).write(&root).unwrap();
     let staged = root.join("shaders/pal");
-    let preset = launch_preset(&selection).unwrap().unwrap();
+    let preset = launch_preset(&selection, &on(ExportTarget::Windows)).unwrap().unwrap();
     let again = resolve(&ShaderSelection {
         custom: vec![CustomShader { name: Some("PAL".into()), path: root.join(&preset) }],
         ..selection.clone()
@@ -564,7 +564,13 @@ fn library() -> std::path::PathBuf {
     crate::repo::at("integrations/shaders/library")
 }
 
-/// The menu we compose at export with these catalog presets, from the library.
+/// A game for `platform`, with the shader library in the repository.
+fn on(platform: ExportTarget) -> Destination {
+    Destination { platform, library: library() }
+}
+
+/// The menu we compose at export with these catalog presets, from the
+/// library, for a Windows game, in which every GLSL version compiles.
 fn composed_from_library(bundled: &[&str]) -> crate::menu::Composition {
     crate::menu::compose_menu(&crate::menu::MenuRequest {
         shaders: ShaderSelection {
@@ -572,6 +578,7 @@ fn composed_from_library(bundled: &[&str]) -> crate::menu::Composition {
             ..Default::default()
         },
         shader_library: library(),
+        target: ExportTarget::Windows,
         menu_entries: Some(vec!["controls".into(), "video".into(), "shaders".into()]),
         ..crate::menu::MenuRequest::new(
             crate::repo::at("integrations/designs/native"),
@@ -613,7 +620,53 @@ fn a_libretro_preset_is_staged_whole_at_its_paths_in_its_pack() {
     let config = composed.text("shaders.cfg").unwrap();
     assert!(config.contains("shader_preset_crt-royale = \"shaders/glsl/crt/crt-royale.glslp\""), "{config}");
     let selection = ShaderSelection { bundled: vec!["crt-royale".into()], ..Default::default() };
-    assert_eq!(video_driver(&selection).unwrap(), VideoDriver::Gl);
+    assert_eq!(video_driver(&selection, &on(ExportTarget::Windows)).unwrap(), VideoDriver::Gl);
+}
+
+/// On a Mac, GLSL above version 120 does not compile. So we make a Mac game
+/// with a preset whose GLSL passes are version 130 in slang, unless the
+/// author's own shaders are GLSL. A preset whose GLSL compiles on a Mac stays
+/// in GLSL, and every preset stays in GLSL on Windows.
+#[test]
+fn a_mac_game_takes_slang_where_the_glsl_of_a_preset_does_not_compile() {
+    let mac = on(ExportTarget::Macos);
+    for id in ["crt-royale", "crt-royale-pal", "ntsc-adaptive", "lcd-grid-v2"] {
+        let selection = ShaderSelection { bundled: vec![id.into(), "scanlines".into()], ..Default::default() };
+        assert_eq!(video_driver(&selection, &mac).unwrap(), VideoDriver::Glcore, "{id}");
+        assert_eq!(video_driver(&selection, &on(ExportTarget::Windows)).unwrap(), VideoDriver::Gl, "{id}");
+    }
+    let lottes = ShaderSelection { bundled: vec!["crt-lottes".into()], ..Default::default() };
+    assert_eq!(video_driver(&lottes, &mac).unwrap(), VideoDriver::Gl);
+    let root = rominabox_scratch::Scratch::dir("rominabox-shader-mac-glsl");
+    let mut theirs = custom_preset(
+        &root,
+        "mine.glslp",
+        &[("mine.glslp", "shaders = 1\nshader0 = pass.glsl\n"), ("pass.glsl", PASS)],
+    );
+    theirs.bundled = vec!["crt-royale".into()];
+    theirs.initial = None;
+    assert_eq!(video_driver(&theirs, &mac).unwrap(), VideoDriver::Gl);
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// Every libretro preset in the catalogue has a GLSL version that compiles on
+/// every platform or a slang version, so on every platform we can make a game
+/// with only our presets in which every shader loads.
+#[test]
+fn every_catalog_preset_has_a_version_that_compiles_on_every_platform() {
+    for preset in catalog_file().unwrap().presets {
+        let Made::Files(files) = &preset.made else {
+            continue;
+        };
+        if files.slang.is_some() {
+            continue;
+        }
+        let version = library_glsl_version(&library(), files.glsl.as_deref().unwrap()).unwrap();
+        for platform in ExportTarget::ALL {
+            let newest = crate::shader_format::newest_glsl(platform).unwrap_or(u32::MAX);
+            assert!(version <= newest, "{} has only GLSL {version}, which does not compile on {platform:?}", preset.id);
+        }
+    }
 }
 
 /// When a libretro preset exists only in slang, the game uses slang, and we
@@ -624,7 +677,7 @@ fn a_preset_only_in_slang_makes_the_game_slang() {
         bundled: vec!["crt-easymode".into(), "crt-guest-advanced".into(), "scanlines".into()],
         ..Default::default()
     };
-    assert_eq!(video_driver(&selection).unwrap(), VideoDriver::Glcore);
+    assert_eq!(video_driver(&selection, &on(ExportTarget::Windows)).unwrap(), VideoDriver::Glcore);
     let presets: Vec<String> = resolve(&selection).unwrap().into_iter().map(|item| item.relative_preset).collect();
     assert_eq!(
         presets,
