@@ -98,6 +98,23 @@ int main(int argc, char **argv) {
       rib_game_data_file_name(games, name, sizeof name);
       expect(!strcmp(name, "Sonic- 3-Knuckles data.zip"), "we suggest a file name every system allows");
    }
+   {
+      /* "A" and 22 katakana of three bytes each, longer than a name we
+       * suggest, which ends at 63 bytes, inside the 21st katakana. */
+      char title[128] = "A";
+      char shortened[128] = "A";
+      char name[256];
+      int letter;
+      for (letter = 0; letter < 22; letter++) {
+         strcat(title, "\xe3\x82\xbd");
+         if (letter < 20)
+            strcat(shortened, "\xe3\x82\xbd");
+      }
+      strcat(shortened, " data.zip");
+      rib_game_set(games, "title", title);
+      rib_game_data_file_name(games, name, sizeof name);
+      expect(!strcmp(name, shortened), "we shorten a long title between characters");
+   }
    rib_games_free(games);
    expect(rib_game_data_set_aside(zip, target, error, sizeof error) == 0, "the menu sets the zip aside");
    expect(exists(target, "import.zip"), "beside the game's data");
