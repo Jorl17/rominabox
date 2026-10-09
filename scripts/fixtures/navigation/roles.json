@@ -56,19 +56,46 @@
       }
     },
     {
-      "name": "DATA, last in Options, opens on EXPORT DATA, Right is IMPORT DATA, and Back is Options again on DATA",
+      "name": "DATA, last in Options, opens on EXPORT DATA, IMPORT DATA is to its right, or below it in Disc's column, and Back is Options again on DATA",
       "menu": "md3-with-data",
-      "steps": [
-        "options",
-        "data",
-        "key:right",
-        "key:cancel"
-      ],
+      "steps": {
+        "*": [
+          "options",
+          "data",
+          "key:right",
+          "key:cancel"
+        ],
+        "disc": [
+          "options",
+          "data",
+          "key:down",
+          "key:cancel"
+        ]
+      },
       "focused": {
         "*": [
           "volume-level",
           "data-export",
           "data-import",
+          "data"
+        ]
+      },
+      "screen": {
+        "*": "options-panel"
+      }
+    },
+    {
+      "name": "BACK on DATA is Options again, on DATA",
+      "menu": "md3-with-data",
+      "steps": [
+        "options",
+        "data",
+        "data-back"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "data-export",
           "data"
         ]
       },

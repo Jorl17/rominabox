@@ -265,7 +265,7 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #brightness-level.focused #brightness-level-thumb, #contrast-level.focused #contrast-level-thumb { background-color: #193e88; border-color: #fff13d; border-left-width: 3dp; }
 #brightness-level.dragging #brightness-level-thumb, #contrast-level.dragging #contrast-level-thumb { background-color: #fff13d; border-color: #ffffff; }
 .video-shaders { position: absolute; left: 24dp; top: 168dp; }
-#video-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
+#video-back, #data-back { position: absolute; left: 766dp; top: 508dp; width: 176dp; height: 36dp; line-height: 36dp; font-family: Silkscreen; font-size: 14dp; border-width: 1dp; text-align: center; }
 
 #disc-face { position: absolute; left: 250dp; top: 100dp; width: 280dp; height: 280dp; border-radius: 140dp; background-color: #75b2e4; border: 14dp #fff13d; }
 #disc-hole { position: absolute; left: 116dp; top: 116dp; width: 48dp; height: 48dp; border-radius: 24dp; background-color: #041738; }
@@ -364,25 +364,20 @@ body.overlay #unlock-row[data-notice=slot] { display: block; }
 #hotkeys-list .list-pager { top: 452dp; }
 
 /* On the screens where we ask before UNINSTALL, RESET or RESTART, we show what
- * happens and what stays, then a button to go back and a button to go ahead,
- * under the heading and drawn like the buttons of the pause screen. */
+ * happens and what stays, then a button to go back above a button to go
+ * ahead, under the heading and drawn like the column of the pause screen. */
 .confirm-copy { position: absolute; left: 24dp; top: 64dp; width: 700dp; font-size: 14dp; line-height: 26dp; color: #ffffff; }
 .confirm-stays { top: 136dp; color: #fff13d; }
-.confirm-actions { position: absolute; left: 24dp; top: 196dp; width: 700dp; height: 40dp; }
-.confirm-actions button { position: absolute; top: 0; width: 176dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
-#forget-back, #restart-back { left: 0; }
-#forget-confirm, #restart-confirm { left: 200dp; }
-/* DATA: EXPORT DATA and IMPORT DATA where the confirm screens have their
- * buttons, the line where we say how it went, and the dialog where we ask
- * before an import, over the page. */
-#data-export { left: 0; }
-#data-import { left: 200dp; }
-.data-status { position: absolute; left: 24dp; top: 260dp; width: 700dp; font-size: 13dp; color: #fff13d; }
+.confirm-actions { position: absolute; left: 24dp; top: 196dp; width: 700dp; }
+.confirm-actions button, .data-dialog-actions button { display: block; position: relative; box-sizing: border-box; margin-bottom: 6dp; width: 340dp; height: 36dp; line-height: 36dp; text-align: left; padding-left: 12dp; white-space: nowrap; font-family: Silkscreen; font-size: 14dp; }
+/* DATA: EXPORT DATA above IMPORT DATA where the confirm screens have their
+ * buttons, the line where we say how it went, BACK where VIDEO has it, and
+ * the dialog where we ask before an import, over the page. */
+.data-status { position: absolute; left: 24dp; top: 290dp; width: 700dp; font-size: 13dp; color: #fff13d; }
 .data-dialog { position: absolute; box-sizing: border-box; left: 0; top: 0; width: 100%; height: 100%; padding: 64dp 24dp; z-index: 120; background-color: #1049c3; }
 .data-dialog-title { font-size: 18dp; color: #fff13d; margin-bottom: 18dp; }
 .data-dialog-copy { font-size: 14dp; line-height: 26dp; max-width: 700dp; color: #ffffff; }
 .data-dialog-actions { margin-top: 32dp; }
-.data-dialog-actions button { display: inline-block; box-sizing: border-box; width: 176dp; height: 36dp; margin-right: 24dp; line-height: 36dp; text-align: left; padding-left: 12dp; font-family: Silkscreen; font-size: 14dp; }
 .data-dialog-actions button.disabled { opacity: 0.4; }
 
 .account-screen .account-summary { height: 44dp; line-height: 32dp; font-size: 15dp; color: #fff13d; }
