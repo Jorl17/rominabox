@@ -175,7 +175,7 @@ fn remove_set_aside(aside: &Path) -> Result<(), ExportError> {
 /// one may write it. So we ask to write it, change nothing and share
 /// everything, and only a running program makes that request fail.
 #[cfg(windows)]
-fn running(path: &Path) -> bool {
+pub(crate) fn running(path: &Path) -> bool {
     use std::os::windows::fs::OpenOptionsExt;
     const SHARE_EVERYTHING: u32 = 0x1 | 0x2 | 0x4;
     const ERROR_SHARING_VIOLATION: i32 = 32;

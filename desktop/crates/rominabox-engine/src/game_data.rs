@@ -82,8 +82,10 @@ pub struct Game {
     pub player_files: Vec<String>,
 }
 
-/// What checking a backup against a game found.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// What checking a backup against a game found. In JSON, the case is in
+/// `kind`, and the backup's game or the sentence is in `detail`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind", content = "detail")]
 pub enum Check {
     /// A backup of this game.
     SameGame,
