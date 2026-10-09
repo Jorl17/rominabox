@@ -248,6 +248,15 @@ pub(crate) fn bundle_identifier(identity: &str) -> String {
     format!("{BUNDLE_PREFIX}{identity}")
 }
 
+/// The CFBundleIdentifier in the Info.plist of the app `app`, as we write it
+/// in a game, or None when there is none.
+pub(crate) fn bundle_identifier_of(app: &Path) -> Option<String> {
+    let plist = std::fs::read_to_string(app.join("Contents/Info.plist")).ok()?;
+    let after = &plist[plist.find("<key>CFBundleIdentifier</key>")? + "<key>CFBundleIdentifier</key>".len()..];
+    let value = after.trim_start().strip_prefix("<string>")?;
+    Some(value[..value.find("</string>")?].to_string())
+}
+
 /// `accounts` is the QUICK SIGN IN folder, present exactly when the game has
 /// achievements. We grant the network and that folder together. With `menu`,
 /// the game has a menu, where DATA may be, and we grant the one file the

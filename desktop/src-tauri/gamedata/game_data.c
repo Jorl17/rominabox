@@ -795,6 +795,31 @@ static int make_parents(const char *data_dir, const char *relative) {
    return 0;
 }
 
+/* Remove the player's files in `data_dir`, the game `target`'s: every folder
+ * of the player's data, the menu's files and the game's settings. The
+ * manifest and the icon stay. */
+static void clear_player_data(const char *data_dir, const rib_game_t *target) {
+   char path[RIB_GAME_DATA_PATH_SIZE];
+   size_t item;
+   for (item = 0; item < FOLDER_COUNT; item++)
+      if (fs_join(path, sizeof path, data_dir, player_folders[item]) == 0)
+         remove_tree(path);
+   for (item = 0; item < MENU_FILE_COUNT; item++)
+      if (fs_join(path, sizeof path, data_dir, menu_files[item]) == 0)
+         fs_remove(path);
+   for (item = 0; item < target->player_file_count; item++)
+      if (plain_path(target->player_files[item]) && fs_join(path, sizeof path, data_dir, target->player_files[item]) == 0)
+         fs_remove(path);
+}
+
+int rib_game_data_reset(const char *data_dir, char *error, size_t error_size) {
+   rib_game_t target;
+   if (target_of(data_dir, &target, error, error_size) != 0)
+      return -1;
+   clear_player_data(data_dir, &target);
+   return 0;
+}
+
 static int import_opened(Opened *opened, size_t which, const char *data_dir, char *error, size_t error_size) {
    rib_game_t target;
    const rib_game_t *source;
@@ -802,7 +827,6 @@ static int import_opened(Opened *opened, size_t which, const char *data_dir, cha
    size_t prefix_length;
    mz_uint entries = mz_zip_reader_get_num_files(&opened->zip);
    mz_uint index;
-   size_t item;
    char path[RIB_GAME_DATA_PATH_SIZE];
    if (target_of(data_dir, &target, error, error_size) != 0
          || check_opened(opened, which, &target, error, error_size) == RIB_GAME_DATA_REFUSED)
@@ -811,15 +835,7 @@ static int import_opened(Opened *opened, size_t which, const char *data_dir, cha
    prefix = opened->prefixes[which];
    prefix_length = strlen(prefix);
    /* The zip is checked. We replace the player's data with the backup's. */
-   for (item = 0; item < FOLDER_COUNT; item++)
-      if (fs_join(path, sizeof path, data_dir, player_folders[item]) == 0)
-         remove_tree(path);
-   for (item = 0; item < MENU_FILE_COUNT; item++)
-      if (fs_join(path, sizeof path, data_dir, menu_files[item]) == 0)
-         fs_remove(path);
-   for (item = 0; item < target.player_file_count; item++)
-      if (plain_path(target.player_files[item]) && fs_join(path, sizeof path, data_dir, target.player_files[item]) == 0)
-         fs_remove(path);
+   clear_player_data(data_dir, &target);
    for (index = 0; index < entries; index++) {
       mz_zip_archive_file_stat stat;
       char relative[RIB_GAME_DATA_PATH_SIZE];

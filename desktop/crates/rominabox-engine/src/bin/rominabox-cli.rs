@@ -104,6 +104,14 @@ fn game_data(command: &str, input: &str) -> Result<Value, String> {
             library.remove(&identity()?)?;
             value(json!({ "removed": identity()? }))
         }
+        "game-data-reset" => {
+            library.reset(&identity()?)?;
+            value(json!({ "reset": identity()? }))
+        }
+        "game-uninstall" => {
+            library.uninstall(&identity()?)?;
+            value(json!({ "uninstalled": identity()? }))
+        }
         _ => Err(format!("unknown command: {command}")),
     }
 }
@@ -121,7 +129,7 @@ fn run() -> Result<(), String> {
         .nth(1)
         .unwrap_or_else(|| "--help".to_string());
     if command == "--help" || command == "-h" {
-        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|hotkey-defaults|hotkeys-check|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|places|cores|schemas|games|game-data-export|game-data-open|game-data-check|game-data-import|game-data-import-all|game-data-remove|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's. Before it starts it prints what the builder's details step shows: the lookup, the files that travel with the game and the BIOS assessment.\nproject-save completes its game as export does.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out, places the folders and platform it leaves to the builder.\npreview draws the builder's menu preview; hotkey-defaults prints the hotkeys a game for a console starts with; hotkeys-check checks hotkeys as export does.\ncores fetches the download list for one target into cache.\ngames lists the games on this computer; the game-data commands export their data to a zip, read a zip, check and import one backup into one game, import a bulk backup into every game it contains, and remove the data of a game whose app is gone.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
+        println!("ROM-in-a-Box native authoring CLI\n\nUsage: rominabox-cli <inspect|content|systems|controls|stage-controls|preview|export|firmware|hotkey-defaults|hotkeys-check|project-save|project-open|volume-markup|design-screens|shaders|shaders-check|designs|defaults|places|cores|schemas|games|game-data-export|game-data-open|game-data-check|game-data-import|game-data-import-all|game-data-remove|game-data-reset|game-uninstall|freeze-macos-executable>\n       rominabox-cli export GAME [FOLDER]\n\nA command that takes a request reads one JSON object from stdin through EOF. Progress and results are JSON Lines on stdout.\ncontent names every file export will copy for a dropped path.\nexport makes the game that dropping GAME into the builder makes, in FOLDER or the builder's; a request on stdin can say more, and whatever it leaves out is the builder's. Before it starts it prints what the builder's details step shows: the lookup, the files that travel with the game and the BIOS assessment.\nproject-save completes its game as export does.\nexport and project-save accept includeAchievements (default true); player authentication is per game.\nshaders prints the catalog. shaders-check reads a selection on stdin.\ndesigns lists the menu designs, palettes and sound packs. defaults prints the settings a request leaves out, places the folders and platform it leaves to the builder.\npreview draws the builder's menu preview; hotkey-defaults prints the hotkeys a game for a console starts with; hotkeys-check checks hotkeys as export does.\ncores fetches the download list for one target into cache.\ngames lists the games on this computer; the game-data commands export their data to a zip, read a zip, check and import one backup into one game, import a bulk backup into every game it contains, remove the data of a game whose app is gone, and reset a game's data; game-uninstall deletes a game's app and its data.\nfreeze-macos-executable is a developer-only macOS runtime-kit preparation command.");
         return Ok(());
     }
     if command == "schemas" {
@@ -174,6 +182,8 @@ fn run() -> Result<(), String> {
                 "game-data-import": { "request": ["zip", "identity", "which?", "root?"], "result": { "imported": "identity" } },
                 "game-data-import-all": { "request": ["zip", "root?"], "result": { "imported": ["game"], "notHere": ["game"], "refused": [{ "game": "game", "reason": "sentence" }] } },
                 "game-data-remove": { "request": ["identity", "root?"], "result": { "removed": "identity" }, "refused": "while the game's app is there or the game is running" },
+                "game-data-reset": { "request": ["identity", "root?"], "result": { "reset": "identity" }, "removes": "the game's saves, states, memory cards, controls and settings; the game stays installed", "refused": "while the game is running" },
+                "game-uninstall": { "request": ["identity", "root?"], "result": { "uninstalled": "identity" }, "removes": "the game's app and everything stored for it", "refused": "while the game is running, when its app is gone, or when the app in its manifest is not this game's" },
                 "design-screens": { "request": ["design"], "result": { "screens": "the design's screens as the menu resolves them, Native's merged with its own, in design.json's words" } }
             })
         );
@@ -721,7 +731,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "games" | "game-data-export" | "game-data-open" | "game-data-check" | "game-data-import"
-        | "game-data-import-all" | "game-data-remove" => {
+        | "game-data-import-all" | "game-data-remove" | "game-data-reset" | "game-uninstall" => {
             let result = game_data(&command, &read_request()?)?;
             println!("{}", json!({ "type": "result", "result": result }));
             Ok(())

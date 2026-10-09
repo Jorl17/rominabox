@@ -271,10 +271,11 @@ fn a_running_game_is_neither_imported_into_nor_removed() {
 }
 
 /// The same on Windows, where the running game is a copy of Windows' own
-/// ping, pinging the loopback address.
+/// ping, pinging the loopback address. We neither reset nor uninstall it
+/// either.
 #[cfg(windows)]
 #[test]
-fn a_running_windows_game_is_neither_imported_into_nor_removed() {
+fn a_running_windows_game_is_neither_imported_into_nor_reset_nor_uninstalled() {
     let root = Scratch::dir("rominabox-game-library-running");
     let library = Library::at(root.to_path_buf(), Layout::Windows);
     let program = root.join("Sonic 3.exe");
@@ -292,9 +293,123 @@ fn a_running_windows_game_is_neither_imported_into_nor_removed() {
 
     let games = library.games();
     let imported = library.import(&zip, 0, SONIC);
+    let reset = library.reset(SONIC);
+    let uninstalled = library.uninstall(SONIC);
     child.kill().unwrap();
     child.wait().unwrap();
 
     assert!(games[0].running);
-    assert_eq!(imported, Err("\u{201c}Sonic 3\u{201d} is open. Quit it, then try again.".to_string()));
+    let open = Err("\u{201c}Sonic 3\u{201d} is open. Quit it, then try again.".to_string());
+    assert_eq!(imported, open);
+    assert_eq!(reset, open);
+    assert_eq!(uninstalled, open);
+    assert_eq!(save(&library, &sonic), "rings");
+    assert!(program.is_file());
+}
+
+/// An app of the game `identity` at `app`, as we make one for `layout`: on a
+/// Mac a bundle with its identifier in its Info.plist, and on Windows one
+/// program with the game's runtime folder in its packed index.
+fn app_of(layout: Layout, identity: &str, app: &Path) {
+    match layout {
+        Layout::Macos => {
+            fs::create_dir_all(app.join("Contents")).unwrap();
+            fs::write(
+                app.join("Contents/Info.plist"),
+                format!("<dict><key>CFBundleIdentifier</key><string>{}</string></dict>", bundle_identifier(identity)),
+            )
+            .unwrap();
+        }
+        Layout::Windows => {
+            let runtime = format!("{}-0123abcd", runtime_folder(identity));
+            let mut program = b"MZ the launcher".to_vec();
+            let index_at = program.len() as u64;
+            program.extend_from_slice(b"RIBPACK1");
+            program.extend_from_slice(&(runtime.len() as u16).to_le_bytes());
+            program.extend_from_slice(runtime.as_bytes());
+            let index_length = program.len() as u64 - index_at;
+            program.extend_from_slice(&index_at.to_le_bytes());
+            program.extend_from_slice(&index_length.to_le_bytes());
+            program.extend_from_slice(b"RIBTAIL1");
+            fs::write(app, program).unwrap();
+        }
+    }
+}
+
+/// The path of a game's app for `layout`.
+fn app_path(root: &Path, layout: Layout, title: &str) -> PathBuf {
+    root.join(match layout {
+        Layout::Macos => format!("{title}.app"),
+        Layout::Windows => format!("{title}.exe"),
+    })
+}
+
+/// A reset removes a game's saves and settings, and the game stays listed,
+/// with its manifest, so that it starts as new.
+#[test]
+fn a_reset_removes_a_games_data_and_keeps_the_game() {
+    for layout in LAYOUTS {
+        let root = Scratch::dir("rominabox-game-library-reset");
+        let library = Library::at(root.to_path_buf(), layout);
+        let sonic = manifest(SONIC, "Sonic 3", "megadrive", &app_path(&root, layout, "Sonic 3"));
+        let data = installed(&library, &sonic, "rings", false);
+        fs::write(data.join("volume.cfg"), "audio_volume = \"0.0\"").unwrap();
+
+        library.reset(SONIC).unwrap();
+
+        assert!(!data.join(format!("saves/{}.srm", sonic.content)).exists(), "{layout:?}");
+        assert!(!data.join("volume.cfg").exists(), "{layout:?}");
+        assert_eq!(library.games().len(), 1, "{layout:?}");
+    }
+}
+
+/// An uninstall deletes the game's app, then its sandbox and data, and on
+/// Windows its unpacked copy, as for a game whose app is gone.
+#[test]
+fn an_uninstall_deletes_the_games_app_and_everything_stored_for_it() {
+    for layout in LAYOUTS {
+        let root = Scratch::dir("rominabox-game-library-uninstall");
+        let library = Library::at(root.to_path_buf(), layout);
+        let app = app_path(&root, layout, "Sonic 3");
+        let sonic = manifest(SONIC, "Sonic 3", "megadrive", &app);
+        installed(&library, &sonic, "rings", false);
+        app_of(layout, SONIC, &app);
+        let unpacked = root.join(runtime_folder(SONIC));
+        fs::create_dir_all(&unpacked).unwrap();
+
+        library.uninstall(SONIC).unwrap();
+
+        assert!(!app.exists(), "{layout:?}: the app is still there");
+        assert!(!library.sandbox(SONIC).exists(), "{layout:?}");
+        assert_eq!(unpacked.exists(), layout == Layout::Macos, "{layout:?}");
+        assert!(library.games().is_empty(), "{layout:?}");
+    }
+}
+
+/// A game can write its own manifest, which contains the path to its app.
+/// We delete nothing at that path unless it is this game's app: not another
+/// file, and not another game's app.
+#[test]
+fn an_uninstall_deletes_only_the_games_own_app() {
+    for layout in LAYOUTS {
+        let root = Scratch::dir("rominabox-game-library-uninstall-other");
+        let library = Library::at(root.to_path_buf(), layout);
+        let app = app_path(&root, layout, "Sonic 3");
+        let sonic = manifest(SONIC, "Sonic 3", "megadrive", &app);
+        installed(&library, &sonic, "rings", false);
+
+        app_of(layout, KNUCKLES, &app);
+        let error = library.uninstall(SONIC).unwrap_err();
+        assert_eq!(error, format!("{} is not the app of \u{201c}Sonic 3\u{201d}, so we did not delete it.", sonic.app));
+        assert!(app.exists(), "{layout:?}: another game's app was deleted");
+        assert_eq!(save(&library, &sonic), "rings");
+
+        let other = root.join("notes.txt");
+        fs::write(&other, "keep me").unwrap();
+        let pointed = manifest(SONIC, "Sonic 3", "megadrive", &other);
+        game_data::write_manifest(&library.data_dir(SONIC), &pointed).unwrap();
+        assert!(library.uninstall(SONIC).is_err(), "{layout:?}");
+        assert_eq!(fs::read_to_string(&other).unwrap(), "keep me");
+        assert_eq!(save(&library, &sonic), "rings");
+    }
 }

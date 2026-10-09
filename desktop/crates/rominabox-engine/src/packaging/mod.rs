@@ -26,7 +26,8 @@ mod tests;
 /// The names of a game's data folder, its Mac container and its unpacked
 /// Windows copy, for the list of games on this computer (`game_library`).
 pub(crate) use launch_plan::{game_data_folder, runtime_folder};
-pub(crate) use macos::{bundle_identifier, BUNDLE_PREFIX};
+pub(crate) use macos::{bundle_identifier, bundle_identifier_of, BUNDLE_PREFIX};
+pub(crate) use windows_pack::packed_runtime;
 
 use crate::target::Target;
 use crate::launch_contract::{app_file, shipped};

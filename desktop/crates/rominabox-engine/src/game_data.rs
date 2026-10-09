@@ -61,6 +61,7 @@ extern "C" {
         error: *mut c_char,
         error_size: usize,
     ) -> c_int;
+    fn rib_game_data_reset(data_dir: *const c_char, error: *mut c_char, error_size: usize) -> c_int;
 }
 
 /// What a game's manifest says about it.
@@ -274,3 +275,16 @@ pub fn import(zip: &Path, which: usize, data_dir: &Path) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests;
+
+/// Remove the player's saves, states, memory cards, controls and settings in
+/// `data_dir`, and keep the manifest and the icon, so the game starts as new.
+pub fn reset(data_dir: &Path) -> Result<(), String> {
+    let folder = c_path(data_dir)?;
+    let mut error = [0 as c_char; ERROR_SIZE];
+    let result = unsafe { rib_game_data_reset(folder.as_ptr(), error.as_mut_ptr(), ERROR_SIZE) };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(sentence(&error, "We could not reset the game's data."))
+    }
+}

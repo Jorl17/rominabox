@@ -133,6 +133,12 @@ void rib_game_data_file_name(const rib_game_t *game, char *out, size_t size);
 int rib_game_data_import(const char *zip_path, size_t which, const char *data_dir,
       char *error, size_t error_size);
 
+/* Remove the player's files in `data_dir`, which an import replaces: their
+ * saves, states, memory cards, controls and settings. The manifest and the
+ * icon stay, so the game starts as new. Returns 0, or -1 with a sentence in
+ * `error`. */
+int rib_game_data_reset(const char *data_dir, char *error, size_t error_size);
+
 /* An import the player chose in the game, which the launcher applies before
  * the next launch: copy the zip into `data_dir` (RIB_GAME_FILE(PendingImport)).
  * Returns 0, or -1 with a sentence in `error`. */

@@ -126,6 +126,17 @@ int main(int argc, char **argv) {
    expect(exists(target, "volume.cfg") && !exists(target, "achievements.session"), "with the settings, without the login");
    expect(rib_game_data_apply_pending(target, error, sizeof error) == 0, "with nothing set aside, nothing happens");
 
+   /* A reset removes what an import replaces, and keeps the manifest, so
+    * the game starts as new. */
+   {
+      char error_reset[RIB_GAME_DATA_ERROR_SIZE] = "";
+      expect(rib_game_data_reset(target, error_reset, sizeof error_reset) == 0, "we reset a game's data");
+      expect(!exists(target, "saves/Sonic Patched.srm") && !exists(target, "states/Sonic Patched.state1"),
+             "its saves and states are gone");
+      expect(!exists(target, "volume.cfg"), "and its settings");
+      expect(exists(target, "game.json"), "and its manifest stays");
+   }
+
    /* A game's data folder deep enough that the path of a save, with the
     * name we write it under first, is longer than Windows' 260 characters,
     * as for a long user name and a long game file name. */

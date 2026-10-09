@@ -13,7 +13,9 @@
 
 use crate::game_data::{self, Check, Game};
 use crate::launch_contract::game_file;
-use crate::packaging::{bundle_identifier, game_data_folder, runtime_folder, BUNDLE_PREFIX};
+use crate::packaging::{
+    bundle_identifier, bundle_identifier_of, game_data_folder, packed_runtime, runtime_folder, BUNDLE_PREFIX,
+};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
@@ -71,6 +73,17 @@ impl Layout {
         match self {
             Layout::Macos => "Data/Library/Application Support",
             Layout::Windows => "AC",
+        }
+    }
+
+    /// Whether `app` is the app of the game `identity`, from what we wrote in
+    /// the app when we made it: on a Mac its bundle identifier, and on
+    /// Windows the runtime folder in its packed index.
+    fn is_app_of(self, app: &Path, identity: &str) -> bool {
+        match self {
+            Layout::Macos => bundle_identifier_of(app).is_some_and(|found| found == bundle_identifier(identity)),
+            Layout::Windows => packed_runtime(app)
+                .is_some_and(|runtime| runtime.starts_with(&format!("{}-", runtime_folder(identity)))),
         }
     }
 }
@@ -296,10 +309,14 @@ impl Library {
         Ok(game)
     }
 
-    /// Remove everything stored for the game `identity`, whose app is gone:
-    /// its sandbox folder, with its data, and on Windows the registration of
-    /// its sandbox and its unpacked copy. We remove only a folder whose name
-    /// we made from a checked identity and found to be a folder, not a link.
+    /// Remove the saves, states, memory cards, controls and settings of the
+    /// game `identity`, which stays installed and starts as new.
+    pub fn reset(&self, identity: &str) -> Result<(), String> {
+        game_data::reset(&self.ready(identity)?.data)
+    }
+
+    /// Remove everything stored for the game `identity`, whose app is gone
+    /// (`forget`).
     pub fn remove(&self, identity: &str) -> Result<(), String> {
         let game = self.ready(identity)?;
         if game.app_present {
@@ -308,6 +325,41 @@ impl Library {
                 game.game.title, game.game.app
             ));
         }
+        self.forget(identity)
+    }
+
+    /// Delete the app of the game `identity`, then everything stored for it
+    /// (`forget`). The game's manifest, which the game itself can write,
+    /// contains the path to its app, so we delete the file or bundle at that
+    /// path only when it is this game's app (`Layout::is_app_of`).
+    pub fn uninstall(&self, identity: &str) -> Result<(), String> {
+        let game = self.ready(identity)?;
+        let app = PathBuf::from(&game.game.app);
+        if !game.app_present {
+            return Err(format!(
+                "\u{201c}{}\u{201d} is not installed at {} any more. Remove its data instead.",
+                game.game.title, game.game.app
+            ));
+        }
+        if !self.layout.is_app_of(&app, identity) {
+            return Err(format!(
+                "{} is not the app of \u{201c}{}\u{201d}, so we did not delete it.",
+                game.game.app, game.game.title
+            ));
+        }
+        let deleted = match self.layout {
+            Layout::Macos => remove_folder(&app),
+            Layout::Windows => remove_file(&app),
+        };
+        deleted.map_err(|error| format!("We could not delete {}: {error}", app.display()))?;
+        self.forget(identity)
+    }
+
+    /// Remove everything stored for the game `identity` besides its app: its
+    /// sandbox folder, with its data, and on Windows the registration of its
+    /// sandbox and its unpacked copy. We remove only a folder whose name we
+    /// made from a checked identity and found to be a folder, not a link.
+    fn forget(&self, identity: &str) -> Result<(), String> {
         if !self.root.is_absolute() {
             return Err(format!("{} is not an absolute path.", self.root.display()));
         }
@@ -322,6 +374,15 @@ impl Library {
         }
         Ok(())
     }
+}
+
+/// Remove the file at `path`. We refuse a link or a folder at that path.
+fn remove_file(path: &Path) -> io::Result<()> {
+    let metadata = fs::symlink_metadata(path)?;
+    if !metadata.is_file() {
+        return Err(io::Error::other("it is not a file"));
+    }
+    fs::remove_file(path)
 }
 
 /// Remove the folder at `path` and everything in it, when it is there. We
