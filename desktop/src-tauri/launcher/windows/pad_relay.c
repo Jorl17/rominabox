@@ -348,7 +348,8 @@ static void answer_ask(PadRelay *relay) {
     memcpy(&ask, &relay->view->ask, sizeof ask);
     if (ask.what == RIB_PAD_RELAY_EXPORT_DATA || ask.what == RIB_PAD_RELAY_CHOOSE_IMPORT
         || ask.what == RIB_PAD_RELAY_CONFIRM_IMPORT) {
-        game_data_request(ask.what, relay->data_dir, relay->window, &relay->view->data);
+        game_data_request(ask.what, relay->data_dir, relay->window, (HWND)(uintptr_t)ask.window,
+                          &relay->view->data);
         relay->view->ask.answer = DI_OK;
         return;
     }

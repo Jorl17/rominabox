@@ -13,8 +13,10 @@
 
 /* Perform `what` (RIB_PAD_RELAY_EXPORT_DATA, CHOOSE_IMPORT or CONFIRM_IMPORT)
  * for the game whose data is in `data_dir`, with our dialogs owned by
- * `owner`, and write what happened in `reply`. After CONFIRM_IMPORT, we have
- * set the chosen zip aside and left RIB_DATA_RESTART_MARKER in `data_dir`. */
-void game_data_request(int what, const char *data_dir, HWND owner, rib_pad_relay_data *reply);
+ * `owner`, and write what happened in `reply`. When a dialog closes, we give
+ * the foreground back to `game_window`, the game's window, when it is known.
+ * After CONFIRM_IMPORT, we have set the chosen zip aside and left
+ * RIB_DATA_RESTART_MARKER in `data_dir`. */
+void game_data_request(int what, const char *data_dir, HWND owner, HWND game_window, rib_pad_relay_data *reply);
 
 #endif

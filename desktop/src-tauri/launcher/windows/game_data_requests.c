@@ -12,8 +12,12 @@ static char chosen[RIB_GAME_DATA_PATH_SIZE];
 
 /* Ask the player for a zip to save or open, in a dialog in front of the
  * game's window, which lets us take the foreground while it waits for us.
- * Returns 1 with the path in UTF-8 in `out`, or 0 when they closed it. */
-static int ask_for_zip(HWND owner, int saving, const char *suggested, char *out, size_t out_size) {
+ * The dialog's owner is our own window, so when it closes, we give the
+ * foreground back to `game_window`, and the game takes the keyboard and the
+ * mouse again. Returns 1 with the path in UTF-8 in `out`, or 0 when they
+ * closed it. */
+static int ask_for_zip(HWND owner, HWND game_window, int saving, const char *suggested, char *out, size_t out_size) {
+    BOOL chosen_file;
     wchar_t file[RIB_GAME_DATA_PATH_SIZE] = L"";
     OPENFILENAMEW dialog;
     memset(&dialog, 0, sizeof dialog);
@@ -30,12 +34,15 @@ static int ask_for_zip(HWND owner, int saving, const char *suggested, char *out,
         | (saving ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST);
     if (owner)
         SetForegroundWindow(owner);
-    if (!(saving ? GetSaveFileNameW(&dialog) : GetOpenFileNameW(&dialog)))
+    chosen_file = saving ? GetSaveFileNameW(&dialog) : GetOpenFileNameW(&dialog);
+    if (game_window)
+        SetForegroundWindow(game_window);
+    if (!chosen_file)
         return 0;
     return WideCharToMultiByte(CP_UTF8, 0, file, -1, out, (int)out_size, NULL, NULL) > 0;
 }
 
-void game_data_request(int what, const char *data_dir, HWND owner, rib_pad_relay_data *reply) {
+void game_data_request(int what, const char *data_dir, HWND owner, HWND game_window, rib_pad_relay_data *reply) {
     char path[RIB_GAME_DATA_PATH_SIZE];
     char sentence[RIB_GAME_DATA_ERROR_SIZE] = "";
     rib_game_t *game = rib_games_new(1);
@@ -53,7 +60,7 @@ void game_data_request(int what, const char *data_dir, HWND owner, rib_pad_relay
         folders[0] = data_dir;
         if (rib_game_manifest_read(data_dir, game) == 0)
             rib_game_data_file_name(game, name, sizeof name);
-        if (!ask_for_zip(owner, 1, name, path, sizeof path))
+        if (!ask_for_zip(owner, game_window, 1, name, path, sizeof path))
             answer = RIB_DATA_CANCELLED;
         else
             answer = rib_game_data_export(folders, 1, path, sentence, sizeof sentence) == 0 ? RIB_DATA_DONE
@@ -61,7 +68,7 @@ void game_data_request(int what, const char *data_dir, HWND owner, rib_pad_relay
         break;
     }
     case RIB_PAD_RELAY_CHOOSE_IMPORT:
-        if (!ask_for_zip(owner, 0, NULL, chosen, sizeof chosen)) {
+        if (!ask_for_zip(owner, game_window, 0, NULL, chosen, sizeof chosen)) {
             chosen[0] = '\0';
             answer = RIB_DATA_CANCELLED;
             break;
