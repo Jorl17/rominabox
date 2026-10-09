@@ -309,10 +309,12 @@ int main(int argc, char** argv)
                     under ? escape(std::string(under->GetId())).c_str() : "");
         for (size_t i = 0; i < watched.size(); i++) {
             Rml::Element* element = document->GetElementById(watched[i]);
-            std::printf("%s\"%s\":{\"present\":%s,\"classes\":\"%s\"}",
+            /* :active is how a design draws a button held down. */
+            std::printf("%s\"%s\":{\"present\":%s,\"classes\":\"%s\",\"active\":%s}",
                         i ? "," : "", escape(watched[i]).c_str(),
                         element ? "true" : "false",
-                        element ? escape(classes_of(element)).c_str() : "");
+                        element ? escape(classes_of(element)).c_str() : "",
+                        element && element->IsPseudoClassSet("active") ? "true" : "false");
         }
         std::printf("}");
         /* Where layout put each element: x, y, width, height in document
