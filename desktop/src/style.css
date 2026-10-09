@@ -280,6 +280,37 @@ main {
   box-shadow: 3px 3px 0 var(--ink);
   transform: translate(-1px, -1px);
 }
+/* A square button with only an icon, framed as a secondary button, with its
+   words in a tooltip (Help.tsx). In red when it deletes something for good. */
+.icon-button-anchor {
+  display: inline-flex;
+}
+.icon-button {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  transition:
+    box-shadow 0.12s,
+    transform 0.12s;
+}
+.icon-button:hover:not(:disabled) {
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: translate(-1px, -1px);
+}
+.icon-button.danger {
+  color: var(--error);
+  border-color: var(--error);
+}
+.icon-button.danger:hover:not(:disabled) {
+  box-shadow: 3px 3px 0 var(--error);
+}
+.primary.danger {
+  background: var(--error);
+}
 .drop-settings {
   margin-top: 17px;
   display: flex;

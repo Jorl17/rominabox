@@ -36,6 +36,8 @@ vi.mock("./bridge", async (importOriginal) => {
     importGameData: called("importGameData", () => undefined),
     importAllGameData: called("importAllGameData", () => engine.bulk),
     removeGameData: called("removeGameData", () => undefined),
+    resetGameData: called("resetGameData", () => undefined),
+    uninstallGame: called("uninstallGame", () => undefined),
   };
 });
 
@@ -105,6 +107,24 @@ function button(name: string): HTMLButtonElement {
   if (!found) throw new Error(`no button ${name}`);
   return found;
 }
+/** The button that shows only an icon, by the words it has for a screen
+ * reader. */
+function labelled(name: string): HTMLButtonElement {
+  const found = document.querySelector<HTMLButtonElement>(
+    `button[aria-label="${name}"]`,
+  );
+  if (!found) throw new Error(`no button labelled ${name}`);
+  return found;
+}
+/** The labels of the buttons in the row of `title`. */
+function actions(title: string): string[] {
+  const row = [...container.querySelectorAll("tbody tr")].find((element) =>
+    element.textContent?.includes(title),
+  )!;
+  return [...row.querySelectorAll(".game-data-row-actions button")].map(
+    (element) => element.getAttribute("aria-label") ?? "",
+  );
+}
 async function click(element: HTMLElement) {
   await act(async () => element.click());
 }
@@ -119,13 +139,20 @@ const popUp = () =>
   document.querySelector<HTMLElement>(".pop-up")?.textContent ?? "";
 
 describe("the Game data section", () => {
-  it("lists each game with its console and app, and offers Remove only for a game whose app is gone", async () => {
+  it("lists each game with its console and app, offers Remove for a game whose app is gone, and Reset and Uninstall for one that is there", async () => {
     await shown();
     expect(rows()).toEqual([
-      ["", "Knuckles", "Mega Drive / Genesis", "Not found", "Remove"],
+      ["", "Knuckles", "Mega Drive / Genesis", "Not found", ""],
       ["", "Pokemon Gold", "Mega Drive / Genesis", "Running", ""],
       ["", "Sonic 3", "Mega Drive / Genesis", "Found", ""],
     ]);
+    expect(actions("Knuckles")).toEqual(["Remove the data of Knuckles"]);
+    expect(actions("Sonic 3")).toEqual([
+      "Reset the data of Sonic 3",
+      "Uninstall Sonic 3",
+    ]);
+    expect(labelled("Reset the data of Pokemon Gold").disabled).toBe(true);
+    expect(labelled("Uninstall Pokemon Gold").disabled).toBe(true);
     const icon = container.querySelector<HTMLImageElement>("tbody img");
     expect(icon?.getAttribute("src")).toBe("blob:/data/aaaa/game-icon.png");
   });
@@ -228,17 +255,39 @@ describe("the Game data section", () => {
 
   it("removes a game whose app is gone only once confirmed", async () => {
     await shown();
-    await click(button("Remove"));
+    await click(labelled("Remove the data of Knuckles"));
     expect(popUp()).toContain("Remove “Knuckles”?");
-    await click(button("Cancel"));
+    await click(button("No, keep its data"));
     expect(asked("removeGameData")).toEqual([]);
-    await click(button("Remove"));
-    const confirm = [
-      ...document.querySelectorAll<HTMLButtonElement>(".pop-up button"),
-    ].find((element) => element.textContent === "Remove")!;
-    await click(confirm);
+    await click(labelled("Remove the data of Knuckles"));
+    await click(button("Yes, remove"));
     expect(asked("removeGameData")).toEqual([["bbbb"]]);
     expect(container.textContent).toContain("Removed “Knuckles”.");
+  });
+
+  it("resets a game's data only once confirmed", async () => {
+    await shown();
+    await click(labelled("Reset the data of Sonic 3"));
+    expect(popUp()).toContain("Reset the data of “Sonic 3”?");
+    await click(button("No, keep my data"));
+    expect(asked("resetGameData")).toEqual([]);
+    await click(labelled("Reset the data of Sonic 3"));
+    await click(button("Yes, reset"));
+    expect(asked("resetGameData")).toEqual([["aaaa"]]);
+    expect(container.textContent).toContain("Reset the data of “Sonic 3”.");
+  });
+
+  it("uninstalls a game only once confirmed, naming its app", async () => {
+    await shown();
+    await click(labelled("Uninstall Sonic 3"));
+    expect(popUp()).toContain("Uninstall “Sonic 3”?");
+    expect(popUp()).toContain("/Applications/Sonic 3.app");
+    await click(button("No, keep my game"));
+    expect(asked("uninstallGame")).toEqual([]);
+    await click(labelled("Uninstall Sonic 3"));
+    await click(button("Yes, uninstall"));
+    expect(asked("uninstallGame")).toEqual([["aaaa"]]);
+    expect(container.textContent).toContain("Uninstalled “Sonic 3”.");
   });
 
   it("opens from the header in place of the builder, and closes again", async () => {

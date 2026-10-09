@@ -1,15 +1,24 @@
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as bridge from "./bridge";
-import { ImportAll, ImportOne, quoted, RemoveGame } from "./GameDataDialogs";
-import { Help } from "./Help";
+import {
+  ImportAll,
+  ImportOne,
+  quoted,
+  RemoveGame,
+  ResetGame,
+  UninstallGame,
+} from "./GameDataDialogs";
+import { Help, IconButton } from "./Help";
 import "./GameData.css";
 
 /** The pop-up open over the list, if any. */
 type Asking =
   | { kind: "one"; zip: string; backup: bridge.BackupGame }
   | { kind: "all"; zip: string; backups: bridge.BackupGame[] }
-  | { kind: "remove"; game: bridge.InstalledGame };
+  | { kind: "remove"; game: bridge.InstalledGame }
+  | { kind: "reset"; game: bridge.InstalledGame }
+  | { kind: "uninstall"; game: bridge.InstalledGame };
 
 /** What we say under the buttons after the last action. */
 type Said = { text: string; failed: boolean };
@@ -267,18 +276,46 @@ export function GameData() {
                   {appState(game)}
                 </td>
                 <td>
-                  {!game.appPresent && (
-                    <button
-                      className="text-button"
-                      disabled={busy}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setAsking({ kind: "remove", game });
-                      }}
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <span className="game-data-row-actions">
+                    {game.appPresent ? (
+                      <>
+                        <IconButton
+                          label={`Reset the data of ${game.title}`}
+                          tip={
+                            game.running
+                              ? "Quit the game to reset its data."
+                              : "Reset its data. The game stays installed."
+                          }
+                          disabled={busy || game.running}
+                          onClick={() => setAsking({ kind: "reset", game })}
+                        >
+                          <RotateCcw size={18} />
+                        </IconButton>
+                        <IconButton
+                          label={`Uninstall ${game.title}`}
+                          tip={
+                            game.running
+                              ? "Quit the game to uninstall it."
+                              : "Uninstall: delete the game and all of its data."
+                          }
+                          className="danger"
+                          disabled={busy || game.running}
+                          onClick={() => setAsking({ kind: "uninstall", game })}
+                        >
+                          <Trash2 size={18} />
+                        </IconButton>
+                      </>
+                    ) : (
+                      <IconButton
+                        label={`Remove the data of ${game.title}`}
+                        tip="Remove its data. Its app was not found."
+                        disabled={busy}
+                        onClick={() => setAsking({ kind: "remove", game })}
+                      >
+                        <Trash2 size={18} />
+                      </IconButton>
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}
@@ -321,6 +358,32 @@ export function GameData() {
             void act(async () => {
               await bridge.removeGameData(asking.game.identity);
               return `Removed ${quoted(asking.game.title)}.`;
+            });
+          }}
+        />
+      )}
+      {asking?.kind === "reset" && (
+        <ResetGame
+          game={asking.game}
+          close={() => setAsking(null)}
+          confirm={() => {
+            setAsking(null);
+            void act(async () => {
+              await bridge.resetGameData(asking.game.identity);
+              return `Reset the data of ${quoted(asking.game.title)}.`;
+            });
+          }}
+        />
+      )}
+      {asking?.kind === "uninstall" && (
+        <UninstallGame
+          game={asking.game}
+          close={() => setAsking(null)}
+          confirm={() => {
+            setAsking(null);
+            void act(async () => {
+              await bridge.uninstallGame(asking.game.identity);
+              return `Uninstalled ${quoted(asking.game.title)}.`;
             });
           }}
         />

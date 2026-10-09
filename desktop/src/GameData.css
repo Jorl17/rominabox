@@ -136,3 +136,8 @@ body.game-data-open .app-shell > main {
 .header-link:hover {
   opacity: 1;
 }
+.game-data-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

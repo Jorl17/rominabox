@@ -2,13 +2,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import * as bridge from "./bridge";
 
 /** A pop-up with a button labelled `keep`, which closes it, and one labelled
- * `action`, which we turn off while `ready` is false. Pressing it calls
- * `confirm`. */
+ * `action`, which we turn off while `ready` is false and draw in red when it
+ * deletes something for good (`danger`). Pressing it calls `confirm`. */
 function Confirm({
   title,
   action,
   keep = "Cancel",
   ready = true,
+  danger = false,
   close,
   confirm,
   children,
@@ -17,6 +18,7 @@ function Confirm({
   action: string;
   keep?: string;
   ready?: boolean;
+  danger?: boolean;
   close: () => void;
   confirm: () => void;
   children: ReactNode;
@@ -38,7 +40,11 @@ function Confirm({
           <button className="secondary" onClick={close} autoFocus>
             {keep}
           </button>
-          <button className="primary" disabled={!ready} onClick={confirm}>
+          <button
+            className={danger ? "primary danger" : "primary"}
+            disabled={!ready}
+            onClick={confirm}
+          >
             {action}
           </button>
         </div>
@@ -190,7 +196,9 @@ export function RemoveGame({
   return (
     <Confirm
       title={`Remove ${quoted(game.title)}?`}
-      action="Remove"
+      keep="No, keep its data"
+      action="Yes, remove"
+      danger
       close={close}
       confirm={confirm}
     >
@@ -198,6 +206,60 @@ export function RemoveGame({
         Its app is no longer at {game.app}. If you moved it, open it once and it
         will appear again. Removing deletes its saves, states and settings from
         this computer.
+      </p>
+    </Confirm>
+  );
+}
+
+/** The pop-up before we reset a game's data. The game stays installed. */
+export function ResetGame({
+  game,
+  close,
+  confirm,
+}: {
+  game: bridge.InstalledGame;
+  close: () => void;
+  confirm: () => void;
+}) {
+  return (
+    <Confirm
+      title={`Reset the data of ${quoted(game.title)}?`}
+      keep="No, keep my data"
+      action="Yes, reset"
+      danger
+      close={close}
+      confirm={confirm}
+    >
+      <p>
+        This permanently deletes its saves, states, memory cards, controls and
+        settings. The game stays installed and starts as new.
+      </p>
+    </Confirm>
+  );
+}
+
+/** The pop-up before we uninstall a game: its app and all of its data. */
+export function UninstallGame({
+  game,
+  close,
+  confirm,
+}: {
+  game: bridge.InstalledGame;
+  close: () => void;
+  confirm: () => void;
+}) {
+  return (
+    <Confirm
+      title={`Uninstall ${quoted(game.title)}?`}
+      keep="No, keep my game"
+      action="Yes, uninstall"
+      danger
+      close={close}
+      confirm={confirm}
+    >
+      <p>
+        This permanently deletes the game&apos;s app, at {game.app}, and all of
+        its saves, states, memory cards, controls and settings.
       </p>
     </Confirm>
   );
