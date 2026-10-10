@@ -40,12 +40,18 @@ extern "C" bool rib_host_bind_conflicts(unsigned changed, unsigned other)
    return changed != other && changed < host.bind_ids.size()
          && host.bind_ids[changed] == host.clashing;
 }
+std::string profile_value(const std::string& position);
 extern "C" void rib_host_bind_lines(unsigned index, char details[][64], char kinds[][8], int *lines)
 {
    if (!details || !kinds || !lines || *lines + 2 > RIB_HOST_BIND_LINE_MAX) return;
-   (void)index;
-   std::snprintf(details[*lines], 64, "%s", host.bound_pad.c_str());
-   std::strcpy(kinds[(*lines)++], "PAD");
+   const std::string position = index < host.bind_ids.size() ? host.bind_ids[index] : std::string();
+   const auto rebound = host.rebinds.find(position);
+   const std::string pad = rebound != host.rebinds.end() ? rebound->second : profile_value(position);
+   if (!pad.empty())
+   {
+      std::snprintf(details[*lines], 64, "%s", pad.c_str());
+      std::strcpy(kinds[(*lines)++], "PAD");
+   }
    std::snprintf(details[*lines], 64, "%s", host.bound_key.c_str());
    std::strcpy(kinds[(*lines)++], "KEY");
 }
@@ -73,6 +79,14 @@ bool held(const std::vector<std::string>& down, const std::string& name)
 {
    return std::find(down.begin(), down.end(), name) != down.end();
 }
+}
+/* The pad input of `position` in the profile of the fake pad. */
+std::string profile_value(const std::string& position)
+{
+   for (unsigned index = 0; index < sizeof(pad_inputs) / sizeof(pad_inputs[0]); ++index)
+      if (position == pad_inputs[index])
+         return std::to_string(index);
+   return std::string();
 }
 extern "C" bool rib_host_key_code(const char *name, unsigned *code)
 {
@@ -131,8 +145,21 @@ extern "C" bool rib_host_pad_name(unsigned bind, char *name, size_t size)
 }
 extern "C" bool rib_host_pad_value_input(const char *value, unsigned *bind)
 {
-   const auto found = value ? host.pad_values.find(value) : host.pad_values.end();
-   return found != host.pad_values.end() && rib_host_pad_input(found->second.c_str(), bind);
+   for (unsigned index = 0; value && index < sizeof(pad_inputs) / sizeof(pad_inputs[0]); ++index)
+      if (std::to_string(index) == value)
+      {
+         *bind = index;
+         return true;
+      }
+   return false;
+}
+extern "C" bool rib_host_pad_input_value(const char *id, char *value, size_t size)
+{
+   const std::string found = id && rib_host_pad_value(id) ? std::string(id) : profile_value(id ? id : "");
+   if (found.empty() || !value || !size)
+      return false;
+   std::snprintf(value, size, "%s", found.c_str());
+   return true;
 }
 extern "C" bool rib_host_capture_input_start(unsigned seconds)
 {

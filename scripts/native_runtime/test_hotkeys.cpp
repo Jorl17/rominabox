@@ -614,11 +614,12 @@ void reset(void *menu)
 void the_pad_names_its_own_inputs(const char *assets)
 {
    const auto binding_of_up = [] { return inspect.text("control-binding-up"); };
-   host.pad_names = {{"b", "Cross"}};
-   host.pad_values = {{"1", "b"}};
-   for (const char *bound : {"1", "13"})
+   host.pad_names = {{"b", "Cross"}, {"up", "D-Pad Up"}};
+   for (const char *rebound : {"", "20"})
    {
-      host.bound_pad = bound;
+      host.rebinds.clear();
+      if (*rebound)
+         host.rebinds["up"] = rebound;
       filestream_delete((data + "/hotkeys.cfg").c_str());
       void *menu = open(assets);
       if (!menu)
@@ -627,19 +628,39 @@ void the_pad_names_its_own_inputs(const char *assets)
       rib_menu_key(menu, RIB_KEY_CANCEL);
       frame(menu);
       click(menu, "controls");
-      const std::string expected = std::string(bound) == "1" ? "Cross" : "Button 13";
+      const std::string expected = *rebound ? "Button 20" : "D-Pad Up";
       check(binding_of_up().rfind(expected, 0) == 0,
-            "CONTROLS shows the pad input " + std::string(bound) + " as " + expected + ": "
-                  + binding_of_up());
+            "CONTROLS shows Up as " + expected + ": " + binding_of_up());
       close(menu);
    }
    host.pad_names.clear();
-   host.pad_values.clear();
-   host.bound_pad = "0";
+   host.rebinds.clear();
 }
 
-/* A pad input with no position of the standard pad, as the touchpad of a
- * DualSense, button 13 through DirectInput, is a binding like any other: we
+/* We refuse a hotkey for use during play on an input the game reads, as we
+ * read it: the player's rebind on CONTROLS, or else the input in the profile
+ * of the pad. With Mega Drive A, which we read from the left button, rebound
+ * to the touchpad, the left button is free for NEXT SLOT, and the touchpad is
+ * the game's. */
+void the_games_inputs_are_its_rebinds(const char *assets)
+{
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+   host.rebinds = {{"y", "20"}};
+   void *menu = open(assets);
+   if (!menu)
+      return;
+   capture(menu, "next-slot", "pad:y");
+   expect_row("next-slot", {"f7", "Left button"}, "the left button, which A no longer reads, for NEXT SLOT");
+   capture(menu, "quick-save", "pad:20");
+   expect_status("THE GAME USES THAT FOR A", "the touchpad, which A reads, for QUICK SAVE");
+   expect_row("quick-save", {"f2"}, "the touchpad, which A reads, for QUICK SAVE");
+   close(menu);
+   host.rebinds.clear();
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+}
+
+/* A pad input with no position of the standard pad, as the touchpad, which
+ * is button 20 of the fake pad, is a binding like any other: we
  * show it by its number, keep it in the player's file, and read it as the
  * hotkey it is bound to. */
 void an_input_with_no_position_is_a_hotkey(const char *assets)
@@ -648,15 +669,15 @@ void an_input_with_no_position_is_a_hotkey(const char *assets)
    void *menu = open(assets);
    if (!menu)
       return;
-   capture(menu, "menu", "pad:13");
-   expect_row("menu", {"Escape", "Home", "L3+R3", "Button 13"}, "the touchpad captured for MENU");
-   check(player_file().find("pad:13") != std::string::npos,
-         "the player's file keeps pad:13: " + player_file());
-   check(press({}, {"13"}).menu_pad, "holding the touchpad is MENU");
+   capture(menu, "menu", "pad:20");
+   expect_row("menu", {"Escape", "Home", "L3+R3", "Button 20"}, "the touchpad captured for MENU");
+   check(player_file().find("pad:20") != std::string::npos,
+         "the player's file keeps pad:20: " + player_file());
+   check(press({}, {"20"}).menu_pad, "holding the touchpad is MENU");
    check(!press({}, {}).menu_pad, "without the touchpad, MENU is not held");
    close(menu);
    menu = open(assets);
-   expect_row("menu", {"Escape", "Home", "L3+R3", "Button 13"}, "pad:13 read back at the next launch");
+   expect_row("menu", {"Escape", "Home", "L3+R3", "Button 20"}, "pad:20 read back at the next launch");
    close(menu);
    filestream_delete((data + "/hotkeys.cfg").c_str());
 }
@@ -722,6 +743,7 @@ int main(int argc, char **argv)
 
    the_pad_names_its_own_inputs(argv[1]);
    an_input_with_no_position_is_a_hotkey(argv[1]);
+   the_games_inputs_are_its_rebinds(argv[1]);
 
    if (failures)
       std::fprintf(stderr, "hotkeys: %d failures\n", failures);

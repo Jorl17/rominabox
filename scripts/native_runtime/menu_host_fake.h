@@ -23,13 +23,15 @@ struct FakeHost
    /* The key bound to every control, by its name in a RetroArch config
     * (input_key_names.inc). */
    std::string bound_key = "a";
-   /* The pad input bound to every control, in the form of a RetroArch config:
-    * "13" for a button, "h0up" for a direction of a hat, "+3" for an axis. */
-   std::string bound_pad = "0";
-   /* The position of the standard pad, by its id, of each such input on the
-    * first player's pad, and the name of each position in the profile of
-    * that pad, for the positions it names. */
-   std::map<std::string, std::string> pad_values, pad_names;
+   /* The pad of the first player has a profile in which each position of
+    * the standard pad is the button with the number of the position in the
+    * bind order of RetroPad (pad_inputs in menu_host_fake.cpp): the bottom
+    * button is "0" and Up is "4". In `pad_names` we give the name in that
+    * profile of each position that has one. In `rebinds` we give the
+    * player's rebinds on CONTROLS, by the position of the control, each a
+    * pad input in the form of RetroArch's config: "13" for a button, "h0up"
+    * for a direction of a hat, "+3" for an axis. */
+   std::map<std::string, std::string> pad_names, rebinds;
    /* The control whose new binding clashes with every other, or none. */
    std::string clashing;
    std::string captured_id;
