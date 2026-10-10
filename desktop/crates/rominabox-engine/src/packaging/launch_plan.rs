@@ -296,7 +296,11 @@ pub(super) fn write_launch_plan(
         ));
     }
     let shader_initial = if request.game.show_menu {
-        crate::shaders::launch_preset(&request.game.shaders, &shader_destination(request))
+        crate::shaders::launch_preset(
+            &request.game.shaders,
+            &shader_destination(request),
+            crate::systems::frames_of(&request.game.system),
+        )
             .map_err(|message| ExportError::new(ErrorStage::Configure, message))?
             .unwrap_or_default()
     } else {

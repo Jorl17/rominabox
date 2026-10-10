@@ -299,7 +299,13 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         platform: request.target,
         library: request.shader_library.clone(),
     };
-    let shaders = crate::shaders::stage(&manifest, &request.shaders, &destination, settings.video.is_some())?;
+    let shaders = crate::shaders::stage(
+        &manifest,
+        &request.shaders,
+        &destination,
+        settings.video.is_some(),
+        crate::systems::frames_of(&request.system),
+    )?;
     for (name, content) in shaders.files {
         composition.put(name, content);
     }

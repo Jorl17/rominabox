@@ -55,9 +55,9 @@ fn value_in(preset: &Path, parameter: &str) -> Option<String> {
 /// A game in slang, as a game with a preset only in slang is.
 const SLANG: &str = "gba-lcd";
 
-/// Flycast sends every Dreamcast picture as a whole frame, 640 by 480. CRT
-/// Royale takes a picture of that height as two interlaced fields and shows
-/// one field a frame, with the other field's lines made from their
+/// Every Dreamcast picture from Flycast is a whole frame, 640 by 480. In CRT
+/// Royale a picture of that height counts as two interlaced fields, and each
+/// frame shows one field, with the other field's lines made from their
 /// neighbours. So in a Dreamcast game we switch that off.
 #[test]
 fn crt_royale_takes_a_dreamcast_picture_as_a_whole_frame() {
@@ -65,16 +65,16 @@ fn crt_royale_takes_a_dreamcast_picture_as_a_whole_frame() {
     assert_eq!(value_in(&root.join(&preset), "interlace_detect_toggle").as_deref().map(str::parse::<f32>), Some(Ok(0.0)));
 }
 
-/// Genesis Plus GX sends a Mega Drive game's interlaced mode as two fields
-/// woven into one picture, so CRT Royale keeps showing one field a frame.
+/// In a Mega Drive game's interlaced mode, each picture from Genesis Plus GX
+/// is two fields woven together, so CRT Royale keeps one field a frame.
 #[test]
 fn crt_royale_still_takes_a_mega_drive_picture_as_interlaced() {
     let (root, preset) = staged("megadrive", &["crt-royale", SLANG], "crt-royale");
     assert_eq!(value_in(&root.join(&preset), "interlace_detect_toggle"), None);
 }
 
-/// CRT Geom's switch has a parameter in both languages, so a Dreamcast game
-/// in GLSL switches it off too.
+/// CRT Geom's switch is a parameter in both languages, so we switch it off
+/// in a Dreamcast game in GLSL too.
 #[test]
 fn crt_geom_takes_a_dreamcast_picture_as_a_whole_frame_in_glsl() {
     let (root, preset) = staged("dreamcast", &["crt-geom"], "crt-geom");
@@ -82,8 +82,8 @@ fn crt_geom_takes_a_dreamcast_picture_as_a_whole_frame_in_glsl() {
     assert_eq!(value_in(&root.join(&preset), "interlace_detect").as_deref().map(str::parse::<f32>), Some(Ok(0.0)));
 }
 
-/// CRT Guest takes a picture over 375 lines high as interlaced, unless its
-/// interlace mode is off.
+/// In CRT Guest a picture over 375 lines high counts as interlaced, unless
+/// its interlace mode is off.
 #[test]
 fn crt_guest_takes_a_dreamcast_picture_as_a_whole_frame() {
     let (root, preset) = staged("dreamcast", &["crt-guest-advanced"], "crt-guest-advanced");
@@ -110,4 +110,39 @@ fn the_row_of_a_dreamcast_game_names_a_preset_whose_files_are_all_there() {
     })
     .unwrap();
     assert!(names(&walked[1]) > names(&library_preset[1]), "the row's preset reaches every file of CRT Royale");
+}
+
+/// Each language's files of a preset declare the parameter that the catalog
+/// names as its switch, so that the value we give it reaches the shader.
+#[test]
+fn each_switch_in_the_catalog_is_a_parameter_of_its_preset() {
+    for preset in catalog_file().unwrap().presets {
+        let (Some(interlacing), Made::Files(files)) = (&preset.interlacing, &preset.made) else {
+            continue;
+        };
+        for language in Language::ALL {
+            let (Some(switch), Some(path)) = (interlacing.switch(language), files.in_language(language)) else {
+                continue;
+            };
+            let folder = library_folder(language);
+            let listed = library_files(&library().join(folder), path).unwrap();
+            assert!(
+                super::super::brightness::declares(&listed, switch.parameter()),
+                "{folder}/{path} declares no {}",
+                switch.parameter()
+            );
+        }
+    }
+}
+
+/// What a Dreamcast game's row of CRT Royale names: our preset, which
+/// references the library preset and switches the guess off.
+#[test]
+fn the_preset_of_a_dreamcast_game_references_the_library_preset() {
+    let (root, preset) = staged("dreamcast", &["crt-royale", SLANG], "crt-royale");
+    assert_eq!(preset, "shaders/crt-royale/whole-frames.slangp");
+    assert_eq!(
+        fs::read_to_string(root.join(&preset)).unwrap(),
+        "#reference \"../slang/crt/crt-royale.slangp\"\ninterlace_detect_toggle = \"0.000000\"\n"
+    );
 }

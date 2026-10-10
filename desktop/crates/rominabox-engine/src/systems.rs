@@ -227,6 +227,22 @@ pub struct Core {
     /// reconstruction. Empty when the core's defaults already give that.
     #[serde(default)]
     pub pixels: Vec<PixelOption>,
+    /// Whether any picture from this build is two interlaced fields woven
+    /// together. When every picture is a whole frame, we switch off the guess
+    /// of interlacing from the height of the picture in each shader with one.
+    #[serde(default)]
+    pub frames: Frames,
+}
+
+/// The pictures from a core.
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum Frames {
+    /// Some pictures may be two interlaced fields woven together.
+    #[default]
+    MayBeInterlaced,
+    /// Every picture is a whole frame, at any height.
+    Whole,
 }
 
 /// A core option that we write so the picture stays the core's pixels.
@@ -275,6 +291,17 @@ impl System {
     pub fn preferred_core(&self) -> Option<&Core> {
         self.cores.first()
     }
+
+    /// The pictures from the core we package for this console.
+    pub fn frames(&self) -> Frames {
+        self.preferred_core().map_or(Frames::MayBeInterlaced, |core| core.frames)
+    }
+}
+
+/// The pictures from the core we package for the console `id`. We take a
+/// console we do not know as one whose pictures may be interlaced.
+pub fn frames_of(id: &str) -> Frames {
+    find(id).map_or(Frames::MayBeInterlaced, System::frames)
 }
 
 /// Returns the declared system metadata. A core entry lists a core we may

@@ -545,7 +545,8 @@
           "license": "GPL-2.0",
           "licenseFile": "flycast.txt",
           "capabilities": [],
-          "libraryName": "Flycast"
+          "libraryName": "Flycast",
+          "frames": "whole"
         }
       ],
       "controllerProfile": "dreamcast",

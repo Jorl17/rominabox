@@ -27,6 +27,7 @@ fn the_emulated_device_is_written_as_a_remap_not_a_config_line() {
         groups: Default::default(),
     };
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "pcsx_rearmed".into(),
         license: "GPL-2.0".into(),
@@ -63,6 +64,7 @@ fn a_profile_with_no_declared_device_writes_nothing() {
         groups: Default::default(),
     };
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "nestopia".into(),
         license: "GPL-2.0".into(),
@@ -93,6 +95,7 @@ fn a_moved_control_is_written_into_the_remap() {
         ..profile
     };
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "genesis_plus_gx".into(),
         license: String::new(),
@@ -129,6 +132,7 @@ fn every_pad_is_player_one_in_the_remap_and_moves_its_controls_on_each() {
         ..controls::profile_for_system("megadrive").unwrap()
     };
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "genesis_plus_gx".into(),
         license: String::new(),
@@ -179,6 +183,7 @@ fn every_core_names_the_folder_its_remap_goes_in() {
 fn picture_options_are_written_where_retroarch_reads_them() {
     let root = scratch_dir();
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "nestopia".into(),
         license: "GPL-2.0".into(),
@@ -197,6 +202,7 @@ fn picture_options_are_written_where_retroarch_reads_them() {
     assert_eq!(text, "nestopia_blargg_ntsc_filter = \"disabled\"\n");
 
     let untouched = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         pixels: Vec::new(),
         library_name: None,
         ..core
@@ -206,6 +212,7 @@ fn picture_options_are_written_where_retroarch_reads_them() {
     assert!(!empty.exists(), "no options directory should be created");
 
     let nameless = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         library_name: None,
         pixels: vec![crate::systems::PixelOption {
             key: "nestopia_blargg_ntsc_filter".into(),
@@ -238,6 +245,7 @@ fn a_declared_device_with_no_library_name_is_refused() {
         groups: Default::default(),
     };
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "genesis_plus_gx".into(),
         license: "MAME".into(),
@@ -296,6 +304,7 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
     )
     .unwrap();
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "genesis_plus_gx".into(),
         license: "GPL-3.0".into(),
@@ -351,6 +360,7 @@ fn a_game_carries_every_licence_the_kit_holds_for_its_player() {
 fn a_kit_with_no_licence_index_is_refused() {
     let root = scratch_dir();
     let core = crate::systems::Core {
+        frames: crate::systems::Frames::default(),
         artifacts: Default::default(),
         component: "genesis_plus_gx".into(),
         license: "GPL-3.0".into(),

@@ -30,7 +30,13 @@
         "glsl": "crt/crt-royale.glslp",
         "slang": "crt/crt-royale.slangp"
       },
-      "authors": "TroggleMonkey; GLSL port by hunterk"
+      "authors": "TroggleMonkey; GLSL port by hunterk",
+      "interlacing": {
+        "slang": {
+          "parameter": "interlace_detect_toggle",
+          "off": 0.0
+        }
+      }
     },
     {
       "id": "crt-royale-pal",
@@ -40,7 +46,13 @@
         "glsl": "crt/crt-royale-pal-r57shell.glslp",
         "slang": "presets/crt-plus-signal/crt-royale-pal-r57shell.slangp"
       },
-      "authors": "TroggleMonkey and r57shell; GLSL port by hunterk"
+      "authors": "TroggleMonkey and r57shell; GLSL port by hunterk",
+      "interlacing": {
+        "slang": {
+          "parameter": "interlace_detect_toggle",
+          "off": 0.0
+        }
+      }
     },
     {
       "id": "crt-guest-advanced",
@@ -70,6 +82,12 @@
             1.8
           ]
         ]
+      },
+      "interlacing": {
+        "slang": {
+          "parameter": "interm",
+          "off": 0.0
+        }
       }
     },
     {
@@ -222,7 +240,17 @@
         "glsl": "crt/crt-geom.glslp",
         "slang": "crt/crt-geom.slangp"
       },
-      "authors": "cgwg, Themaister and DOLLS"
+      "authors": "cgwg, Themaister and DOLLS",
+      "interlacing": {
+        "glsl": {
+          "parameter": "interlace_detect",
+          "off": 0.0
+        },
+        "slang": {
+          "parameter": "interlace_detect",
+          "off": 0.0
+        }
+      }
     },
     {
       "id": "crt-aperture",

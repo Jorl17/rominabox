@@ -111,7 +111,7 @@ fn catalog_presets_are_written_in_a_slang_game_s_language() {
     assert!(preset.contains("shader0 = scanlines.slang"), "{preset}");
     assert!(staged.join("shaders/crt/crt.slang").is_file());
     assert_eq!(
-        launch_preset(&selection, &on(ExportTarget::Windows)).unwrap().as_deref(),
+        launch_preset(&selection, &on(ExportTarget::Windows), Frames::MayBeInterlaced).unwrap().as_deref(),
         Some("shaders/scanlines/scanlines.slangp")
     );
     let _ = fs::remove_dir_all(&root);
@@ -165,7 +165,7 @@ fn bundling_a_preset_uses_the_row_and_writes_glsl() {
             bundled: vec!["scanlines".into(), "phosphor".into()],
             initial: Some("phosphor".into()),
             custom: Vec::new(),
-        }, &on(ExportTarget::Windows))
+        }, &on(ExportTarget::Windows), Frames::MayBeInterlaced)
         .unwrap()
         .as_deref(),
         Some("shaders/phosphor/phosphor.glslp")
@@ -293,7 +293,7 @@ fn a_preset_takes_the_files_it_names_from_a_neighbouring_folder() {
         ["crt/royale-pal.glslp", "icon.png", "pal/resources/lut.png", "pal/shaders/pal.glsl"]
     );
     assert_eq!(
-        launch_preset(&selection, &on(ExportTarget::Windows)).unwrap().as_deref(),
+        launch_preset(&selection, &on(ExportTarget::Windows), Frames::MayBeInterlaced).unwrap().as_deref(),
         Some("shaders/pal/crt/royale-pal.glslp")
     );
 }
@@ -350,7 +350,7 @@ fn a_staged_preset_resolves_inside_its_own_folder() {
     let root = rominabox_scratch::Scratch::dir("rominabox-shader-walk-staged");
     composed(selection.clone()).write(&root).unwrap();
     let staged = root.join("shaders/pal");
-    let preset = launch_preset(&selection, &on(ExportTarget::Windows)).unwrap().unwrap();
+    let preset = launch_preset(&selection, &on(ExportTarget::Windows), Frames::MayBeInterlaced).unwrap().unwrap();
     let again = resolve(&ShaderSelection {
         custom: vec![CustomShader { name: Some("PAL".into()), path: root.join(&preset) }],
         ..selection.clone()

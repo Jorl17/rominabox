@@ -257,9 +257,46 @@ pub struct CoreComponent {
     /// declared defaults already leave the pixels intact.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pixels: Vec<PixelOption>,
+    /// Whether any picture from this build is two interlaced fields woven
+    /// together. Read it from the pictures of the artifact, not from the
+    /// console: a console whose television picture was interlaced can have a
+    /// core whose pictures are whole frames.
+    #[serde(default, skip_serializing_if = "Frames::may_be_interlaced")]
+    pub frames: Frames,
     /// Where the shipped artifact came from and what source we retain for it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provenance: Option<ComponentProvenance>,
+}
+
+impl CoreComponent {
+    /// Add what we declare about the picture of this core to its entry in
+    /// `systems.json`. We leave out what the core's defaults already give,
+    /// so a console with nothing to declare has no empty entries.
+    pub fn write_picture(&self, core: &mut serde_json::Value) {
+        if !self.pixels.is_empty() {
+            core["pixels"] = serde_json::json!(self.pixels);
+        }
+        if !self.frames.may_be_interlaced() {
+            core["frames"] = serde_json::json!(self.frames);
+        }
+    }
+}
+
+/// The pictures from a core.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Frames {
+    /// Some pictures may be two interlaced fields woven together.
+    #[default]
+    MayBeInterlaced,
+    /// Every picture is a whole frame, at any height.
+    Whole,
+}
+
+impl Frames {
+    pub fn may_be_interlaced(&self) -> bool {
+        *self == Frames::MayBeInterlaced
+    }
 }
 
 /// How we obtained a core artifact, and what source we include with it.

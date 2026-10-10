@@ -862,12 +862,7 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
                         // an unfiltered picture. So we need it in the player too.
                         "libraryName": component.library_name,
                     });
-                    // We leave this out when the core's defaults already keep
-                    // the pixels intact, so a console with nothing to override
-                    // has no empty list.
-                    if !component.pixels.is_empty() {
-                        core["pixels"] = json!(component.pixels);
-                    }
+                    component.write_picture(&mut core);
                     core
                 })
             })

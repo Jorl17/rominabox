@@ -18,6 +18,7 @@
 
 use crate::packaging::ExportTarget;
 use crate::shader_format::{Language, VideoDriver};
+use crate::systems::Frames;
 use brightness::{BrightnessControl, CatalogBrightness};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -72,6 +73,9 @@ struct CatalogPreset {
     /// The brightness parameter of the preset, if there is one.
     #[serde(default)]
     brightness: Option<CatalogBrightness>,
+    /// Its switch for guessing interlacing from the height of the picture.
+    #[serde(default)]
+    interlacing: Option<interlacing::CatalogInterlacing>,
 }
 
 /// How a catalog preset is made.
@@ -224,6 +228,9 @@ pub struct ResolvedShader {
     files: Vec<(PathBuf, String)>,
     /// The brightness parameter, when there is one in the shader.
     brightness: Option<BrightnessControl>,
+    /// A library preset's switch for its guess of interlacing, in the game's
+    /// language (`interlacing`).
+    interlacing: Option<interlacing::Switch>,
     /// In a GLSL game, the newest GLSL version among its passes. We know it
     /// for the author's shaders and ours, and for a libretro preset when we
     /// know the game's destination.
@@ -424,6 +431,7 @@ fn unfiltered() -> ResolvedShader {
         library: None,
         files: Vec::new(),
         brightness: None,
+        interlacing: None,
         glsl_version: None,
         written: Vec::new(),
     }
@@ -440,6 +448,18 @@ pub fn resolve(selection: &ShaderSelection) -> Result<Vec<ResolvedShader>, Strin
 /// language of the shaders, and use the GLSL driver for a game with none.
 pub fn video_driver(selection: &ShaderSelection, destination: &Destination) -> Result<VideoDriver, String> {
     Ok(resolved(selection, Some(destination))?.0.video_driver())
+}
+
+/// The shaders of a game for `destination` and a console whose core's
+/// pictures are `frames` (`interlacing`).
+fn for_game(
+    selection: &ShaderSelection,
+    destination: &Destination,
+    frames: Frames,
+) -> Result<(Language, Vec<ResolvedShader>), String> {
+    let (language, mut resolved) = resolved(selection, Some(destination))?;
+    interlacing::for_frames(&mut resolved, frames, language);
+    Ok((language, resolved))
 }
 
 /// The newest GLSL version among the passes of a libretro preset, by its path
@@ -611,6 +631,7 @@ fn resolved(
             library,
             files: Vec::new(),
             brightness: preset.brightness.as_ref().and_then(|entry| entry.control(language)),
+            interlacing: preset.interlacing.as_ref().and_then(|entry| entry.switch(language)),
             glsl_version,
             written,
         });
@@ -673,6 +694,7 @@ fn resolved(
             detail: String::new(),
             files,
             brightness: control,
+            interlacing: None,
             glsl_version,
             written,
         });
@@ -760,10 +782,11 @@ pub fn stage(
     selection: &ShaderSelection,
     destination: &Destination,
     video: bool,
+    frames: Frames,
 ) -> Result<StagedShaders, String> {
     use crate::menu::Content;
     let library = &destination.library;
-    let (language, resolved) = resolved(selection, Some(destination))?;
+    let (language, resolved) = for_game(selection, destination, frames)?;
     let (video_files, video_config) = if video {
         let (files, preset) = crate::video::files(language);
         (
@@ -867,8 +890,12 @@ pub fn stage(
 
 /// The preset to pass to RetroArch at launch, relative to the menu assets.
 /// For the unfiltered choice and an empty selection, we leave shaders off.
-pub fn launch_preset(selection: &ShaderSelection, destination: &Destination) -> Result<Option<String>, String> {
-    let (_, resolved) = resolved(selection, Some(destination))?;
+pub fn launch_preset(
+    selection: &ShaderSelection,
+    destination: &Destination,
+    frames: Frames,
+) -> Result<Option<String>, String> {
+    let (_, resolved) = for_game(selection, destination, frames)?;
     if resolved.is_empty() {
         return Ok(None);
     }

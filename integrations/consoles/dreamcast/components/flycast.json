@@ -14,6 +14,7 @@
     "file": "flycast.txt"
   },
   "capabilities": [],
+  "frames": "whole",
   "provenance": {
     "origin": "libretro-buildbot",
     "repository": "flyinghead/flycast",
