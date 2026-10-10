@@ -57,7 +57,15 @@ pub struct MenuRequest {
     pub target: crate::packaging::ExportTarget,
     /// The components we ship in the game, which we list on its ABOUT screen.
     pub licences: Vec<crate::licences::Row>,
+    /// Our logo, from the kit, which we write beside the menu as LOGO. A
+    /// design shows it on the card over a game that waits, paused, in the
+    /// background. The splash has its own copy, which the game has only with
+    /// the splash on.
+    pub logo: Option<PathBuf>,
 }
+
+/// Our logo beside the menu, as the designs name it.
+const LOGO: &str = "logo.png";
 
 impl MenuRequest {
     /// The design's default menu for a one-disc Mega Drive game in Blue.
@@ -90,6 +98,7 @@ impl MenuRequest {
             target: crate::packaging::ExportTarget::of_host()
                 .expect("the builder runs on a platform it makes games for"),
             licences: Vec::new(),
+            logo: None,
         }
     }
 }
@@ -265,6 +274,9 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let mut composition = Composition::default();
     if !request.show_menu && !request.splash {
         return Ok(composition);
+    }
+    if let Some(logo) = &request.logo {
+        composition.put(LOGO, Content::Copy(logo.clone()));
     }
     let manifest = Manifest::load(&request.design)?;
     let palette = crate::themes::palette(&request.palette)?;

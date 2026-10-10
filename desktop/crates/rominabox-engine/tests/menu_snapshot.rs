@@ -410,6 +410,30 @@ fn the_composed_menu_matches_its_snapshot() {
     eprintln!("compared {} menu snapshots", cases.len());
 }
 
+/// The player shows the splash exactly when the game has the splash's logo,
+/// so a game with the splash off must not have it. The card over a game that
+/// waits in the background has its own copy, in every game with a menu.
+#[test]
+fn a_game_has_the_splash_logo_only_with_the_splash() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-menu-logos");
+    let kit = support::kit(&root);
+    support::with_shader_library(&kit);
+    let mut wrong = Vec::new();
+    for menu in Menu::ALL {
+        let case = Case { design: "native".into(), menu, system: "megadrive" };
+        let request = request(&root, &kit, &case);
+        let staged = root.join(case.name());
+        rominabox_engine::packaging::stage_menu(&request, 1, &menu.licences(), &staged).unwrap();
+        for (file, wanted) in [("splash-logo.png", request.game.splash), ("logo.png", request.game.show_menu)] {
+            if staged.join(file).is_file() != wanted {
+                wrong.push(format!("{}: {file} {}", case.name(), if wanted { "missing" } else { "shipped" }));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("
+"));
+}
+
 /// We trust the snapshot only as far as `compose` matches an export. So we
 /// export every case and check that the menu files of the export are the
 /// ones that `compose` wrote for the same request.

@@ -587,6 +587,7 @@ fn run() -> Result<(), String> {
                 shader_library: builder::runtime_kit()
                     .map(|kit| shaders::kit_library(&kit))
                     .unwrap_or_default(),
+                logo: builder::runtime_kit().map(|kit| rominabox_engine::packaging::kit_logo(&kit)),
                 discs: request.discs.unwrap_or(defaults.discs),
                 settings: rominabox_engine::player_settings::Defaults {
                     keep_playing_in_background: request.keep_playing_in_background,

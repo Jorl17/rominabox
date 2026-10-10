@@ -30,6 +30,7 @@ pub fn menu_request(
         menu_entries: request.game.menu_entries.clone(),
         shaders: request.game.shaders.clone(),
         shader_library: crate::shaders::kit_library(kit),
+        logo: request.game.show_menu.then(|| super::kit_logo(kit)),
         discs,
         settings: request.game.player_defaults(),
         sound_pack: request.game.menu_sounds != "off",
@@ -66,10 +67,7 @@ pub fn stage_menu(
     )
     .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
     if request.game.splash {
-        copy_file(
-            &request.runtime_kit.join("branding/logo.png"),
-            &menu_assets.join("splash-logo.png"),
-        )?;
+        copy_file(&super::kit_logo(&request.runtime_kit), &menu_assets.join("splash-logo.png"))?;
     }
     Ok(profile)
 }

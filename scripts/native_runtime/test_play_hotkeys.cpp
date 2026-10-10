@@ -263,6 +263,28 @@ void the_next_launch_keeps_the_chosen_slot(void *menu)
 }
 }
 
+/* With its window in the background, and PLAY IN BACKGROUND off, the game
+ * waits, paused. We say so on the body for the design, and draw over the
+ * game while it waits, also on a document built again meanwhile, as after a
+ * switch to fullscreen. With the window in front again, the game plays. */
+void the_game_waiting_in_the_background_is_drawn_over(void *menu)
+{
+   const auto says = [] { return view.document.root()->IsClassSet("paused-in-background"); };
+   play(menu);
+   check(!says(), "a game that plays is not said to wait");
+   host.waits_in_background = true;
+   play(menu);
+   check(says(), "the body says the game waits in the background");
+   check(rib_rmlui_overlays_drawing() && host.overlay_frames, "we draw over the game while it waits");
+   rib_menu_context_destroy(menu);
+   rib_menu_context_reset(menu);
+   frame(menu);
+   check(says(), "a document built again while the game waits says so");
+   host.waits_in_background = false;
+   play(menu);
+   check(!says(), "with the window in front again, the body no longer says so");
+}
+
 int main(int argc, char **argv)
 {
    Utf8Arguments utf8(argc, argv);
@@ -299,6 +321,7 @@ int main(int argc, char **argv)
    nothing_acts_while_the_menu_is_open(menu);
    the_menu_shows_the_chosen_slot(menu);
    fullscreen_acts_in_play_and_in_the_menu(menu);
+   the_game_waiting_in_the_background_is_drawn_over(menu);
    rib_menu_destroy(menu);
 
    /* The game closed and opened again, on the same data. */

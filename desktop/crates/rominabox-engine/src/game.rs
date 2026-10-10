@@ -118,6 +118,12 @@ pub struct Game {
 }
 
 impl Game {
+    /// Whether the game shows our logo: on its splash, and in its menu, on the
+    /// card over a game that waits, paused, in the background.
+    pub fn shows_logo(&self) -> bool {
+        self.splash || self.show_menu
+    }
+
     /// The defaults of the player's settings in the game.
     pub fn player_defaults(&self) -> crate::player_settings::Defaults {
         crate::player_settings::Defaults {

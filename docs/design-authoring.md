@@ -62,7 +62,11 @@ pixel.
 
 The page skeleton, `native/menu.rml`, is fixed. We put every fragment above
 into it. It contains the splash, the notice, the heading (`#heading`, with
-the `heading` of each screen), the unlock pop-up and the insertion points.
+the `heading` of each screen), the unlock pop-up, the card over a game that
+waits in the background (`#background-pause`) and the insertion points. Our
+logo is beside the menu as `logo.png` in every game with a menu, and as
+`splash-logo.png` only in a game with the splash, which shows when that file
+is there.
 
 Four shared stylesheets in `integrations/parts/` are linked **before** yours,
 so any rule of yours wins over them:
@@ -277,6 +281,7 @@ attributes, and your RCSS decides what each one looks like:
 | `.capturing` | a control waiting for a new input |
 | `.showing`, `.leaving` | an overlay appearing and going |
 | `.overlay` | on the body while the game runs with the menu closed |
+| `.paused-in-background` | on the body while the game waits, paused, because its window is in the background and the player keeps it from playing there; we then draw over the game |
 | `data-notice="<notice>"` | on `#unlock-row`: the current notice, `achievement` (an achievement unlocked) or `slot` (the result of a hotkey for the save slots during play: `SAVED TO SLOT 3`, `LOADED SLOT 3`, `SLOT 3 IS EMPTY`, `SLOT 4`) |
 | `.badge-loading` | a list row whose picture is still downloading |
 | `.nav-outside` | everything outside an open dialog or picker |

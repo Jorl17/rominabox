@@ -218,13 +218,7 @@ fn a_core_that_needs_a_library_windows_lacks_is_refused() {
 fn every_file_of_a_game_with_every_shader_fits_windows_path_limit() {
     let root = workspace();
     let kit = windows_kit(&root);
-    for (from, to) in [
-        ("integrations/designs", "designs"),
-        ("integrations/parts", "parts"),
-        ("desktop/assets/controllers", "menu-assets"),
-    ] {
-        support::copy_tree(&rominabox_engine::repo::at(from), &kit.join(to));
-    }
+    support::with_menu_assets(&kit);
     support::with_shader_library(&kit);
     let every: Vec<String> = rominabox_engine::shaders::catalog()
         .unwrap()

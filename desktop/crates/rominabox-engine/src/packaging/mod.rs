@@ -811,16 +811,21 @@ fn validate_request(
         }
     }
     validate_firmware(request, system)?;
-    if request.game.splash {
-        let logo = request.runtime_kit.join("branding/logo.png");
+    if request.game.shows_logo() {
+        let logo = kit_logo(&request.runtime_kit);
         if !logo.is_file() {
             return Err(ExportError::new(
                 ErrorStage::Validate,
-                format!("splash logo does not exist: {}", logo.display()),
+                format!("the logo does not exist: {}", logo.display()),
             ));
         }
     }
     Ok(())
+}
+
+/// Where our logo is in a runtime kit.
+pub fn kit_logo(kit: &Path) -> PathBuf {
+    kit.join("branding/logo.png")
 }
 
 fn validate_firmware(

@@ -14,7 +14,8 @@ using rib::test::Sound;
 
 extern "C" bool rib_host_menu_open(void) { return host.menu_open; }
 extern "C" void rib_host_open_menu(void) {}
-extern "C" void rib_host_overlay_frames(bool) {}
+extern "C" void rib_host_overlay_frames(bool on) { host.overlay_frames = on; }
+extern "C" bool rib_host_game_waits_in_background(void) { return host.waits_in_background; }
 extern "C" bool rib_host_has_settings(void) { return true; }
 extern "C" bool rib_host_bind_index(const char *id, unsigned *index)
 {

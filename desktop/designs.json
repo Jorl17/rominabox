@@ -32,7 +32,8 @@
         "disabled": "#647cad",
         "frame": "#5296ef",
         "slot-label": "#081433",
-        "well-edge": "#092754"
+        "well-edge": "#092754",
+        "veil": "#00000073"
       }
     },
     {
@@ -53,7 +54,8 @@
         "disabled": "#6fa891",
         "frame": "#2fb98f",
         "slot-label": "#08222c",
-        "well-edge": "#0d2d3a"
+        "well-edge": "#0d2d3a",
+        "veil": "#00000073"
       }
     },
     {
@@ -74,7 +76,8 @@
         "disabled": "#b98a5f",
         "frame": "#e8702a",
         "slot-label": "#1d0f06",
-        "well-edge": "#2a1409"
+        "well-edge": "#2a1409",
+        "veil": "#00000073"
       }
     },
     {
@@ -95,7 +98,8 @@
         "disabled": "#6a7382",
         "frame": "#ff3b4e",
         "slot-label": "#0e1016",
-        "well-edge": "#141820"
+        "well-edge": "#141820",
+        "veil": "#00000073"
       }
     },
     {
@@ -116,7 +120,8 @@
         "disabled": "#8d6a98",
         "frame": "#ff5c9a",
         "slot-label": "#120816",
-        "well-edge": "#1a0c20"
+        "well-edge": "#1a0c20",
+        "veil": "#00000073"
       }
     }
   ],

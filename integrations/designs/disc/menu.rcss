@@ -311,6 +311,17 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity d
 #unlock-kicker { font-size: 11dp; color: design(highlight); }
 #unlock-title { font-size: 16dp; color: design(ink); margin-top: 3dp; }
 #unlock-detail { font-size: 11dp; color: design(muted); margin-top: 3dp; }
+/* While the game waits, paused, with its window in the background: the game
+ * dimmed, and a card saying so, with our logo on a tile of the screen's
+ * colour. */
+body.overlay.paused-in-background { background-color: design(veil); }
+#background-pause { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 95; }
+body.paused-in-background #background-pause { display: flex; justify-content: center; align-items: center; }
+#background-pause-card { display: flex; align-items: center; padding: 18dp; background-color: design(surface); border: 1dp design(highlight); }
+#background-pause-logo { width: 100dp; height: 100dp; padding: 10dp; background-color: design(screen); border: 1dp design(rule); }
+#background-pause-words { margin-left: 20dp; }
+#background-pause-title { font-size: 30dp; color: design(ink); }
+#background-pause-state { font-size: 18dp; color: design(muted); margin-top: 10dp; }
 /* The result of a hotkey on the save slots during play, in the same notice,
  * with only its words and no kicker, badge or second line. */
 #unlock-row[data-notice=slot] #unlock-kicker, #unlock-row[data-notice=slot] #unlock-detail { display: none; }

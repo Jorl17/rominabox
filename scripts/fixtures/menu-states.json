@@ -1134,6 +1134,15 @@
           "display": "block"
         }
       }
+    },
+    "paused-in-background": {
+      "describes": "the game paused with its window in the background, the menu closed: the game dimmed and a card with our logo saying so",
+      "screen": "pause",
+      "set": {
+        "body": {
+          "class": ["overlay", "paused-in-background"]
+        }
+      }
     }
   }
 }

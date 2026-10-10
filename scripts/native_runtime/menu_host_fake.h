@@ -115,6 +115,10 @@ struct FakeHost
    /* Whether RetroArch's menu is open. When a game does not start at the
     * menu, the menu is closed and we draw only its overlays. */
    bool menu_open = true;
+   /* Whether the game waits, paused, with its window in the background, and
+    * whether we last asked for frames to draw over the game. */
+   bool waits_in_background = false;
+   bool overlay_frames = false;
    /* The thumbnail beside an occupied slot 1 in RetroArch, or empty. */
    std::string thumbnail;
    /* The aspect ratio of the running game, width over height, as reported

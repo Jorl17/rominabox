@@ -367,6 +367,17 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 #unlock-kicker { font-size: 12dp; color: #fff13d; }
 #unlock-title { font-size: 18dp; color: #ffffff; margin-top: 4dp; }
 #unlock-detail { font-size: 12dp; color: #b4e6ff; margin-top: 4dp; }
+/* While the game waits, paused, with its window in the background: the game
+ * dimmed, and a card saying so, with our logo on a tile of the screen's
+ * colour. */
+body.overlay.paused-in-background { background-color: #00000073; }
+#background-pause { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 95; }
+body.paused-in-background #background-pause { display: flex; justify-content: center; align-items: center; }
+#background-pause-card { display: flex; align-items: center; padding: 18dp; background-color: #061a48; border: 3dp #fff13d; }
+#background-pause-logo { width: 100dp; height: 100dp; padding: 10dp; background-color: #1049c3; border-top: 2dp #041738; border-left: 2dp #041738; border-right: 2dp #75b2e4; border-bottom: 2dp #75b2e4; }
+#background-pause-words { margin-left: 20dp; }
+#background-pause-title { font-size: 30dp; color: #ffffff; }
+#background-pause-state { font-size: 18dp; color: #b4e6ff; margin-top: 10dp; }
 /* The result of a hotkey on the save slots during play, in the same notice,
  * with only its words and no kicker, badge or second line. */
 #unlock-row[data-notice=slot] #unlock-kicker, #unlock-row[data-notice=slot] #unlock-detail { display: none; }
