@@ -374,6 +374,14 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "restart",
+        "in the exported test player, that RESTART, once confirmed, resets the console and closes the menu, and that the menu then opens again on the pause screen",
+        "what the game draws after the reset, sound, or window focus",
+        [PYTHON, str(ROOT / "scripts/test_restart.py"), str(SCRATCH / "restart")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
         "cleanup",
         "on Windows, that a launched test whose real export fails part-way, as the game is built, while it is open, or in the shipped scope's menu sounds case, leaves nothing of the game in the person's ROM-in-a-Box folders, no sandbox and no temporary folder",
         "that a game plays (no player starts: each launch is plan-only), or anything on macOS, whose games unpack nothing and keep their data in their containers",
