@@ -25,6 +25,8 @@ PROGRAMS = [
     ("test_alt_enter", PLAYER / "input/alt_enter_fullscreen.c", ROOT / "scripts/native_runtime/test_alt_enter.c"),
     ("test_video_split", PLAYER / "menu/drivers/rmlui/video_split.c",
      ROOT / "scripts/native_runtime/test_video_split.c"),
+    ("test_background_pause", PLAYER / "rominabox_background_pause.c",
+     ROOT / "scripts/native_runtime/test_background_pause.c"),
 ]
 # For the brightness split we include the shader mark of the menu, which
 # includes libretro-common and has functions that the split does not call.
