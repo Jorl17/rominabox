@@ -930,6 +930,7 @@ pub fn unpack_selection(mut selection: ShaderSelection, root: &Path) -> ShaderSe
 }
 
 mod brightness;
+mod interlacing;
 #[cfg(test)]
 mod tests;
 mod warnings;
