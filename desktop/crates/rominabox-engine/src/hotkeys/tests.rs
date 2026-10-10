@@ -84,6 +84,9 @@ fn a_request_changes_the_hotkeys_it_names_and_keeps_the_rest() {
     );
 }
 
+/// In the defaults of an export, a pad input is a position of the standard
+/// pad or Home, so the binding works on any pad. An input with no position,
+/// as pad:13, is only ever a player's own capture in the game.
 #[test]
 fn a_binding_is_a_key_retroarch_reads_or_pad_inputs_the_standard_pad_has() {
     assert_eq!(Binding::read("key:f1").unwrap(), Binding::Key("f1".into()));
@@ -95,6 +98,7 @@ fn a_binding_is_a_key_retroarch_reads_or_pad_inputs_the_standard_pad_has() {
     for (text, says) in [
         ("key:notakey", "no key RetroArch reads"),
         ("pad:l_x_plus", "no pad input"),
+        ("pad:13", "no pad input"),
         ("pad:a+a", "twice"),
         ("escape", "no binding"),
     ] {
