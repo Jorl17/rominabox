@@ -313,17 +313,8 @@ fn home_on_pad(profile: &str, button: u32, pad: u32, every_pad_is_player_one: bo
 /// The remap loader is the one in the player, which we build with
 /// `HAVE_CONFIGFILE`, along with the input layer and the menu's pad input.
 fn pad_home() -> crate::retroarch_probe::Probe {
-    use crate::retroarch_probe::{Probe, CONFIGURED, INPUT_LAYER};
-    let sources = [
-        INPUT_LAYER,
-        &[
-            "menu/drivers/rmlui/pad_inputs.c",
-            "libretro-common/file/config_file_userdata.c",
-            "libretro-common/lists/string_list.c",
-            "libretro-common/time/rtime.c",
-        ],
-    ]
-    .concat();
+    use crate::retroarch_probe::{Probe, CONFIGURED, INPUT_LAYER, PAD_INPUTS};
+    let sources = [INPUT_LAYER, PAD_INPUTS].concat();
     Probe::build_defining("pad_home", CONFIGURED, &sources)
 }
 
@@ -388,18 +379,8 @@ fn captured_on(probe: &crate::retroarch_probe::Probe, options: &[&str], profile:
 }
 
 fn pad_capture() -> crate::retroarch_probe::Probe {
-    use crate::retroarch_probe::{Probe, INPUT_LAYER};
-    let sources = [
-        INPUT_LAYER,
-        &[
-            "menu/menu_driver.c",
-            "menu/drivers/rmlui/pad_inputs.c",
-            "libretro-common/file/config_file_userdata.c",
-            "libretro-common/lists/string_list.c",
-            "libretro-common/time/rtime.c",
-        ],
-    ]
-    .concat();
+    use crate::retroarch_probe::{Probe, INPUT_LAYER, PAD_INPUTS};
+    let sources = [INPUT_LAYER, &["menu/menu_driver.c"], PAD_INPUTS].concat();
     Probe::build_defining("pad_capture", &["HAVE_CONFIGFILE", "HAVE_MENU"], &sources)
 }
 

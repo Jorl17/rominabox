@@ -541,6 +541,34 @@ mod tests {
     use super::*;
     use crate::retroarch_probe::Probe;
 
+    /// Whether two positions clash on CONTROLS, on a pad with `profile` from
+    /// the kit and with the player's `rebinds` (POSITION=VALUE), from
+    /// `scripts/native_runtime/controls_binds.c`.
+    fn clash(probe: &Probe, profile: &str, rebinds: &[&str], left: &str, right: &str) -> String {
+        let staged = crate::repo::builder_resources().join("runtime/autoconfig").join(profile);
+        assert!(staged.is_file(), "the kit stages {}", staged.display());
+        let mut arguments = vec![staged.to_str().unwrap()];
+        arguments.extend_from_slice(rebinds);
+        arguments.extend_from_slice(&["--", left, right]);
+        probe.lines(&arguments).join("\n")
+    }
+
+    /// On CONTROLS we warn of a rebind that shares an input with another
+    /// control, whether that control has the input from the player or from
+    /// the profile of the pad. On a DualSense through DirectInput, Cross is
+    /// button 1, the bottom button in its profile.
+    #[test]
+    #[cfg(windows)]
+    fn a_rebind_onto_an_input_of_the_profile_is_a_clash() {
+        use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER, PAD_INPUTS};
+        let probe = Probe::build_defining("controls_binds", CONFIGURED, &[INPUT_LAYER, PAD_INPUTS].concat());
+        let dualsense = "dinput/DualSense5.cfg";
+        assert_eq!(clash(&probe, dualsense, &["a=1"], "a", "b"), "conflict yes");
+        assert_eq!(clash(&probe, dualsense, &["a=1", "b=0"], "a", "b"), "conflict no");
+        assert_eq!(clash(&probe, dualsense, &["a=1", "b=1"], "a", "b"), "conflict yes");
+        assert_eq!(clash(&probe, dualsense, &["a=13"], "a", "b"), "conflict no");
+    }
+
     fn key_names_probe() -> Probe {
         Probe::build(
             "key_names",

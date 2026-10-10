@@ -29,6 +29,15 @@ pub const INPUT_LAYER: &[&str] = &[
 ];
 pub const CONFIGURED: &[&str] = &["HAVE_CONFIGFILE"];
 
+/// The pad inputs of the menu in the fork, with what they need beyond the
+/// input layer. For use after `INPUT_LAYER`.
+pub const PAD_INPUTS: &[&str] = &[
+    "menu/drivers/rmlui/pad_inputs.c",
+    "libretro-common/file/config_file_userdata.c",
+    "libretro-common/lists/string_list.c",
+    "libretro-common/time/rtime.c",
+];
+
 pub struct Probe {
     // We remove it, with the program, when we drop the probe.
     _scratch: Scratch,
