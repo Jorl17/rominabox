@@ -771,6 +771,33 @@ def every_program_a_run_starts_is_given_its_python() -> None:
     )
 
 
+def every_python_of_a_run_reads_the_utf8_its_programs_write() -> None:
+    """Our programs write UTF-8, as the curly quotes in a message of the
+    launcher. When we read such output as text in a Python program of a run,
+    we must get the same characters back, on Windows too, where we would
+    otherwise read it in the code page of the system."""
+    import importlib.util
+    from unittest.mock import patch
+
+    spec = importlib.util.spec_from_file_location("test_runner", Path(__file__).resolve().parent / "test.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    reader = (
+        "import subprocess, sys\n"
+        "written = subprocess.run([sys.executable, '-c', "
+        "'import sys; sys.stdout.buffer.write(\"\\u201dquoted\\u201d\".encode(\"utf-8\"))'], "
+        "capture_output=True, text=True)\n"
+        "print('read' if written.stdout == '\\u201dquoted\\u201d' else 'misread ' + ascii(written.stdout))\n"
+    )
+    with patch.dict(os.environ):
+        # When we start this process from scripts/test.py, it may be set already.
+        os.environ.pop("PYTHONUTF8", None)
+        ran = runner.execute([sys.executable, "-c", reader])
+    said = ran.stdout or ""
+    check(ran.returncode == 0 and said.strip() == "read",
+          f"a Python program of a run reads UTF-8 from the programs it starts: {said.strip()!r} {ran.stderr!r}")
+
+
 def a_branch_with_a_slash_keeps_its_whole_name() -> None:
     """Check that we read the branch name menu/nav back in remove(), and not nav."""
     import worktree
@@ -796,6 +823,7 @@ ANYWHERE = [
     a_failed_rebuild_forgets_the_stamp_of_the_binary_it_rewrote,
     the_workspace_lockfile_counts_as_a_members_source,
     every_program_a_run_starts_is_given_its_python,
+    every_python_of_a_run_reads_the_utf8_its_programs_write,
     a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
     an_up_to_date_menu_probe_is_not_compiled_again,
     # We also run create() from inside a worktree, where we could check out an
