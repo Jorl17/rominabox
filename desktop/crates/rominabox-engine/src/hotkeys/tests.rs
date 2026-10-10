@@ -40,7 +40,7 @@ fn the_hotkeys_are_the_players_own() {
     assert_eq!(named("fullscreen").acts(), Acts::Both);
     assert!(named("menu").shares_with(named("back")) && named("back").shares_with(named("menu")));
     assert!(!named("confirm").shares_with(named("back")));
-    assert!(!named("quick-save").shares_with(named("confirm")));
+    assert!(named("quick-save").shares_with(named("confirm")));
 }
 
 /// The builder's defaults: MENU is Escape, the pad's Home and L3+R3. CONFIRM
@@ -141,7 +141,7 @@ fn defaults_that_would_lock_a_player_out_or_hold_an_input_twice_are_refused() {
         (serde_json::json!({ "confirm": ["key:enter", "pad:a"] }), "bound to both"),
         (serde_json::json!({ "back": ["key:escape", "key:escape"] }), "twice"),
         (serde_json::json!({ "quick-save": ["key:f4"] }), "bound to both quick-save and quick-load"),
-        (serde_json::json!({ "next-slot": ["key:enter"] }), "bound to both confirm and next-slot"),
+        (serde_json::json!({ "fullscreen": ["key:f7"] }), "bound to both next-slot and fullscreen"),
     ] {
         let error = hotkeys(json.clone()).unwrap().check().unwrap_err().to_string();
         assert!(error.contains(says), "{json}: {error}");

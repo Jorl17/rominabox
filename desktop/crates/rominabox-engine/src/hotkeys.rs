@@ -183,11 +183,18 @@ impl Hotkey {
         self.declaration().acts
     }
 
-    /// Whether two hotkeys may have the same input.
+    /// Whether two hotkeys may have the same input: a pair declared in
+    /// `hotkeys.inc`, or one hotkey of the menu and one of play, which never
+    /// act at the same time.
     pub fn shares_with(self, other: Hotkey) -> bool {
         let (one, two) = (self.declaration().name, other.declaration().name);
-        declared("RIB_HOTKEYS_SHARE")
-            .any(|pair| (pair[0] == one && pair[1] == two) || (pair[0] == two && pair[1] == one))
+        let acts_apart = matches!(
+            (self.acts(), other.acts()),
+            (Acts::InMenu, Acts::InGame) | (Acts::InGame, Acts::InMenu)
+        );
+        acts_apart
+            || declared("RIB_HOTKEYS_SHARE")
+                .any(|pair| (pair[0] == one && pair[1] == two) || (pair[0] == two && pair[1] == one))
     }
 
     fn ids() -> String {
