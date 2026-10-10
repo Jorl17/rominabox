@@ -767,6 +767,39 @@ void an_input_with_no_position_is_a_hotkey(const char *assets)
    filestream_delete((data + "/hotkeys.cfg").c_str());
 }
 
+/* Wherever a design names a hotkey, in a hint or in an element marked
+ * data-binding, we show a binding of the kind of input in use, or else of the
+ * other kind: the footer names BACK and the notice MENU by the player's own
+ * bindings, also after the player removes Escape from BACK. */
+void the_hints_name_the_bindings_in_use(const char *assets)
+{
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+   void *menu = open(assets);
+   if (!menu)
+      return;
+   const auto footer = [] { return inspect.words("footer-hint"); };
+   const auto notice = [] {
+      Rml::ElementList found;
+      view.document.root()->QuerySelectorAll(found, "[data-binding=menu]");
+      return found.empty() ? std::string("none") : rib::words_of(found[0]);
+   };
+   rib_rmlui_keyboard_used();
+   check(footer() == "Escape  BACK", "with the keyboard, the footer names BACK's key: " + footer());
+   check(notice() == "Escape", "with the keyboard, the notice names MENU's key: " + notice());
+   capture(menu, "back", "key:backspace");
+   click(menu, "hotkey-back-1");
+   expect_row("back", {"Right button", "Backspace"}, "Escape removed from BACK");
+   check(footer() == "Backspace  BACK", "with Escape removed, the footer names Backspace: " + footer());
+   host.pads_down = {"x"};
+   rib_rmlui_play_hotkeys();
+   host.pads_down.clear();
+   rib_rmlui_play_hotkeys();
+   check(footer() == "Right button  BACK", "with a pad, the footer names BACK's pad input: " + footer());
+   check(notice() == "Home", "with a pad, the notice names MENU's pad input: " + notice());
+   close(menu);
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+}
+
 int main(int argc, char **argv)
 {
    Utf8Arguments utf8(argc, argv);
@@ -832,6 +865,7 @@ int main(int argc, char **argv)
    the_pad_names_its_own_inputs(argv[1]);
    an_input_with_no_position_is_a_hotkey(argv[1]);
    the_games_inputs_are_its_rebinds(argv[1]);
+   the_hints_name_the_bindings_in_use(argv[1]);
 
    if (failures)
       std::fprintf(stderr, "hotkeys: %d failures\n", failures);
