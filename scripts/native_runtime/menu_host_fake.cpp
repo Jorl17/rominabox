@@ -105,6 +105,7 @@ extern "C" bool rib_host_pad_down(unsigned bind)
 {
    return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) && held(host.pads_down, pad_inputs[bind]);
 }
+extern "C" void rib_host_share_player_one_binds(void) {}
 extern "C" bool rib_host_pad_value(const char *value)
 {
    return value && (std::isdigit((unsigned char)value[0])

@@ -563,10 +563,29 @@ mod tests {
         use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER, PAD_INPUTS};
         let probe = Probe::build_defining("controls_binds", CONFIGURED, &[INPUT_LAYER, PAD_INPUTS].concat());
         let dualsense = "dinput/DualSense5.cfg";
-        assert_eq!(clash(&probe, dualsense, &["a=1"], "a", "b"), "conflict yes");
-        assert_eq!(clash(&probe, dualsense, &["a=1", "b=0"], "a", "b"), "conflict no");
-        assert_eq!(clash(&probe, dualsense, &["a=1", "b=1"], "a", "b"), "conflict yes");
-        assert_eq!(clash(&probe, dualsense, &["a=13"], "a", "b"), "conflict no");
+        assert_eq!(clash(&probe, dualsense, &["a=1"], "a", "b"), "conflict yes\nport 1 1");
+        assert_eq!(clash(&probe, dualsense, &["a=1", "b=0"], "a", "b"), "conflict no\nport 1 1");
+        assert_eq!(clash(&probe, dualsense, &["a=1", "b=1"], "a", "b"), "conflict yes\nport 1 1");
+        assert_eq!(clash(&probe, dualsense, &["a=13"], "a", "b"), "conflict no\nport 1 13");
+    }
+
+    /// With every pad playing as player 1, every pad reads the rebinds of
+    /// CONTROLS: we give the binds of player 1 to the port of each pad. When
+    /// each pad is a player of its own, the second pad keeps its own binds.
+    #[test]
+    #[cfg(windows)]
+    fn every_pad_that_plays_as_player_one_reads_the_rebinds() {
+        use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER, PAD_INPUTS};
+        let probe = Probe::build_defining("controls_binds", CONFIGURED, &[INPUT_LAYER, PAD_INPUTS].concat());
+        let dualsense = "dinput/DualSense5.cfg";
+        assert_eq!(
+            clash(&probe, dualsense, &["--pads", "2", "start=13"], "start", "select"),
+            "conflict no\nport 1 13\nport 2 13"
+        );
+        assert_eq!(
+            clash(&probe, dualsense, &["--pads", "2", "--separate", "start=13"], "start", "select"),
+            "conflict no\nport 1 13\nport 2 none"
+        );
     }
 
     fn key_names_probe() -> Probe {
