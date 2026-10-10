@@ -382,6 +382,14 @@ SCOPES = [
         launches_games=True,
     ),
     Scope(
+        "startmenu",
+        "in the exported test player, that a game set to show its menu at startup opens it before the game runs its first frame, on a first launch and when it resumes its autosave, and that the game runs once the player continues",
+        "what is drawn, how long the splash lasts, the achievements loading dialog (the account-input scope hides it while the menu is closed), sound, or window focus",
+        [PYTHON, str(ROOT / "scripts/test_start_menu.py"), str(SCRATCH / "start-menu")],
+        slow=True,
+        launches_games=True,
+    ),
+    Scope(
         "cleanup",
         "on Windows, that a launched test whose real export fails part-way, as the game is built, while it is open, or in the shipped scope's menu sounds case, leaves nothing of the game in the person's ROM-in-a-Box folders, no sandbox and no temporary folder",
         "that a game plays (no player starts: each launch is plan-only), or anything on macOS, whose games unpack nothing and keep their data in their containers",
