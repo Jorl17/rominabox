@@ -259,8 +259,18 @@ int main(int argc, char **argv) {
    achievements.key(RIB_KEY_UP);
    check(document.get_context()->GetFocusElement() == username, "Joypad continues from the restored form control");
    achievements.leave_form();
+   menu_open = false;
    session.startup_waiting = true; session.status = RIB_ACHIEVEMENTS_LOADING; ++session.revision;
    achievements.update();
+   Rml::Element *startup = document.root()->GetElementById("achievements-startup");
+   check(startup && rib::hidden(startup),
+         "Resuming with achievements draws nothing over the splash while the menu is closed");
+   menu_open = true;
+   achievements.update();
+   check(startup && !rib::hidden(startup), "The menu opens on the resuming dialog");
+   check(document.get_context()->GetFocusElement()
+         && document.get_context()->GetFocusElement()->GetId() == "achievements-skip-startup",
+         "The resuming dialog has the focus when the menu opens");
    capture("startup");
    achievements.physical(true, RETROK_RETURN, '\r', 0);
    achievements.handle(events.take());
