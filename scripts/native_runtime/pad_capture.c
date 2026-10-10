@@ -1,23 +1,30 @@
-/* The input we capture in the menu for a hotkey from a pad, with the code in
- * the fork: RetroArch's own capture (menu_input_rib_capture_start and
- * menu_input_rib_bind_poll in menu/menu_driver.c), started as for a hotkey
- * (rib_pad_input_capture_start in pad_inputs.c), and the pad input we read
- * the capture as through the pad's RetroArch profile.
+/* The input we capture in the menu from a pad, with the code in the fork:
+ * RetroArch's own capture (menu_input_rib_bind_poll in menu/menu_driver.c),
+ * started as for a hotkey or for a control on CONTROLS (pad_inputs.c), and
+ * the pad input we read in the capture through the profile of the pad we
+ * captured from.
  *
- *   pad_capture PROFILE FRAME...
+ *   pad_capture [--controls POSITION] [--pads N] PROFILE FRAME...
  *
- * connects one pad with PROFILE, starts a capture with the pad as the first
- * FRAME has it, and polls the capture once for each later FRAME, with the
- * pad as that FRAME has it. A FRAME is a list of what is held, separated by
- * spaces: bN for button N, and aN:V for axis N at V (from -32768 to 32767,
- * 0 for any axis not listed). We print one line:
+ * We connect N pads (1 when not given), each with PROFILE and each playing
+ * as player 1, start a capture with the pads as in the first FRAME, and poll
+ * the capture once for each later FRAME, with the pads as in that FRAME.
+ * Without --controls the capture is for a hotkey. With it, the capture is
+ * for the control of CONTROLS on POSITION, a position of the standard pad.
+ * In a FRAME we list what the player holds, separated by spaces: bN for
+ * button N and aN:V for axis N at V (from -32768 to 32767, 0 for any axis not
+ * listed), on the first pad, or on pad P (from 1) as P:bN and P:aN:V. We
+ * print one line:
  *
- *   captured <the pad input we read the capture as, or none>
+ *   captured <input> on pad <P>
  *
- * or "captured nothing" when no FRAME completed the capture.
+ * where <input> is the position of the standard pad, or home, of the input
+ * captured in the profile of the pad, or else the input itself, as
+ * "button N" or "axis +N" or "axis -N". When we capture nothing in any FRAME,
+ * we print "captured nothing".
  *
- * RetroArch does not start. retroarch_unreached.c stands in for the rest of
- * RetroArch. */
+ * We do not start RetroArch, and link retroarch_unreached.c in place of the
+ * rest of it. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,10 +39,10 @@
 #include "menu/menu_driver.h"
 #include "menu/drivers/rmlui/pad_inputs.h"
 
-enum { BUTTONS = 32, AXES = 8 };
+enum { PADS = 4, BUTTONS = 32, AXES = 8 };
 
-static int held_buttons[BUTTONS];
-static int held_axes[AXES];
+static int held_buttons[PADS][BUTTONS];
+static int held_axes[PADS][AXES];
 static runloop_state_t runloop;
 static retro_time_t now;
 
@@ -49,18 +56,18 @@ const char *msg_hash_to_str(enum msg_hash_enums msg)
 
 static int32_t button(unsigned pad, uint16_t joykey)
 {
-   return pad == 0 && joykey < BUTTONS && held_buttons[joykey];
+   return pad < PADS && joykey < BUTTONS && held_buttons[pad][joykey];
 }
 
 /* As a RetroArch joypad driver reads an axis: one half of it at a time. */
 static int16_t axis(unsigned pad, uint32_t joyaxis)
 {
-   if (pad != 0 || joyaxis == AXIS_NONE)
+   if (pad >= PADS || joyaxis == AXIS_NONE)
       return 0;
    if (AXIS_POS_GET(joyaxis) < AXES)
-      return held_axes[AXIS_POS_GET(joyaxis)] > 0 ? held_axes[AXIS_POS_GET(joyaxis)] : 0;
+      return held_axes[pad][AXIS_POS_GET(joyaxis)] > 0 ? held_axes[pad][AXIS_POS_GET(joyaxis)] : 0;
    if (AXIS_NEG_GET(joyaxis) < AXES)
-      return held_axes[AXIS_NEG_GET(joyaxis)] < 0 ? held_axes[AXIS_NEG_GET(joyaxis)] : 0;
+      return held_axes[pad][AXIS_NEG_GET(joyaxis)] < 0 ? held_axes[pad][AXIS_NEG_GET(joyaxis)] : 0;
    return 0;
 }
 
@@ -89,12 +96,38 @@ static void hold(const char *frame)
    snprintf(copy, sizeof copy, "%s", frame);
    for (item = strtok(copy, " "); item; item = strtok(NULL, " "))
    {
-      unsigned index = (unsigned)atoi(item + 1);
+      unsigned on = 0;
+      unsigned index;
+      if (strchr(item, ':') && item[0] >= '1' && item[0] <= '9' && item[1] == ':')
+      {
+         on = (unsigned)(item[0] - '1');
+         item += 2;
+      }
+      index = (unsigned)atoi(item + 1);
+      if (on >= PADS)
+         continue;
       if (item[0] == 'b' && index < BUTTONS)
-         held_buttons[index] = 1;
+         held_buttons[on][index] = 1;
       else if (item[0] == 'a' && index < AXES && strchr(item, ':'))
-         held_axes[index] = atoi(strchr(item, ':') + 1);
+         held_axes[on][index] = atoi(strchr(item, ':') + 1);
    }
+}
+
+static void print_captured(const struct retro_keybind *captured)
+{
+   const unsigned from = rib_pad_input_captured_pad();
+   unsigned bind;
+   if (rib_pad_input_on(from, captured->joykey, captured->joyaxis, &bind))
+      printf("captured %s", rib_pad_input_id(bind));
+   else if (captured->joykey != NO_BTN)
+      printf("captured button %u", (unsigned)captured->joykey);
+   else if (captured->joyaxis != AXIS_NONE && AXIS_POS_GET(captured->joyaxis) != AXIS_DIR_NONE)
+      printf("captured axis +%u", (unsigned)AXIS_POS_GET(captured->joyaxis));
+   else if (captured->joyaxis != AXIS_NONE)
+      printf("captured axis -%u", (unsigned)AXIS_NEG_GET(captured->joyaxis));
+   else
+      printf("captured none");
+   printf(" on pad %u\n", from + 1);
 }
 
 int main(int argc, char **argv)
@@ -102,47 +135,73 @@ int main(int argc, char **argv)
    config_file_t *profile;
    settings_t *settings;
    input_driver_state_t *input;
-   struct retro_keybind captured;
-   unsigned bind;
+   struct retro_keybind hotkey;
+   struct retro_keybind *captured = &hotkey;
+   const char *control = NULL;
+   unsigned control_bind = 0;
+   unsigned pads = 1;
+   unsigned port;
+   int first = 1;
    int frame;
 
-   if (argc < 3 || !(profile = config_file_new_from_path_to_string(argv[1])))
+   while (first + 1 < argc && !strncmp(argv[first], "--", 2))
    {
-      fprintf(stderr, "usage: pad_capture PROFILE FRAME...\n");
+      if (!strcmp(argv[first], "--controls"))
+         control = argv[first + 1];
+      else if (!strcmp(argv[first], "--pads"))
+         pads = (unsigned)atoi(argv[first + 1]);
+      first += 2;
+   }
+   if (argc < first + 2 || pads < 1 || pads > PADS
+         || !(profile = config_file_new_from_path_to_string(argv[first])))
+   {
+      fprintf(stderr, "usage: pad_capture [--controls POSITION] [--pads N] PROFILE FRAME...\n");
       return 2;
    }
    retroarch_config_init();
    settings = config_get_ptr();
-   settings->uints.input_max_users = 1;
+   settings->uints.input_max_users = pads;
    settings->floats.input_axis_threshold = DEFAULT_AXIS_THRESHOLD;
    input_config_reset();
-   settings->uints.input_joypad_index[0] = 0;
-   input_config_reset_autoconfig_binds(0);
-   input_config_set_autoconfig_binds(0, profile);
-   config_file_free(profile);
    input = input_state_get_ptr();
+   /* Every pad plays as player 1, as the remap we write on export has it. */
+   for (port = 0; port < MAX_USERS; ++port)
+      settings->uints.input_remap_port_map[0][port] = port < pads ? port : MAX_USERS;
+   for (port = 0; port < pads; ++port)
+   {
+      settings->uints.input_joypad_index[port] = port;
+      input_config_reset_autoconfig_binds(port);
+      input_config_set_autoconfig_binds(port, profile);
+      input->libretro_input_binds[port] = &input_config_binds[port];
+   }
+   config_file_free(profile);
    input->primary_joypad = &pad;
    input->current_driver = &keyboard;
-   input->libretro_input_binds[0] = &input_config_binds[0];
 
    now = 1000000;
-   hold(argv[2]);
-   if (!rib_pad_input_capture_start(&captured, 5))
+   hold(argv[first + 1]);
+   if (control)
+   {
+      if (!rib_pad_input_bind(control, &control_bind))
+      {
+         fprintf(stderr, "%s is no position of the standard pad\n", control);
+         return 2;
+      }
+      captured = &input_config_binds[0][control_bind];
+   }
+   if (!(control ? rib_pad_input_bind_start(control_bind, 5) : rib_pad_input_capture_start(&hotkey, 5)))
    {
       fprintf(stderr, "the capture did not start\n");
       return 1;
    }
-   for (frame = 3; frame < argc; ++frame)
+   for (frame = first + 2; frame < argc; ++frame)
    {
       float remaining;
       now += 16000;
       hold(argv[frame]);
       if (menu_input_rib_bind_poll(now, &remaining, true) != MENU_RIB_BIND_CAPTURED)
          continue;
-      if (rib_pad_input_of(captured.joykey, captured.joyaxis, &bind))
-         printf("captured %s\n", rib_pad_input_id(bind));
-      else
-         printf("captured none\n");
+      print_captured(captured);
       return 0;
    }
    printf("captured nothing\n");

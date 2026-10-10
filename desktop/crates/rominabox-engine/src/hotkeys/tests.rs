@@ -369,14 +369,16 @@ fn home_on_any_pad_that_plays_as_player_one_is_the_menus() {
     assert_eq!(held(1, false), "held 1");
 }
 
-/// What a capture for a hotkey reads as the pad input of a stand-in pad
-/// with a profile from the kit, the pad changing frame by frame as `frames`
-/// list (`scripts/native_runtime/pad_capture.c`). We run RetroArch's own
-/// capture in the menu (menu_driver.c) with the fork's reader.
-fn captured_on(probe: &crate::retroarch_probe::Probe, profile: &str, frames: &[&str]) -> String {
+/// The pad input we capture from stand-in pads with a profile from the kit,
+/// with the pads in each frame as listed in `frames`. The frames and the
+/// `options` are as in `scripts/native_runtime/pad_capture.c`. We run
+/// RetroArch's own capture in the menu (menu_driver.c) with the fork's
+/// reader.
+fn captured_on(probe: &crate::retroarch_probe::Probe, options: &[&str], profile: &str, frames: &[&str]) -> String {
     let staged = crate::repo::builder_resources().join("runtime/autoconfig").join(profile);
     assert!(staged.is_file(), "the kit stages {}", staged.display());
-    let mut arguments = vec![staged.to_str().unwrap()];
+    let mut arguments = options.to_vec();
+    arguments.push(staged.to_str().unwrap());
     arguments.extend_from_slice(frames);
     probe.lines(&arguments).join("\n")
 }
@@ -398,25 +400,63 @@ fn pad_capture() -> crate::retroarch_probe::Probe {
 }
 
 /// Through DirectInput each trigger of a DualSense is a button, down at the
-/// lightest touch, and an axis, which rests at its negative end. Its profile
-/// maps L2 and R2 to the axes only. A trigger pulled all the way for a hotkey
-/// is L2 or R2, as R1 pressed is R1.
+/// lightest touch, and an axis, which rests at its negative end. In its
+/// profile, L2 and R2 are the axes only. On HOTKEYS and on CONTROLS, we
+/// capture a trigger pressed at all as L2 or R2, pulled all the way or only
+/// touched, as we capture R1 as R1.
 #[test]
 #[cfg(windows)]
-fn a_dualsense_trigger_pulled_for_a_hotkey_is_l2_or_r2() {
+fn a_dualsense_trigger_pressed_at_all_is_l2_or_r2() {
     let probe = pad_capture();
     let dualsense = "dinput/DualSense5.cfg";
     let rest = "a3:-32768 a4:-32768";
-    let pulled = |button: &str, held: &str, pulling: &str, full: &str| {
-        captured_on(
-            &probe,
-            dualsense,
-            &[rest, rest, &format!("{button} {held} {pulling}"), &format!("{button} {held} {full}")],
-        )
-    };
-    assert_eq!(pulled("b6", "a4:-32768", "a3:-20000", "a3:32767"), "captured l2");
-    assert_eq!(pulled("b7", "a3:-32768", "a4:-20000", "a4:32767"), "captured r2");
-    assert_eq!(captured_on(&probe, dualsense, &[rest, rest, &format!("b5 {rest}")]), "captured r");
+    for screen in [&[][..], &["--controls", "start"][..]] {
+        let pressed = |button: &str, held: &str, frames: &[&str]| {
+            let mut all = vec![rest.to_string(), rest.to_string()];
+            all.extend(frames.iter().map(|frame| format!("{button} {held} {frame}")));
+            all.push(rest.to_string());
+            captured_on(&probe, screen, dualsense, &all.iter().map(String::as_str).collect::<Vec<_>>())
+        };
+        let on = |what: &str| format!("captured {what} on pad 1, with {screen:?}");
+        let said = |text: String| format!("{text}, with {screen:?}");
+        assert_eq!(said(pressed("b6", "a4:-32768", &["a3:-20000", "a3:32767"])), on("l2"));
+        assert_eq!(said(pressed("b7", "a3:-32768", &["a4:-20000", "a4:32767"])), on("r2"));
+        assert_eq!(said(pressed("b6", "a4:-32768", &["a3:-30000"])), on("l2"), "a touch of L2");
+        assert_eq!(said(pressed("b5", rest, &[""])), on("r"));
+    }
+}
+
+/// The touchpad of a DualSense is button 13 through DirectInput, and has no
+/// position in its profile. On HOTKEYS and on CONTROLS, we capture it when
+/// the player releases it.
+#[test]
+#[cfg(windows)]
+fn the_touchpad_is_captured_as_itself() {
+    let probe = pad_capture();
+    let rest = "a3:-32768 a4:-32768";
+    for screen in [&[][..], &["--controls", "start"][..]] {
+        assert_eq!(
+            captured_on(&probe, screen, "dinput/DualSense5.cfg", &[rest, rest, &format!("b13 {rest}"), rest]),
+            "captured button 13 on pad 1",
+            "{screen:?}"
+        );
+    }
+}
+
+/// With every pad playing as player 1, we capture a press on any of them,
+/// through the profile of the pad pressed.
+#[test]
+#[cfg(windows)]
+fn a_capture_takes_any_pad_that_plays_as_player_one() {
+    let probe = pad_capture();
+    let rest = "a3:-32768 a4:-32768 2:a3:-32768 2:a4:-32768";
+    for screen in [&["--pads", "2"][..], &["--pads", "2", "--controls", "start"][..]] {
+        assert_eq!(
+            captured_on(&probe, screen, "dinput/DualSense5.cfg", &[rest, rest, &format!("2:b5 {rest}"), rest]),
+            "captured r on pad 2",
+            "{screen:?}"
+        );
+    }
 }
 
 #[test]
