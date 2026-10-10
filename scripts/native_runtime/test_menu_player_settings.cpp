@@ -203,6 +203,40 @@ void volume_is_heard_at_its_level(const char *native_assets)
    }
 }
 
+/* The cue of a step is the volume's own: a tick at the level just chosen. The
+ * light and contrast of the picture move in silence. */
+void only_the_volume_is_heard_as_it_moves(const char *native_assets)
+{
+   const std::string assets = design_assets(native_assets, "everything");
+   test_setenv("ROMINABOX_RML_ASSETS", assets.c_str());
+   host.settings["audio_volume"] = 0.0f;
+   host.settings["rib_video_brightness"] = 1.0f;
+   host.settings["rib_video_contrast"] = 1.0f;
+   void *menu = open_menu();
+   if (menu)
+   {
+      click_and_frame(menu, "options");
+      click_and_frame(menu, "video");
+      check(view.document.has_element("brightness-up") && view.document.has_element("contrast-up"),
+            "VIDEO has BRIGHTNESS and CONTRAST");
+      const struct { const char *arrow, *key; } steps[] = {
+         {"brightness-up", "rib_video_brightness"}, {"brightness-down", "rib_video_brightness"},
+         {"contrast-up", "rib_video_contrast"}, {"contrast-down", "rib_video_contrast"},
+      };
+      for (const auto& step : steps)
+      {
+         const float before = host.settings[step.key];
+         host.level_cue_db.clear();
+         click_and_frame(menu, step.arrow);
+         const std::string name = std::string(step.arrow) + " ";
+         check(host.settings[step.key] != before, (name + "moves its level").c_str());
+         check(host.level_cue_db.empty(), (name + "plays no level cue").c_str());
+      }
+      rib_menu_destroy(menu);
+   }
+   test_setenv("ROMINABOX_RML_ASSETS", native_assets);
+}
+
 /* Replace the player's volume file and count each replacement. */
 int volume_writes;
 int counting_rename(const char *from, const char *to)

@@ -85,6 +85,7 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *d
 void background_play_is_the_players(const char *native_assets, const char *data);
 void rumble_is_the_players_where_the_game_rumbles(const char *native_assets, const char *data);
 void volume_is_heard_at_its_level(const char *native_assets);
+void only_the_volume_is_heard_as_it_moves(const char *native_assets);
 void a_menu_load_writes_the_volume_only_off_a_position();
 void a_drag_cut_short_by_closing_is_kept(const char *data);
 void the_middle_of_the_volume_is_clearly_audible();

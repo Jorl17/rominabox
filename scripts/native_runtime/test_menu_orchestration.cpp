@@ -967,6 +967,7 @@ int main(int argc, char **argv)
    fixes::background_play_is_the_players(argv[1], argv[2]);
    fixes::rumble_is_the_players_where_the_game_rumbles(argv[1], argv[2]);
    fixes::volume_is_heard_at_its_level(argv[1]);
+   fixes::only_the_volume_is_heard_as_it_moves(argv[1]);
    fixes::design_prompt_survives_an_empty_status(argv[1], argv[2]);
    fixes::disc_list_keeps_its_page(argv[1], argv[2]);
    fixes::a_filter_row_applies_its_filter(argv[1], argv[2]);
