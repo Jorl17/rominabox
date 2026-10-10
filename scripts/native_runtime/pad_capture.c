@@ -4,7 +4,7 @@
  * the pad input we read in the capture through the profile of the pad we
  * captured from.
  *
- *   pad_capture [--controls POSITION] [--pads N] PROFILE FRAME...
+ *   pad_capture [--controls POSITION] [--pads N] [--named] PROFILE FRAME...
  *
  * We connect N pads (1 when not given), each with PROFILE and each playing
  * as player 1, start a capture with the pads as in the first FRAME, and poll
@@ -21,7 +21,12 @@
  * where <input> is the position of the standard pad, or home, of the input
  * captured in the profile of the pad, or else the input itself, as
  * "button N" or "axis +N" or "axis -N". When we capture nothing in any FRAME,
- * we print "captured nothing".
+ * we print "captured nothing". With --named we also print the input in the
+ * form of RetroArch's config, and its name, as we find them in the host for
+ * the menu (host.c, rib_host_pad_value_input and rib_host_pad_name):
+ *
+ *   value <13, h0up or +3>
+ *   named <the name of its position in the profile of the first pad, or none>
  *
  * We do not start RetroArch, and link retroarch_unreached.c in place of the
  * rest of it. */
@@ -113,6 +118,26 @@ static void hold(const char *frame)
    }
 }
 
+static void print_named(const struct retro_keybind *captured)
+{
+   char value[RIB_PAD_INPUT_VALUE_MAX];
+   char name[64];
+   uint16_t joykey;
+   uint32_t joyaxis;
+   unsigned bind;
+   if (!rib_pad_input_value(captured->joykey, captured->joyaxis, value, sizeof(value)))
+   {
+      printf("value none\n");
+      return;
+   }
+   printf("value %s\n", value);
+   if (rib_pad_input_parse(value, &joykey, &joyaxis) && rib_pad_input_of(joykey, joyaxis, &bind)
+         && rib_pad_input_name(bind, name, sizeof(name)))
+      printf("named %s\n", name);
+   else
+      printf("named none\n");
+}
+
 static void print_captured(const struct retro_keybind *captured)
 {
    const unsigned from = rib_pad_input_captured_pad();
@@ -140,12 +165,19 @@ int main(int argc, char **argv)
    const char *control = NULL;
    unsigned control_bind = 0;
    unsigned pads = 1;
+   int named = 0;
    unsigned port;
    int first = 1;
    int frame;
 
    while (first + 1 < argc && !strncmp(argv[first], "--", 2))
    {
+      if (!strcmp(argv[first], "--named"))
+      {
+         named = 1;
+         first += 1;
+         continue;
+      }
       if (!strcmp(argv[first], "--controls"))
          control = argv[first + 1];
       else if (!strcmp(argv[first], "--pads"))
@@ -155,7 +187,7 @@ int main(int argc, char **argv)
    if (argc < first + 2 || pads < 1 || pads > PADS
          || !(profile = config_file_new_from_path_to_string(argv[first])))
    {
-      fprintf(stderr, "usage: pad_capture [--controls POSITION] [--pads N] PROFILE FRAME...\n");
+      fprintf(stderr, "usage: pad_capture [--controls POSITION] [--pads N] [--named] PROFILE FRAME...\n");
       return 2;
    }
    retroarch_config_init();
@@ -202,6 +234,8 @@ int main(int argc, char **argv)
       if (menu_input_rib_bind_poll(now, &remaining, true) != MENU_RIB_BIND_CAPTURED)
          continue;
       print_captured(captured);
+      if (named)
+         print_named(captured);
       return 0;
    }
    printf("captured nothing\n");
