@@ -798,6 +798,26 @@ def every_python_of_a_run_reads_the_utf8_its_programs_write() -> None:
           f"a Python program of a run reads UTF-8 from the programs it starts: {said.strip()!r} {ran.stderr!r}")
 
 
+def the_runner_prints_any_character_its_programs_write() -> None:
+    """A program of a run can write a character the code page of the system
+    has no place for, as the replacement character in garbled output. With
+    the output of scripts/test.py in a file or a pipe, we must print it, and
+    not stop the run with an error."""
+    runner = Path(__file__).resolve().parent / "test.py"
+    loader = (
+        "import importlib.util\n"
+        f"spec = importlib.util.spec_from_file_location('test_runner', {str(runner)!r})\n"
+        "runner = importlib.util.module_from_spec(spec)\n"
+        "spec.loader.exec_module(runner)\n"
+        "print('garbled \\ufffd output')\n"
+    )
+    environment = {name: value for name, value in os.environ.items() if name != "PYTHONUTF8"}
+    ran = subprocess.run([sys.executable, "-X", "utf8=0", "-c", loader], capture_output=True, env=environment)
+    said = ran.stdout.decode("utf-8", errors="replace").strip()
+    check(ran.returncode == 0 and said == "garbled \ufffd output",
+          f"the runner prints any character: {said!r} {ran.stderr.decode('utf-8', errors='replace')[-300:]!r}")
+
+
 def a_branch_with_a_slash_keeps_its_whole_name() -> None:
     """Check that we read the branch name menu/nav back in remove(), and not nav."""
     import worktree
@@ -824,6 +844,7 @@ ANYWHERE = [
     the_workspace_lockfile_counts_as_a_members_source,
     every_program_a_run_starts_is_given_its_python,
     every_python_of_a_run_reads_the_utf8_its_programs_write,
+    the_runner_prints_any_character_its_programs_write,
     a_rebuilt_rmlui_archive_invalidates_the_menu_probe,
     an_up_to_date_menu_probe_is_not_compiled_again,
     # We also run create() from inside a worktree, where we could check out an
