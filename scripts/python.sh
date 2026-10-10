@@ -5,6 +5,8 @@
 # packages pinned in uv.lock, as in a fresh clone (without any package
 # installed by hand). Set $root to the repository's root first.
 py() {
+  # We run Python in UTF-8 mode, as in scripts/test.py.
+  export PYTHONUTF8=1
   if [ -n "${ROMINABOX_PYTHON:-}" ]; then
     "$ROMINABOX_PYTHON" "$@"
   else

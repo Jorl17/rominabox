@@ -9,6 +9,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
+// We run Python in UTF-8 mode, as in scripts/test.py, in every program this
+// process starts.
+process.env.PYTHONUTF8 = "1";
+
 // The program and the arguments that come before the script's own.
 // python(...args) returns the whole command.
 export function python(...args) {

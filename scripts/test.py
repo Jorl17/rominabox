@@ -617,10 +617,13 @@ SCOPES = [
 BY_NAME = {scope.name: scope for scope in SCOPES}
 
 
-# What we add to this process's environment for every program of a run, which
-# is the Python of this run, for the programs that are not Python (the Rust
-# tests' repo::python(), scripts/python.mjs).
-RUN_ENVIRONMENT = {"ROMINABOX_PYTHON": PYTHON}
+# What we add to this process's environment for every program of a run: the
+# Python of this run, for the programs that are not Python (the Rust tests'
+# repo::python(), scripts/python.mjs), and Python's UTF-8 mode. Our programs
+# write UTF-8, and in UTF-8 mode we read their output as UTF-8 in every Python
+# program of the run, on Windows too, where we would otherwise read it in the
+# code page of the system.
+RUN_ENVIRONMENT = {"ROMINABOX_PYTHON": PYTHON, "PYTHONUTF8": "1"}
 
 
 def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess:

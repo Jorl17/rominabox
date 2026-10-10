@@ -29,16 +29,19 @@ pub fn builder_resources() -> PathBuf {
 /// A command for the Python we run helper scripts with, followed by the
 /// script and its arguments. We use the interpreter used to start
 /// `scripts/test.py` (`ROMINABOX_PYTHON`), or else uv's, with the version in
-/// `.python-version` and the packages in `uv.lock`, as in the README.
+/// `.python-version` and the packages in `uv.lock`, as in the README. We run
+/// it in UTF-8 mode, as in `scripts/test.py`.
 pub fn python() -> std::process::Command {
-    match std::env::var_os("ROMINABOX_PYTHON") {
+    let mut command = match std::env::var_os("ROMINABOX_PYTHON") {
         Some(interpreter) => std::process::Command::new(interpreter),
         None => {
             let mut uv = std::process::Command::new("uv");
             uv.args(["run", "--locked", "--exact", "--project"]).arg(root()).arg("python");
             uv
         }
-    }
+    };
+    command.env("PYTHONUTF8", "1");
+    command
 }
 
 #[cfg(test)]
