@@ -271,12 +271,17 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let values = tokens::design(&manifest, &palette);
     fonts(&mut composition, &manifest);
     let stylesheet = tokens::substitute(&manifest.stylesheet()?, &values)?;
+    // The hotkeys, whether or not the game has HOTKEYS to change them. A hint
+    // names a hotkey by the words of its bindings.
+    let game_hotkeys = crate::hotkeys::GameHotkeys::of(&request.settings);
+    let hotkeys = game_hotkeys.offered(&request.hotkeys);
+    let hint = |text: &str| hotkeys.hint(text);
 
     if !request.show_menu {
         let splash = document::place_parts(&manifest, &manifest.fragment(&manifest.documents.splash)?)?;
         super::contract::validate_splash(&manifest, &splash)?;
         let staged = document::staged_screens(&manifest.screens, None, request.discs, request.target)?;
-        let cfg = declarations::write(&manifest, &staged, &[], &[], &splash)?;
+        let cfg = declarations::write(&manifest, &staged, &[], &[], &splash, &hint)?;
         let splash = parts(&mut composition, &manifest, &values, &splash)?;
         composition.put(DOCUMENT, Content::Text(splash));
         composition.put(document::STYLESHEET, Content::Text(stylesheet));
@@ -331,7 +336,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     for (name, content) in scene.files {
         composition.put(name, content);
     }
-    let menu = document::opening_screen(&manifest, &document::skeleton(&manifest, &staged)?)?;
+    let menu = document::opening_screen(&manifest, &document::skeleton(&manifest, &staged)?, &hint)?;
     // The picker and the bind list are siblings of the scene, not children,
     // because we replace the scene when someone swaps pads and they must stay.
     // We refuse a design with no place for them, instead of exporting it
@@ -386,13 +391,11 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     }
     let (menu, installed) = crate::lists::install(&manifest, &menu, &staged, &lists)?;
     super::contract::validate(&manifest, &menu, &staged.iter().collect::<Vec<_>>())?;
-    // The hotkeys, whether or not the game has HOTKEYS to change them. Where
-    // it has, each row must show every default binding for its hotkey.
-    let game_hotkeys = crate::hotkeys::GameHotkeys::of(&request.settings);
-    let hotkeys = game_hotkeys.offered(&request.hotkeys);
+    // Where the game has HOTKEYS, each row must show every default binding
+    // for its hotkey.
     crate::hotkeys::fit(&hotkeys, &menu, &manifest.id)?;
     composition.put(crate::hotkeys::DEFAULTS_FILE, Content::Text(hotkeys.defaults_config(&game_hotkeys)?));
-    let cfg = declarations::write(&manifest, &staged, &installed, &settings, &menu)?;
+    let cfg = declarations::write(&manifest, &staged, &installed, &settings, &menu, &hint)?;
     // We play a sound for a change of volume in every game with a volume
     // control: the movement cue of the pack, or in a game without a pack the
     // tick for the volume, which we ship only then.
@@ -404,7 +407,8 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
             Content::Copy(document::parts_root(&manifest.design)?.join(tick)),
         );
     }
-    let mut menu = parts(&mut composition, &manifest, &values, &menu)?;
+    // After the parts, which can name a hotkey as the design's own markup does.
+    let mut menu = hotkeys.bound_words(&parts(&mut composition, &manifest, &values, &menu)?)?;
     // The author picks the picture and the design places it (by default
     // behind #screen, with the shared part, unless the design restyles it,
     // in the screen's colour where the author asked for a tint).

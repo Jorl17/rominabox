@@ -51,7 +51,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -115,7 +115,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -181,7 +181,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -245,7 +245,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -313,7 +313,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -371,7 +371,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -441,7 +441,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -499,7 +499,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -569,7 +569,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -627,7 +627,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -922,7 +922,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1035,7 +1035,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1161,7 +1161,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "TIMED OUT; BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1216,7 +1216,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "TIMED OUT; BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1288,7 +1288,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1354,7 +1354,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "DEFAULTS RESTORED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1409,7 +1409,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1464,7 +1464,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1519,7 +1519,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1574,7 +1574,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "DEFAULTS RESTORED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -1648,7 +1648,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -1706,7 +1706,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -1764,7 +1764,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -1832,7 +1832,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -1968,7 +1968,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -2033,7 +2033,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -2095,7 +2095,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -2160,7 +2160,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -2215,7 +2215,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -2270,7 +2270,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -2325,7 +2325,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -2564,7 +2564,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -2627,7 +2627,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -2684,7 +2684,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -2742,7 +2742,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -2796,7 +2796,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -2849,7 +2849,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -2922,7 +2922,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -2980,7 +2980,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -3038,7 +3038,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -3096,7 +3096,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -3154,7 +3154,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -3212,7 +3212,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -3286,7 +3286,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -3351,7 +3351,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3404,7 +3404,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -3475,7 +3475,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3541,7 +3541,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -3596,7 +3596,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3653,7 +3653,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3706,7 +3706,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -3763,7 +3763,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3837,7 +3837,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3905,7 +3905,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -3958,7 +3958,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -4011,7 +4011,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -4080,7 +4080,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -4138,7 +4138,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "BLOCK 1 LOADED"
         },
@@ -4196,7 +4196,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "BLOCK 1 LOADED"
         },
@@ -4254,7 +4254,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "BLOCK 1 SAVED"
         },
@@ -4324,7 +4324,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "VIDEO"
         },
         "transferPending": false,
@@ -4379,7 +4379,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "FILTERS"
         },
         "transferPending": false,
@@ -4432,7 +4432,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "VIDEO"
         },
         "transferPending": false,
@@ -4487,7 +4487,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "FILTERS"
         },
         "transferPending": false,
@@ -4542,7 +4542,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "FILTERS"
         },
         "transferPending": false,
@@ -4614,7 +4614,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "FILTERS"
         },
         "transferPending": false,
@@ -4680,7 +4680,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "FILTERS"
         },
         "transferPending": false,
@@ -4747,7 +4747,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "FILTERS"
         },
         "transferPending": false,
@@ -4812,7 +4812,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -4877,7 +4877,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -4930,7 +4930,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -4983,7 +4983,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -5036,7 +5036,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -5089,7 +5089,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -5159,7 +5159,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -5223,7 +5223,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -5287,7 +5287,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -5351,7 +5351,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -5417,7 +5417,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -5481,7 +5481,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -5546,7 +5546,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -5610,7 +5610,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -5676,7 +5676,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -5740,7 +5740,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -5805,7 +5805,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -5869,7 +5869,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -5935,7 +5935,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "MEMORY CARD",
           "status": "CHOOSE A BLOCK"
         },
@@ -5999,7 +5999,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "PAD"
         },
         "transferPending": false,
@@ -6064,7 +6064,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6128,7 +6128,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -6194,7 +6194,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -6258,7 +6258,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6326,7 +6326,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6384,7 +6384,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6454,7 +6454,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6512,7 +6512,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6582,7 +6582,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6640,7 +6640,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -6935,7 +6935,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7048,7 +7048,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7174,7 +7174,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "TIMED OUT; BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7229,7 +7229,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "TIMED OUT; BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7297,7 +7297,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7363,7 +7363,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "DEFAULTS RESTORED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7418,7 +7418,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7473,7 +7473,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7528,7 +7528,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7583,7 +7583,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "DEFAULTS RESTORED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -7661,7 +7661,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -7719,7 +7719,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -7777,7 +7777,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -7845,7 +7845,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -7981,7 +7981,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -8046,7 +8046,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -8108,7 +8108,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -8173,7 +8173,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -8228,7 +8228,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -8283,7 +8283,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -8338,7 +8338,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -8579,7 +8579,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -8644,7 +8644,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -8699,7 +8699,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -8754,7 +8754,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -8809,7 +8809,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -8864,7 +8864,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -8937,7 +8937,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -8995,7 +8995,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -9053,7 +9053,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -9111,7 +9111,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -9169,7 +9169,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -9227,7 +9227,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -9301,7 +9301,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -9366,7 +9366,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9421,7 +9421,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -9492,7 +9492,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9560,7 +9560,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -9615,7 +9615,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9672,7 +9672,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9727,7 +9727,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -9784,7 +9784,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9858,7 +9858,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9926,7 +9926,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -9981,7 +9981,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -10036,7 +10036,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -10105,7 +10105,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -10163,7 +10163,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "SLOT 1 LOADED"
         },
@@ -10221,7 +10221,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "SLOT 1 LOADED"
         },
@@ -10277,7 +10277,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "SLOT 1 SAVED"
         },
@@ -10351,7 +10351,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "VIDEO"
         },
         "transferPending": false,
@@ -10406,7 +10406,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -10459,7 +10459,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "VIDEO"
         },
         "transferPending": false,
@@ -10514,7 +10514,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -10569,7 +10569,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -10641,7 +10641,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -10707,7 +10707,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -10774,7 +10774,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -10841,7 +10841,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -10908,7 +10908,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -10963,7 +10963,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -11018,7 +11018,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -11073,7 +11073,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -11128,7 +11128,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -11200,7 +11200,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -11266,7 +11266,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -11330,7 +11330,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -11394,7 +11394,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -11460,7 +11460,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -11524,7 +11524,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -11589,7 +11589,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -11653,7 +11653,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -11719,7 +11719,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -11783,7 +11783,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -11848,7 +11848,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -11912,7 +11912,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -11978,7 +11978,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -12042,7 +12042,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12107,7 +12107,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12171,7 +12171,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -12237,7 +12237,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -12301,7 +12301,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12369,7 +12369,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12427,7 +12427,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12497,7 +12497,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12555,7 +12555,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12625,7 +12625,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12683,7 +12683,7 @@
           "control-binds": true,
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -12978,7 +12978,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13091,7 +13091,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13217,7 +13217,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "TIMED OUT; BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13272,7 +13272,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "TIMED OUT; BINDING UNCHANGED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13340,7 +13340,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13406,7 +13406,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "DEFAULTS RESTORED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13461,7 +13461,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13516,7 +13516,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13571,7 +13571,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13626,7 +13626,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "DEFAULTS RESTORED",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -13700,7 +13700,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -13758,7 +13758,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -13816,7 +13816,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -13884,7 +13884,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -14020,7 +14020,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -14085,7 +14085,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -14147,7 +14147,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -14212,7 +14212,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -14267,7 +14267,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -14322,7 +14322,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -14377,7 +14377,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -14618,7 +14618,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -14683,7 +14683,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -14738,7 +14738,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -14793,7 +14793,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -14848,7 +14848,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -14903,7 +14903,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -14976,7 +14976,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15034,7 +15034,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15092,7 +15092,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15150,7 +15150,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15208,7 +15208,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15266,7 +15266,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15340,7 +15340,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -15405,7 +15405,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -15460,7 +15460,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -15531,7 +15531,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -15599,7 +15599,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -15654,7 +15654,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -15711,7 +15711,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -15766,7 +15766,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -15823,7 +15823,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -15897,7 +15897,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -15965,7 +15965,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 6 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -16020,7 +16020,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -16075,7 +16075,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -16144,7 +16144,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -16202,7 +16202,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "SLOT 1 LOADED"
         },
@@ -16260,7 +16260,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "SLOT 1 LOADED"
         },
@@ -16316,7 +16316,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "SLOT 1 SAVED"
         },
@@ -16386,7 +16386,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "VIDEO"
         },
         "transferPending": false,
@@ -16441,7 +16441,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -16494,7 +16494,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "VIDEO"
         },
         "transferPending": false,
@@ -16549,7 +16549,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -16604,7 +16604,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -16676,7 +16676,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -16742,7 +16742,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -16809,7 +16809,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "SHADERS"
         },
         "transferPending": false,
@@ -16876,7 +16876,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -16943,7 +16943,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -16998,7 +16998,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -17053,7 +17053,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -17108,7 +17108,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -17163,7 +17163,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -17235,7 +17235,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -17301,7 +17301,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "OPTIONS"
         },
         "transferPending": false,
@@ -17365,7 +17365,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -17429,7 +17429,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -17495,7 +17495,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -17559,7 +17559,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -17624,7 +17624,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -17688,7 +17688,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -17754,7 +17754,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -17818,7 +17818,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -17883,7 +17883,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,
@@ -17947,7 +17947,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "HOTKEYS"
         },
         "transferPending": false,
@@ -18013,7 +18013,7 @@
           }
         ],
         "text": {
-          "footer-hint": "ESC  CONTINUE",
+          "footer-hint": "Escape  CONTINUE",
           "heading": "GAME PAUSED",
           "status": "CHOOSE A SLOT"
         },
@@ -18077,7 +18077,7 @@
         "text": {
           "controls-device-current": "Mega Drive · 3 buttons",
           "controls-status": "CHOOSE A CONTROL",
-          "footer-hint": "ESC  BACK",
+          "footer-hint": "Escape  BACK",
           "heading": "CONTROLS"
         },
         "transferPending": false,

@@ -268,10 +268,14 @@ fn screen_markup(manifest: &Manifest, screen: &Screen) -> Result<String, String>
 /// in the heading and its footer, when it has one, in the footer hint, as we
 /// write them in the player when we show Pause. A preview, an offscreen
 /// picture and the first screen of the game then match, from one declaration.
-/// We write the footer in its declared words. Where we draw it, in the player
-/// and in the preview alike (`write_hint`), we make the key in brackets a
-/// separate element.
-pub(crate) fn opening_screen(manifest: &Manifest, document: &str) -> Result<String, String> {
+/// We write the footer in its declared words, with the words of the bindings
+/// of the hotkeys it names (`hint`). Where we draw it, in the player and in
+/// the preview alike (`write_hint`), we make the key a separate element.
+pub(crate) fn opening_screen(
+    manifest: &Manifest,
+    document: &str,
+    hint: super::declarations::Hint,
+) -> Result<String, String> {
     let pause = manifest.screen(ScreenRole::Pause).ok_or_else(|| {
         format!(
             "design '{}' declares no Pause screen to open on",
@@ -282,7 +286,7 @@ pub(crate) fn opening_screen(manifest: &Manifest, document: &str) -> Result<Stri
     if pause.footer.is_empty() {
         return Ok(document);
     }
-    set_text(&document, contract!(FooterHint), &pause.footer)
+    set_text(&document, contract!(FooterHint), &hint(&pause.footer)?)
 }
 
 /// `document` with everything inside the element `id` replaced by `text`,

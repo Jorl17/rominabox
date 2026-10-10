@@ -75,7 +75,7 @@
       "role": "pause",
       "panel": "pause-panel",
       "heading": "GAME PAUSED",
-      "footer": "[ESC]  CONTINUE",
+      "footer": "{back}  CONTINUE",
       "button": "controls-back"
     },
     {
@@ -83,7 +83,7 @@
       "role": "options",
       "panel": "options-panel",
       "heading": "OPTIONS",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "options",
       "label": "OPTIONS",
       "back": "BACK",
@@ -95,7 +95,7 @@
       "role": "controls",
       "panel": "controls-panel",
       "heading": "CONTROLS",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "controls",
       "option": {
         "label": "CONTROLS",
@@ -107,7 +107,7 @@
       "role": "hotkeys",
       "panel": "hotkeys-panel",
       "heading": "HOTKEYS",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "hotkeys",
       "pageSize": 4,
       "option": {
@@ -119,7 +119,7 @@
       "id": "video",
       "panel": "video-panel",
       "heading": "VIDEO",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "video",
       "option": {
         "label": "VIDEO",
@@ -131,7 +131,7 @@
       "role": "shaders",
       "panel": "shaders-panel",
       "heading": "SHADERS",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "shaders",
       "back": "BACK",
       "from": "video",
@@ -145,7 +145,7 @@
       "role": "achievements",
       "panel": "achievements-panel",
       "heading": "ACHIEVEMENTS",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "achievements",
       "back": "BACK",
       "option": {
@@ -160,7 +160,7 @@
       "role": "accounts",
       "panel": "accounts-panel",
       "heading": "QUICK SIGN IN",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "achievements-quick",
       "back": "BACK",
       "from": "achievements"
@@ -170,7 +170,7 @@
       "role": "discs",
       "panel": "discs-panel",
       "heading": "DISC",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "discs",
       "back": "BACK",
       "option": {
@@ -183,7 +183,7 @@
       "role": "restart",
       "panel": "restart-panel",
       "heading": "RESTART",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "restart",
       "option": {
         "label": "RESTART",
@@ -197,7 +197,7 @@
       "platforms": ["windows"],
       "panel": "uninstall-panel",
       "heading": "UNINSTALL",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "uninstall",
       "option": {
         "label": "UNINSTALL",
@@ -210,7 +210,7 @@
       "platforms": ["macos"],
       "panel": "reset-panel",
       "heading": "RESET",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "reset",
       "option": {
         "label": "RESET",
@@ -221,7 +221,7 @@
       "id": "about",
       "panel": "about-panel",
       "heading": "ABOUT",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "about",
       "back": "BACK",
       "rows": "licences",
@@ -235,7 +235,7 @@
       "role": "data",
       "panel": "data-panel",
       "heading": "DATA",
-      "footer": "[ESC]  BACK",
+      "footer": "{back}  BACK",
       "button": "data",
       "option": {
         "label": "DATA",

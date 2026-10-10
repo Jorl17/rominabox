@@ -26,14 +26,24 @@ pub struct PadPosition {
     /// half would do nothing, so we move the two together.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub opposite: Option<&'static str>,
+    /// Whether we name it by its place, the same on every pad we read, with
+    /// `name` and never with the word in a pad's profile, which is sometimes
+    /// long ("Left Bumper") and sometimes the same ("L1").
+    #[serde(rename = "namedByPlace", skip_serializing_if = "is_false")]
+    pub named_by_place: bool,
 }
 
 const fn button(id: &'static str, name: &'static str) -> PadPosition {
-    PadPosition { id, name, opposite: None }
+    PadPosition { id, name, opposite: None, named_by_place: false }
+}
+
+/// A shoulder button, a trigger or a stick's click, which we name by place.
+const fn by_place(id: &'static str, name: &'static str) -> PadPosition {
+    PadPosition { id, name, opposite: None, named_by_place: true }
 }
 
 const fn stick(id: &'static str, name: &'static str, opposite: &'static str) -> PadPosition {
-    PadPosition { id, name, opposite: Some(opposite) }
+    PadPosition { id, name, opposite: Some(opposite), named_by_place: false }
 }
 
 /// Every position of the standard pad. We read a control from one of these,
@@ -50,14 +60,14 @@ pub const PAD_POSITIONS: &[PadPosition] = &[
     button("a", "Right button"),
     button("y", "Left button"),
     button("x", "Top button"),
-    button("l", "L1"),
-    button("r", "R1"),
-    button("l2", "L2"),
-    button("r2", "R2"),
+    by_place("l", "L1"),
+    by_place("r", "R1"),
+    by_place("l2", "L2"),
+    by_place("r2", "R2"),
     button("select", "Select"),
     button("start", "Start"),
-    button("l3", "L3"),
-    button("r3", "R3"),
+    by_place("l3", "L3"),
+    by_place("r3", "R3"),
     stick("l_y_minus", "Left stick up", "l_y_plus"),
     stick("l_x_plus", "Left stick right", "l_x_minus"),
     stick("l_y_plus", "Left stick down", "l_y_minus"),

@@ -477,9 +477,16 @@ impl Hotkeys {
         for (hotkey, mode) in &game.modes {
             text.push_str(&format!("{} = \"{mode}\"\n", key!(HotkeyMode, hotkey.id())));
         }
-        for position in button_positions()? {
+        let positions = button_positions()?;
+        for position in &positions {
             text.push_str(&format!("{} = \"{}\"\n", key!(PadWord, position.id), position.name));
         }
+        let by_place: Vec<&str> = positions
+            .iter()
+            .filter(|position| position.named_by_place)
+            .map(|position| position.id.as_str())
+            .collect();
+        text.push_str(&format!("{} = \"{}\"\n", key!(PadWordsByPlace), by_place.join(" ")));
         text.push_str(&format!(
             "{} = \"{}\"\n",
             key!(PadWord, PadInput::home_field(0)),
@@ -680,6 +687,8 @@ pub fn fit(hotkeys: &Hotkeys, document: &str, design: &str) -> Result<(), String
     }
     Ok(())
 }
+
+mod words;
 
 #[cfg(test)]
 mod tests;

@@ -172,11 +172,11 @@
         "*": [
           {
             "controls-status": "CHOOSE A CONTROL",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           },
           {
             "controls-status": "CHOOSE A CONTROL",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           },
           {
             "controls-status": "Up: PRESS AN INPUT (9)",
@@ -184,21 +184,21 @@
           },
           {
             "controls-status": "BINDING UNCHANGED",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           },
           {
             "controls-status": "CHOOSE A CONTROL",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           }
         ],
         "wording": [
           {
             "controls-status": "CHOOSE A CONTROL",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           },
           {
             "controls-status": "CHOOSE A CONTROL",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           },
           {
             "controls-status": "PRESS FOR Up (9)",
@@ -206,11 +206,11 @@
           },
           {
             "controls-status": "KEPT AS IT WAS",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           },
           {
             "controls-status": "CHOOSE A CONTROL",
-            "footer-hint": "ESC  BACK"
+            "footer-hint": "Escape  BACK"
           }
         ]
       }

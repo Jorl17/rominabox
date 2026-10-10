@@ -148,7 +148,7 @@ extern "C" const char *rib_host_pad_input_id(unsigned bind)
 {
    return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) ? pad_inputs[bind] : nullptr;
 }
-extern "C" bool rib_host_pad_name(unsigned bind, char *name, size_t size)
+extern "C" bool rib_host_pad_name(unsigned, unsigned bind, char *name, size_t size)
 {
    const char *id = rib_host_pad_input_id(bind);
    const auto found = id ? host.pad_names.find(id) : host.pad_names.end();

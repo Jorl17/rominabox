@@ -26,7 +26,7 @@
  * the menu (host.c, rib_host_pad_value_input and rib_host_pad_name):
  *
  *   value <13, h0up or +3>
- *   named <the name of its position in the profile of the first pad, or none>
+ *   named <the name of its position in the profile of the pad we captured from, or none>
  *   read <the input we read for it in a binding to a hotkey, as above>
  *
  * We do not start RetroArch, and link retroarch_unreached.c in place of the
@@ -133,7 +133,7 @@ static void print_named(const struct retro_keybind *captured)
    }
    printf("value %s\n", value);
    if (rib_pad_input_parse(value, &joykey, &joyaxis) && rib_pad_input_of(joykey, joyaxis, &bind)
-         && rib_pad_input_name(bind, name, sizeof(name)))
+         && rib_pad_input_name(rib_pad_input_captured_pad(), bind, name, sizeof(name)))
       printf("named %s\n", name);
    else
       printf("named none\n");

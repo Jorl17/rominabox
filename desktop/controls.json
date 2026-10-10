@@ -34,19 +34,23 @@
     },
     {
       "id": "l",
-      "name": "L1"
+      "name": "L1",
+      "namedByPlace": true
     },
     {
       "id": "r",
-      "name": "R1"
+      "name": "R1",
+      "namedByPlace": true
     },
     {
       "id": "l2",
-      "name": "L2"
+      "name": "L2",
+      "namedByPlace": true
     },
     {
       "id": "r2",
-      "name": "R2"
+      "name": "R2",
+      "namedByPlace": true
     },
     {
       "id": "select",
@@ -58,11 +62,13 @@
     },
     {
       "id": "l3",
-      "name": "L3"
+      "name": "L3",
+      "namedByPlace": true
     },
     {
       "id": "r3",
-      "name": "R3"
+      "name": "R3",
+      "namedByPlace": true
     },
     {
       "id": "l_y_minus",

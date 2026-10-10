@@ -131,11 +131,15 @@ fn shown_by(screen: &Screen, screens: &[&Screen], markup: &str) -> Vec<String> {
     buttons
 }
 
-fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String]) -> Result<(), String> {
+/// How we write a hint before the player reads it: with the words of the
+/// bindings of the hotkeys it names (`Hotkeys::hint`).
+pub(crate) type Hint<'a> = &'a dyn Fn(&str) -> Result<String, String>;
+
+fn screen_lines(text: &mut String, screen: &Screen, buttons: &[String], hint: Hint) -> Result<(), String> {
     let id = &screen.id;
     line(text, &key!(ScreenPanel, id), &screen.panel)?;
     line(text, &key!(ScreenHeading, id), &screen.heading)?;
-    line(text, &key!(ScreenFooter, id), &screen.footer)?;
+    line(text, &key!(ScreenFooter, id), &hint(&screen.footer)?)?;
     line(text, &key!(ScreenButton, id), &buttons.join(" "))?;
     if let Some(images) = &screen.images {
         line(text, &key!(ScreenImages, id), images)?;
@@ -179,6 +183,7 @@ pub(crate) fn write(
     lists: &[Installed],
     settings: &[PlayerSetting],
     markup: &str,
+    hint: Hint,
 ) -> Result<String, String> {
     let drawn: Vec<&Screen> = staged
         .iter()
@@ -218,7 +223,7 @@ pub(crate) fn write(
         .collect();
     line(&mut text, key!(Screens), &ids.join(" "))?;
     for (screen, buttons) in declared.iter().zip(&buttons).take(drawn.len()) {
-        screen_lines(&mut text, screen, buttons)?;
+        screen_lines(&mut text, screen, buttons, hint)?;
     }
     // The player's settings in this document, each with its element, its
     // RetroArch key and the file in which we save it.
@@ -291,7 +296,7 @@ pub(crate) fn write(
     }
 
     for (index, list) in lists.iter().enumerate() {
-        screen_lines(&mut text, &list.screen, &buttons[drawn.len() + index])?;
+        screen_lines(&mut text, &list.screen, &buttons[drawn.len() + index], hint)?;
     }
     Ok(text)
 }

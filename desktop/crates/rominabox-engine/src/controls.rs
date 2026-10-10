@@ -55,6 +55,10 @@ pub struct PadPosition {
     /// The opposite direction on the same axis of a stick, which moves with it.
     #[serde(default)]
     pub opposite: Option<String>,
+    /// Whether the menu names it by its place, with `name`, and never with
+    /// the word in a pad's profile.
+    #[serde(default, rename = "namedByPlace")]
+    pub named_by_place: bool,
 }
 
 impl PadPosition {

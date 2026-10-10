@@ -257,7 +257,8 @@ void capture_look_and_ends(void *menu)
    check(!inspect.has_class("hotkey-back-add", "capturing")
          && rib::hidden(view.document.root()->GetElementById("hotkeys-cancel")),
          "a cancelled capture looks done");
-   check(inspect.words("footer-hint") == "ESC  BACK", "the footer is the screen's again");
+   check(inspect.words("footer-hint") == "Escape  BACK", "the footer is the screen's again: "
+         + inspect.words("footer-hint"));
 
    capture(menu, "back", "key:escape");
    expect_status("BINDING UNCHANGED", "Escape during a capture");
