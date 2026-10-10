@@ -52,6 +52,7 @@ pixel.
 | `save-slots.rml`, `footer.rml`, `spine.rml`, `overlay-splash.rml` | Parts of the page. Their text is what shows before the player writes its own words (see [Words](#words)). `#footer-hint` in `footer.rml` shows the `footer` of each screen. `overlay-splash.rml` is the startup splash, in the menu and on the logo-only page alike | Native's (Native has no spine) |
 | `splash.rml` | The page of a game with a logo and no menu, with the places for the spine and the splash (`<!--SPINE-->`, `<!--SPLASH-->`) | Native's |
 | `row.rml` | One row of every list | the built-in row |
+| `badge.rml` | A badge: a binding of the hotkey a button does, on every Back button and on the arrows of a list. Its `HOTKEY` hole takes the hotkey's id, for `data-binding` (see [Classes and attributes](#classes-and-attributes-for-your-stylesheet)). Mark a button of your own with `<!--BADGE:back-->`; we mark the buttons we write. An empty file means no badges | Native's |
 | `option-entry.rml` | One Options entry | the built-in entry |
 | `dialog-<name>.rml`, `actions-<screen>.rml` | A dialog that a screen opens, and extra buttons in the action row of a screen | Native's |
 | `parts/slider.rml`, `parts/toggle.rml` | The volume slider, and a switch you place yourself | the shared parts |
@@ -91,7 +92,7 @@ file is a complete example.
     { "file": "MyFont.ttf", "license": "MyFont-OFL.txt", "family": "MyFont" }
   ],
   "screens": [
-    { "id": "pause", "heading": "PAUSED", "footer": "ESC  RESUME" },
+    { "id": "pause", "heading": "PAUSED", "footer": "{back}  RESUME" },
     { "id": "controls", "heading": "PAD", "option": { "label": "PAD", "default": true } }
   ],
   "words": { "slot": "FILE {slot}" },
@@ -106,6 +107,8 @@ file is a complete example.
   change. The fields are:
   - `heading` and `footer`: the words shown while the screen is open.
     Pause's are in the composed menu too, because the menu opens on Pause.
+    A hotkey in braces in a footer, `{back}`, shows the player's binding
+    for it, in an element with the class `hint-key`.
   - `button`: the id of the element that opens the screen.
   - `label`: its words when another screen links to it.
   - `back`: the words on its BACK.
@@ -277,6 +280,9 @@ attributes, and your RCSS decides what each one looks like:
 | `data-notice="<notice>"` | on `#unlock-row`: the current notice, `achievement` (an achievement unlocked) or `slot` (the result of a hotkey for the save slots during play: `SAVED TO SLOT 3`, `LOADED SLOT 3`, `SLOT 3 IS EMPTY`, `SLOT 4`) |
 | `.badge-loading` | a list row whose picture is still downloading |
 | `.nav-outside` | everything outside an open dialog or picker |
+| `.page-target` | the list that PREVIOUS PAGE and NEXT PAGE turn: the list of the focus, or else the first list shown in an open dialog or in the whole menu |
+| `.unbound` | an element marked `data-binding` whose hotkey has no binding |
+| `data-input="<kind>"` | on the document: the input the player used last, `keyboard` (a key or the mouse) or `pad` |
 | `data-focus="<id>"` | on the document: the id of the focused element |
 | `data-game-shape="<shape>"` | on the document: the shape of the running game (below) |
 
@@ -289,6 +295,14 @@ accounts in QUICK SIGN IN). You decide where it goes:
 
 ```html
 <button class="menu-action" id="save">SAVE · SLOT <span data-fact="chosen-slot">1</span></button>
+```
+
+An element with `data-binding="<hotkey>"`, a hotkey of `hotkeys.inc`, shows a
+binding of it: one of the input in use, or else of the other kind, in the
+words of the player's pad. Its own text is what a preview shows:
+
+```html
+<div class="notice">PRESS <span class="hint-key" data-binding="menu">ESC</span> TO PAUSE</div>
 ```
 
 ### The game's shape
@@ -348,7 +362,9 @@ the pad screen. You don't declare them.
   on any screen. Without it, the focus starts on the first element in
   document order that can take it, and on the pad screen on its first
   control instead of the picker.
-- **Lists:** Left and Right on a row turn the page.
+- **Lists:** Left and Right on a row turn the page, and PREVIOUS PAGE and
+  NEXT PAGE (Page Up and Page Down, L1 and R1, unless the player changes
+  them) turn the list marked `page-target`.
 
 A design that draws screens in unusual places usually needs a few overrides.
 With the navigation checks below you can see where the arrows go.
