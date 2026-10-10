@@ -503,6 +503,25 @@ void the_hotkeys_of_play_keep_nothing(void *menu)
    expect_row("next-slot", {"f7"}, "put back");
 }
 
+/* QUICK SAVE acts only during play and BACK only in the menu, so both keep L2:
+ * in the menu L2 goes back. FULLSCREEN acts in both places, so capturing L2
+ * for it takes L2 from both. */
+void a_hotkey_of_the_menu_and_one_of_play_share_an_input(void *menu)
+{
+   capture(menu, "quick-save", "pad:l2");
+   capture(menu, "back", "pad:l2");
+   expect_row("quick-save", {"f2", "L2"}, "L2 captured for BACK after QUICK SAVE");
+   expect_row("back", {"Escape", "Bottom button", "L2"}, "L2 captured for BACK after QUICK SAVE");
+   check(press({}, {"l2"}).cancel, "in the menu L2 goes back");
+
+   capture(menu, "fullscreen", "pad:l2");
+   expect_row("fullscreen", {"L2"}, "L2 captured for FULLSCREEN");
+   expect_row("quick-save", {"f2"}, "L2 captured for FULLSCREEN");
+   expect_row("back", {"Escape", "Bottom button"}, "L2 captured for FULLSCREEN");
+   click(menu, "hotkey-fullscreen-1");
+   expect_row("fullscreen", {}, "L2 removed from FULLSCREEN");
+}
+
 void a_full_row(void *menu)
 {
    capture(menu, "menu", "key:f1");
@@ -713,6 +732,7 @@ int main(int argc, char **argv)
    a_full_row(menu);
    pages(menu);
    the_hotkeys_of_play_keep_nothing(menu);
+   a_hotkey_of_the_menu_and_one_of_play_share_an_input(menu);
    the_games_inputs_are_not_the_hotkeys_of_play(menu);
    the_fullscreen_chord(menu);
    close(menu);

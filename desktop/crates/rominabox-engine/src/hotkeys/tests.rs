@@ -108,6 +108,28 @@ fn a_binding_is_a_key_retroarch_reads_or_pad_inputs_the_standard_pad_has() {
     assert_eq!(Binding::read("pad:l3+r3").unwrap().text(), "pad:l3+r3");
 }
 
+/// A hotkey of the menu and a hotkey of play never act at the same time, so
+/// both may have one input: in the menu it does the first, during play the
+/// second. A hotkey that acts in both places shares with neither, and two
+/// hotkeys of the same place share only when hotkeys.inc says so.
+#[test]
+fn a_hotkey_of_the_menu_and_one_of_play_may_have_the_same_input() {
+    assert!(named("back").shares_with(named("quick-save")) && named("quick-save").shares_with(named("back")));
+    assert!(named("confirm").shares_with(named("next-slot")));
+    assert!(!named("fullscreen").shares_with(named("quick-save")) && !named("fullscreen").shares_with(named("back")));
+    assert!(!named("confirm").shares_with(named("back")) && !named("quick-save").shares_with(named("quick-load")));
+    hotkeys(serde_json::json!({ "back": ["key:escape", "pad:l2"], "quick-save": ["key:f2", "pad:l2"] }))
+        .unwrap()
+        .check()
+        .unwrap();
+    let error = hotkeys(serde_json::json!({ "fullscreen": ["pad:l2"], "quick-save": ["key:f2", "pad:l2"] }))
+        .unwrap()
+        .check()
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("bound to both"), "{error}");
+}
+
 /// The rules we apply in the menu to every change, and check before an
 /// export: nobody can be locked out, and only two hotkeys that may share an
 /// input can both have it. A hotkey that keeps nothing may have no binding.
