@@ -44,6 +44,7 @@ static bool reject_award;
 static bool replace_account;
 static bool expire_token;
 static bool refuse_password;
+static bool version_untested;
 static unsigned fail_award_attempts;
 static rc_client_server_callback_t deferred_callback;
 static void *deferred_data;
@@ -78,6 +79,19 @@ static const char game_json[] =
    "\"ID\":101000001,\"Title\":\"Unsupported Game Version\","
    "\"Description\":\"This version has no achievements\",\"Flags\":3,"
    "\"Points\":0,\"MemAddr\":\"0xH0000=255\",\"Author\":\"Server\","
+   "\"BadgeName\":\"00000\",\"Created\":1,\"Modified\":1}],"
+   "\"Leaderboards\":[]}]}";
+/* What RetroAchievements sends for a version of the game marked untested: the
+ * game id plus 1100000000, and only the warning in place of the achievements. */
+static const char untested_game_json[] =
+   "{\"Success\":true,\"GameId\":1100000001,"
+   "\"Title\":\"Unsupported Game Version (Fixture Game)\","
+   "\"ConsoleId\":1,\"ImageIconUrl\":\"/Images/1.png\","
+   "\"Sets\":[{\"AchievementSetId\":1,\"GameId\":1100000001,\"Title\":null,"
+   "\"Type\":\"core\",\"ImageIconUrl\":\"/Images/1.png\",\"Achievements\":[{"
+   "\"ID\":101000001,\"Title\":\"Unsupported Game Version\","
+   "\"Description\":\"This version of the game has not been tested\","
+   "\"Flags\":3,\"Points\":0,\"MemAddr\":\"1=1.300.\",\"Author\":\"\","
    "\"BadgeName\":\"00000\",\"Created\":1,\"Modified\":1}],"
    "\"Leaderboards\":[]}]}";
 static const char session_json[] =
@@ -133,9 +147,10 @@ static void server(const rc_api_request_t *request,
          body = refused_login_json;
    }
    else if (strstr(post, "r=gameid"))
-      body = "{\"Success\":true,\"GameID\":1}";
+      body = version_untested ? "{\"Success\":true,\"GameID\":1100000001}" :
+            "{\"Success\":true,\"GameID\":1}";
    else if (strstr(post, "r=achievementsets"))
-      body = game_json;
+      body = version_untested ? untested_game_json : game_json;
    else if (strstr(post, "r=startsession"))
       body = session_json;
    else if (strstr(post, "r=awardachievement"))
@@ -513,6 +528,35 @@ static void shared_accounts(const struct retro_game_info *info,
    test_setenv("ROMINABOX_DATA_DIR", first);
 }
 
+/* A version that RetroAchievements has not approved has no achievements, and
+ * we say why. With nothing to wait for, the game restores its state at once. */
+static void untested_version(const struct retro_game_info *info)
+{
+   char folder[512];
+   char path[512];
+   unsigned i;
+   test_temporary_folder(folder, sizeof folder, "rib-achievements-untested-");
+   version_untested = true;
+   play(folder, GAME_A, info);
+   rib_achievements_begin_startup_gate();
+   assert(rib_achievements_sign_in("Fixture", "fixture-password"));
+   for (i = 0; i < 8 && snapshot().status != RIB_ACHIEVEMENTS_UNAVAILABLE; ++i)
+      rib_achievements_pump();
+   assert(snapshot().status == RIB_ACHIEVEMENTS_UNAVAILABLE);
+   assert(!strcmp(snapshot().error,
+         "This version of the game isn't supported by RetroAchievements."));
+   assert(snapshot().count == 0);
+   assert(rib_achievements_startup_ready());
+   rib_achievements_finish_startup_gate();
+   rib_achievements_sign_out();
+   unload();
+   version_untested = false;
+   snprintf(path, sizeof(path), "%s/achievements.session", folder);
+   assert(!fs_exists(path));
+   assert(rmdir(folder) == 0);
+   test_unsetenv("ROMINABOX_GAME_IDENTITY");
+}
+
 int main(void)
 {
    char directory[512];
@@ -819,6 +863,8 @@ int main(void)
    rc_client_destroy(locals.client);
    locals.client = NULL;
    shared_accounts(&info, directory, second_directory);
+   untested_version(&info);
+   test_setenv("ROMINABOX_DATA_DIR", directory);
    {
       char badge_path[512];
       char badge_dir[512];
