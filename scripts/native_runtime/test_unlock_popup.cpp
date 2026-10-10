@@ -116,6 +116,30 @@ int main(int argc, char **argv) {
    overlays.update(false); document.settle();
    check(unlocked(), "Two seconds on, the unlock still shows");
 
+   // The row says what it does, for the design to move it. It is drawn from
+   // the frame before it says it is showing, so its arrival can animate, and
+   // it is leaving, still drawn, for the time the design declares before it
+   // goes.
+   rib::DesignDeclarations motion;
+   motion.notice_row_leave_ms = 300;
+   overlays.load(motion);
+   overlays.clear_notification();
+   // The frame it comes up in, then the next one.
+   overlays.notify({rib::Overlays::Notice::Achievement, "FIFTH STEP", "5 points", ""});
+   overlays.update(false); document.settle();
+   check(popup && !rib::hidden(popup) && !popup->IsClassSet("showing"),
+         "A popup is drawn for a frame before it says it is showing");
+   overlays.update(false); document.settle();
+   check(popup && popup->IsClassSet("showing"), "On the next frame the popup is showing");
+   host_time_us += 4500 * 1000;
+   overlays.update(false); document.settle();
+   check(popup && !rib::hidden(popup) && popup->IsClassSet("leaving") && !popup->IsClassSet("showing"),
+         "When its time is up, the popup is leaving and still drawn");
+   check(overlays.drawing(), "We draw over the game while the popup leaves");
+   host_time_us += 300 * 1000;
+   overlays.update(false); document.settle();
+   check(popup && rib::hidden(popup) && !popup->IsClassSet("leaving"), "Once it has left, the popup is hidden");
+
    achievements.context_lost();
    document.shutdown();
    std::printf("unlock popup: %d failures\n", failures);
