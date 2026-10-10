@@ -42,7 +42,8 @@ extern "C" bool rib_host_bind_conflicts(unsigned changed, unsigned other)
 extern "C" void rib_host_bind_lines(unsigned index, char details[][64], char kinds[][8], int *lines)
 {
    if (!details || !kinds || !lines || *lines + 2 > RIB_HOST_BIND_LINE_MAX) return;
-   std::snprintf(details[*lines], 64, "Button %u", index);
+   (void)index;
+   std::snprintf(details[*lines], 64, "%s", host.bound_pad.c_str());
    std::strcpy(kinds[(*lines)++], "PAD");
    std::snprintf(details[*lines], 64, "%s", host.bound_key.c_str());
    std::strcpy(kinds[(*lines)++], "KEY");
@@ -102,6 +103,24 @@ extern "C" bool rib_host_pad_input(const char *id, unsigned *bind)
 extern "C" bool rib_host_pad_down(unsigned bind)
 {
    return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) && held(host.pads_down, pad_inputs[bind]);
+}
+extern "C" const char *rib_host_pad_input_id(unsigned bind)
+{
+   return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) ? pad_inputs[bind] : nullptr;
+}
+extern "C" bool rib_host_pad_name(unsigned bind, char *name, size_t size)
+{
+   const char *id = rib_host_pad_input_id(bind);
+   const auto found = id ? host.pad_names.find(id) : host.pad_names.end();
+   if (found == host.pad_names.end() || !name || !size)
+      return false;
+   std::snprintf(name, size, "%s", found->second.c_str());
+   return true;
+}
+extern "C" bool rib_host_pad_value_input(const char *value, unsigned *bind)
+{
+   const auto found = value ? host.pad_values.find(value) : host.pad_values.end();
+   return found != host.pad_values.end() && rib_host_pad_input(found->second.c_str(), bind);
 }
 extern "C" bool rib_host_capture_input_start(unsigned seconds)
 {

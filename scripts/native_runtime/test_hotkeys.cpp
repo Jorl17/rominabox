@@ -607,6 +607,37 @@ void reset(void *menu)
 }
 }
 
+/* We show a pad input by its name in the profile of the first player's pad,
+ * as Cross for the bottom button of a PlayStation pad, on HOTKEYS and on
+ * CONTROLS. An input with no name there, as the touchpad, we show by its
+ * number. */
+void the_pad_names_its_own_inputs(const char *assets)
+{
+   const auto binding_of_up = [] { return inspect.text("control-binding-up"); };
+   host.pad_names = {{"b", "Cross"}};
+   host.pad_values = {{"1", "b"}};
+   for (const char *bound : {"1", "13"})
+   {
+      host.bound_pad = bound;
+      filestream_delete((data + "/hotkeys.cfg").c_str());
+      void *menu = open(assets);
+      if (!menu)
+         return;
+      expect_row("confirm", {"Enter", "Cross"}, "with a pad that names its bottom button Cross");
+      rib_menu_key(menu, RIB_KEY_CANCEL);
+      frame(menu);
+      click(menu, "controls");
+      const std::string expected = std::string(bound) == "1" ? "Cross" : "Button 13";
+      check(binding_of_up().rfind(expected, 0) == 0,
+            "CONTROLS shows the pad input " + std::string(bound) + " as " + expected + ": "
+                  + binding_of_up());
+      close(menu);
+   }
+   host.pad_names.clear();
+   host.pad_values.clear();
+   host.bound_pad = "0";
+}
+
 int main(int argc, char **argv)
 {
    Utf8Arguments utf8(argc, argv);
@@ -665,6 +696,8 @@ int main(int argc, char **argv)
    menu = open(argv[1]);
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "a player's file with no key for MENU");
    close(menu);
+
+   the_pad_names_its_own_inputs(argv[1]);
 
    if (failures)
       std::fprintf(stderr, "hotkeys: %d failures\n", failures);
