@@ -46,18 +46,37 @@ const KEY_WORDS: &str =
 /// RetroArch config, and its word.
 pub fn key_words() -> &'static [(String, String)] {
     static WORDS: OnceLock<Vec<(String, String)>> = OnceLock::new();
+    WORDS.get_or_init(|| declared_key_words("RIB_KEY_WORD"))
+}
+
+/// Each key that has a shorter word in `key_words.inc`, for a hint or a
+/// badge, by its name in the RetroArch config, and that word. Each of them
+/// also has a word.
+pub fn short_key_words() -> &'static [(String, String)] {
+    static WORDS: OnceLock<Vec<(String, String)>> = OnceLock::new();
     WORDS.get_or_init(|| {
-        super::inc::declarations(KEY_WORDS)
-            .filter(|declaration| declaration.macro_name() == "RIB_KEY_WORD")
-            .map(|declaration| match declaration.fields()[..] {
-                [name, word] => (name.to_string(), word.to_string()),
-                ref fields => panic!(
-                    "key_words.inc: RIB_KEY_WORD({}) is not RIB_KEY_WORD(\"name\", \"Word\")",
-                    fields.join(", ")
-                ),
-            })
-            .collect()
+        let words = declared_key_words("RIB_KEY_SHORT");
+        for (name, _) in &words {
+            assert!(
+                key_words().iter().any(|(worded, _)| worded == name),
+                "key_words.inc: RIB_KEY_SHORT(\"{name}\") is for a key with no RIB_KEY_WORD"
+            );
+        }
+        words
     })
+}
+
+fn declared_key_words(macro_name: &str) -> Vec<(String, String)> {
+    super::inc::declarations(KEY_WORDS)
+        .filter(|declaration| declaration.macro_name() == macro_name)
+        .map(|declaration| match declaration.fields()[..] {
+            [name, word] => (name.to_string(), word.to_string()),
+            ref fields => panic!(
+                "key_words.inc: {macro_name}({}) is not {macro_name}(\"name\", \"Word\")",
+                fields.join(", ")
+            ),
+        })
+        .collect()
 }
 
 const MOUSE_BUTTONS: &str =

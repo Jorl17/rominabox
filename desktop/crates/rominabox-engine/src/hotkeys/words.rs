@@ -2,22 +2,25 @@
 //! names a hotkey: in a hint, as "{back}", and in an element marked
 //! data-binding. In the game the menu writes the words of a binding of the
 //! input in use (document_contract.inc, BindingAttribute), and the preview
-//! shows the words of the first key, as a player at a computer sees them.
+//! shows the words of the first key, as a player at a computer sees them,
+//! with a key's short word where it has one (key_words.inc).
 
 use super::{button_positions, chord, Binding, Hotkey, Hotkeys, PadInput};
 use crate::menu::contract::contract;
 
 impl Hotkeys {
     /// The words of the first key bound to `hotkey`, or else of its first
-    /// binding, as the menu writes them. None for a hotkey with no binding.
+    /// binding, as the menu writes them in a hint or on a badge. None for a
+    /// hotkey with no binding.
     pub fn words(&self, hotkey: Hotkey) -> Result<Option<String>, String> {
         let list = self.of(hotkey);
         let Some(binding) = list.iter().find(|binding| binding.is_key()).or(list.first()) else {
             return Ok(None);
         };
         Ok(Some(match binding {
-            Binding::Key(name) => crate::menu::words::key_words()
+            Binding::Key(name) => crate::menu::words::short_key_words()
                 .iter()
+                .chain(crate::menu::words::key_words())
                 .find(|(key, _)| key == name)
                 .map_or_else(|| name.clone(), |(_, word)| word.clone()),
             Binding::Pad(inputs) => {

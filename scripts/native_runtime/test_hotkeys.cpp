@@ -257,7 +257,7 @@ void capture_look_and_ends(void *menu)
    check(!inspect.has_class("hotkey-back-add", "capturing")
          && rib::hidden(view.document.root()->GetElementById("hotkeys-cancel")),
          "a cancelled capture looks done");
-   check(inspect.words("footer-hint") == "Escape  BACK", "the footer is the screen's again: "
+   check(inspect.words("footer-hint") == "Esc  BACK", "the footer is the screen's again: "
          + inspect.words("footer-hint"));
 
    capture(menu, "back", "key:escape");
@@ -785,8 +785,8 @@ void the_hints_name_the_bindings_in_use(const char *assets)
       return found.empty() ? std::string("none") : rib::words_of(found[0]);
    };
    rib_rmlui_keyboard_used();
-   check(footer() == "Escape  BACK", "with the keyboard, the footer names BACK's key: " + footer());
-   check(notice() == "Escape", "with the keyboard, the notice names MENU's key: " + notice());
+   check(footer() == "Esc  BACK", "with the keyboard, the footer names BACK's key: " + footer());
+   check(notice() == "Esc", "with the keyboard, the notice names MENU's key: " + notice());
    capture(menu, "back", "key:backspace");
    click(menu, "hotkey-back-1");
    expect_row("back", {"Right button", "Backspace"}, "Escape removed from BACK");
@@ -802,10 +802,10 @@ void the_hints_name_the_bindings_in_use(const char *assets)
 }
 
 /* A Back button and the arrows of a list carry a badge with a binding of
- * BACK and of the page hotkeys, of the kind of input in use. The arrows of
- * the list the page hotkeys turn are marked page-target: on HOTKEYS its
- * list, on OPTIONS the list of Options, and on Pause, which has none, no
- * list at all. */
+ * BACK and of the page hotkeys, of the kind of input in use, a key by its
+ * short word. The arrows of the list the page hotkeys turn are marked
+ * page-target: on HOTKEYS its list, on OPTIONS the list of Options, and on
+ * Pause, which has none, no list at all. */
 void the_badges_name_the_bindings_of_their_buttons(const char *assets)
 {
    filestream_delete((data + "/hotkeys.cfg").c_str());
@@ -826,8 +826,8 @@ void the_badges_name_the_bindings_of_their_buttons(const char *assets)
       return ids.empty() ? std::string("none") : ids;
    };
    rib_rmlui_keyboard_used();
-   check(badge("hotkeys-back") == "Escape" && badge("hotkeys-prev") == "Page Up"
-         && badge("hotkeys-next") == "Page Down",
+   check(badge("hotkeys-back") == "Esc" && badge("hotkeys-prev") == "Pg Up"
+         && badge("hotkeys-next") == "Pg Down",
          "with the keyboard, the badges name keys: " + badge("hotkeys-back") + ", "
          + badge("hotkeys-prev") + ", " + badge("hotkeys-next"));
    host.pads_down = {"x"};

@@ -9,8 +9,9 @@ fn named(id: &str) -> Hotkey {
 }
 
 /// A preview shows the first key of a hotkey in the words of key_words.inc,
-/// or its first binding when it has no key, with a position in its standard
-/// word, Home in the word of hotkeys.inc and a chord joined as in the menu.
+/// its short word where it has one, or its first binding when it has no key,
+/// with a position in its standard word, Home in the word of hotkeys.inc and a
+/// chord joined as in the menu.
 #[test]
 fn a_hotkey_is_worded_by_its_first_key_or_else_its_first_binding() {
     let chosen = hotkeys(serde_json::json!({
@@ -22,8 +23,8 @@ fn a_hotkey_is_worded_by_its_first_key_or_else_its_first_binding() {
         "fullscreen": ["pad:l3+r3"]
     }));
     let words = |id: &str| chosen.words(named(id)).unwrap();
-    assert_eq!(words("back").as_deref(), Some("Escape"));
-    assert_eq!(words("previous-page").as_deref(), Some("Page Up"));
+    assert_eq!(words("back").as_deref(), Some("Esc"));
+    assert_eq!(words("previous-page").as_deref(), Some("Pg Up"));
     assert_eq!(words("quick-save").as_deref(), Some("L1"));
     assert_eq!(words("quick-load").as_deref(), Some("f4"));
     assert_eq!(words("next-slot"), None);
@@ -38,11 +39,11 @@ fn a_hotkey_is_worded_by_its_first_key_or_else_its_first_binding() {
 #[test]
 fn a_hint_carries_the_words_of_the_hotkeys_it_names() {
     let defaults = crate::builder::defaults().hotkeys.clone();
-    assert_eq!(defaults.hint("{back}  BACK").unwrap(), "{back:Escape}  BACK");
+    assert_eq!(defaults.hint("{back}  BACK").unwrap(), "{back:Esc}  BACK");
     assert_eq!(defaults.hint("[ESC]  CANCEL").unwrap(), "[ESC]  CANCEL");
     assert_eq!(
         defaults.hint("{previous-page} {next-page}  PAGE").unwrap(),
-        "{previous-page:Page Up} {next-page:Page Down}  PAGE"
+        "{previous-page:Pg Up} {next-page:Pg Down}  PAGE"
     );
     let refused = defaults.hint("{pause}  BACK").unwrap_err();
     assert!(refused.contains("names no hotkey 'pause'"), "{refused}");
@@ -56,7 +57,7 @@ fn an_element_marked_data_binding_shows_the_words_of_its_binding() {
         defaults
             .bound_words(r#"<div>PRESS <span class="hint-key" data-binding="menu">ESC</span> TO PAUSE</div>"#)
             .unwrap(),
-        r#"<div>PRESS <span class="hint-key" data-binding="menu">Escape</span> TO PAUSE</div>"#
+        r#"<div>PRESS <span class="hint-key" data-binding="menu">Esc</span> TO PAUSE</div>"#
     );
     let refused = defaults.bound_words(r#"<span data-binding="pause"></span>"#).unwrap_err();
     assert!(refused.contains("names no hotkey 'pause'"), "{refused}");
