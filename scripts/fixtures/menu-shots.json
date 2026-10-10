@@ -202,7 +202,7 @@
         "menu": ["key:escape", "pad:home", "pad:l3+r3", "key:rctrl", "pad:r3"],
         "confirm": ["key:enter", "pad:a", "key:space", "pad:x", "key:backspace"],
         "back": ["key:escape", "pad:b", "key:ctrl", "pad:y", "pad:select"],
-        "quick-save": ["key:f2", "pad:l2", "key:f5", "pad:r2", "key:f8"]
+        "previous-page": ["key:pageup", "pad:l", "key:f5", "pad:r2", "key:f8"]
       }
     },
     "hotkeys-second-page": ["options", "hotkeys", "hotkeys-next"],

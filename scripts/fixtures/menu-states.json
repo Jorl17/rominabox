@@ -769,25 +769,18 @@
           "text": "Bottom button",
           "class": "pad"
         },
-        "hotkey-quick-save-1": {
+        "hotkey-previous-page-1": {
           "display": "block",
-          "text": "f2",
+          "text": "Page Up",
           "class": "key"
         },
-        "hotkey-quick-load": {
-          "display": "none"
-        },
-        "hotkey-previous-slot": {
-          "display": "none"
-        },
-        "hotkey-next-slot": {
-          "display": "none"
+        "hotkey-previous-page-2": {
+          "display": "block",
+          "text": "L1",
+          "class": "pad"
         },
         "hotkeys-pager": {
           "display": "block"
-        },
-        "hotkeys-page-count": {
-          "text": "1/2"
         }
       }
     },
@@ -879,48 +872,36 @@
         "hotkey-back-add": {
           "class": "disabled"
         },
-        "hotkey-quick-save-1": {
+        "hotkey-previous-page-1": {
           "display": "block",
           "text": "Right Shift",
           "class": "key"
         },
-        "hotkey-quick-save-2": {
+        "hotkey-previous-page-2": {
           "display": "block",
           "text": "D-pad right",
           "class": "pad"
         },
-        "hotkey-quick-save-3": {
+        "hotkey-previous-page-3": {
           "display": "block",
           "text": "Bottom button",
           "class": "pad"
         },
-        "hotkey-quick-save-4": {
+        "hotkey-previous-page-4": {
           "display": "block",
           "text": "Right Shift",
           "class": "key"
         },
-        "hotkey-quick-save-5": {
+        "hotkey-previous-page-5": {
           "display": "block",
           "text": "Left button",
           "class": "pad"
         },
-        "hotkey-quick-save-add": {
+        "hotkey-previous-page-add": {
           "class": "disabled"
-        },
-        "hotkey-quick-load": {
-          "display": "none"
-        },
-        "hotkey-previous-slot": {
-          "display": "none"
-        },
-        "hotkey-next-slot": {
-          "display": "none"
         },
         "hotkeys-pager": {
           "display": "block"
-        },
-        "hotkeys-page-count": {
-          "text": "1/2"
         }
       }
     },
@@ -958,25 +939,13 @@
           "text": "Backspace",
           "class": "key"
         },
-        "hotkey-quick-save-1": {
+        "hotkey-previous-page-1": {
           "display": "block",
-          "text": "f2",
+          "text": "Page Up",
           "class": "key"
-        },
-        "hotkey-quick-load": {
-          "display": "none"
-        },
-        "hotkey-previous-slot": {
-          "display": "none"
-        },
-        "hotkey-next-slot": {
-          "display": "none"
         },
         "hotkeys-pager": {
           "display": "block"
-        },
-        "hotkeys-page-count": {
-          "text": "1/2"
         }
       }
     },
@@ -1029,25 +998,18 @@
         "hotkeys-status": {
           "text": "CONFIRM: PRESS AN INPUT (10)"
         },
-        "hotkey-quick-save-1": {
+        "hotkey-previous-page-1": {
           "display": "block",
-          "text": "f2",
+          "text": "Page Up",
           "class": "key"
         },
-        "hotkey-quick-load": {
-          "display": "none"
-        },
-        "hotkey-previous-slot": {
-          "display": "none"
-        },
-        "hotkey-next-slot": {
-          "display": "none"
+        "hotkey-previous-page-2": {
+          "display": "block",
+          "text": "L1",
+          "class": "pad"
         },
         "hotkeys-pager": {
           "display": "block"
-        },
-        "hotkeys-page-count": {
-          "text": "1/2"
         }
       }
     },
@@ -1158,25 +1120,18 @@
         "hotkeys-status": {
           "text": "MENU MUST KEEP A KEY"
         },
-        "hotkey-quick-save-1": {
+        "hotkey-previous-page-1": {
           "display": "block",
-          "text": "f2",
+          "text": "Page Up",
           "class": "key"
         },
-        "hotkey-quick-load": {
-          "display": "none"
-        },
-        "hotkey-previous-slot": {
-          "display": "none"
-        },
-        "hotkey-next-slot": {
-          "display": "none"
+        "hotkey-previous-page-2": {
+          "display": "block",
+          "text": "L1",
+          "class": "pad"
         },
         "hotkeys-pager": {
           "display": "block"
-        },
-        "hotkeys-page-count": {
-          "text": "1/2"
         }
       }
     }

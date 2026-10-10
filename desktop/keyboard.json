@@ -51,6 +51,8 @@
     "Backspace": "backspace",
     "Tab": "tab",
     "Delete": "del",
+    "PageUp": "pageup",
+    "PageDown": "pagedown",
     "F1": "f1",
     "F2": "f2",
     "F3": "f3",

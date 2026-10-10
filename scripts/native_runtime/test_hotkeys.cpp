@@ -142,10 +142,11 @@ std::string player_file()
 
 /* What we read from RetroArch input with `keys` and `pads` held: the RetroPad
  * buttons of the menu, as the runloop passes them to the menu with RetroPad A
- * as OK and B as cancel, and whether MENU is held. */
+ * as OK and B as cancel, L and R, which RetroArch's menu reads as a page back
+ * and forward, and whether MENU is held. */
 struct Pressed
 {
-   bool ok, cancel, menu_pad, start;
+   bool ok, cancel, menu_pad, start, previous, next;
    std::vector<unsigned> menu_keys;
 };
 
@@ -158,6 +159,8 @@ Pressed press(std::vector<std::string> keys, std::vector<std::string> pads, uint
    pressed.ok = buttons & (1u << RETRO_DEVICE_ID_JOYPAD_A);
    pressed.cancel = buttons & (1u << RETRO_DEVICE_ID_JOYPAD_B);
    pressed.start = buttons & (1u << RETRO_DEVICE_ID_JOYPAD_START);
+   pressed.previous = buttons & (1u << RETRO_DEVICE_ID_JOYPAD_L);
+   pressed.next = buttons & (1u << RETRO_DEVICE_ID_JOYPAD_R);
    pressed.menu_pad = rib_rmlui_menu_pad_held();
    unsigned codes[8];
    pressed.menu_keys.assign(codes, codes + rib_rmlui_menu_keys(codes, 8));
@@ -173,14 +176,19 @@ unsigned key_code(const char *name)
    return code;
 }
 
-/* What we do in the menu with a RetroPad A or B from the runloop. In the menu
- * driver we turn MENU_ACTION_OK and MENU_ACTION_CANCEL into menu keys. */
+/* What we do in the menu with a RetroPad A, B, L or R from the runloop. In
+ * the menu driver we turn MENU_ACTION_OK, MENU_ACTION_CANCEL and RetroArch's
+ * page actions into menu keys. */
 void act(void *menu, const Pressed& pressed)
 {
    if (pressed.ok)
       rib_menu_key(menu, RIB_KEY_OK);
    if (pressed.cancel)
       rib_menu_key(menu, RIB_KEY_CANCEL);
+   if (pressed.previous)
+      rib_menu_key(menu, RIB_KEY_PREVIOUS_PAGE);
+   if (pressed.next)
+      rib_menu_key(menu, RIB_KEY_NEXT_PAGE);
    frame(menu);
 }
 
@@ -468,14 +476,38 @@ void pages(void *menu)
       Rml::Element *element = view.document.root()->GetElementById(id);
       return element && !rib::hidden(element);
    };
-   check(shown("hotkey-menu") && shown("hotkey-quick-save") && !shown("hotkey-quick-load"),
-         "the first page shows MENU to QUICK SAVE, and not QUICK LOAD");
-   check(shown("hotkeys-pager") && inspect.words("hotkeys-page-count") == "1/2",
-         "the pager shows, on 1/2: " + inspect.words("hotkeys-page-count"));
+   check(shown("hotkey-menu") && shown("hotkey-previous-page") && !shown("hotkey-next-page"),
+         "the first page shows MENU to PREVIOUS PAGE, and not NEXT PAGE");
+   check(shown("hotkeys-pager") && inspect.words("hotkeys-page-count") == "1/3",
+         "the pager shows, on 1/3: " + inspect.words("hotkeys-page-count"));
    click(menu, "hotkeys-next");
-   check(!shown("hotkey-menu") && shown("hotkey-quick-load") && shown("hotkey-next-slot"),
-         "the second page shows QUICK LOAD to NEXT SLOT");
-   check(inspect.words("hotkeys-page-count") == "2/2", "the pager says 2/2: " + inspect.words("hotkeys-page-count"));
+   check(!shown("hotkey-menu") && shown("hotkey-next-page") && shown("hotkey-previous-slot"),
+         "the second page shows NEXT PAGE to PREVIOUS SLOT");
+   check(inspect.words("hotkeys-page-count") == "2/3", "the pager says 2/3: " + inspect.words("hotkeys-page-count"));
+}
+
+/* PREVIOUS PAGE and NEXT PAGE turn the page of the list, by their keys and
+ * pad buttons, and stop at the first and the last page. RetroArch's menu also
+ * turns a page on L2 and R2, which here turn nothing. */
+void the_page_hotkeys_turn_the_page(void *menu)
+{
+   const auto page = [] { return inspect.words("hotkeys-page-count"); };
+   act(menu, press({}, {"r"}));
+   check(page() == "3/3", "R1 turns to 3/3: " + page());
+   act(menu, press({}, {"r"}));
+   check(page() == "3/3", "R1 on the last page stays there: " + page());
+   act(menu, press({}, {}, 1u << RETRO_DEVICE_ID_JOYPAD_L2));
+   check(page() == "3/3", "L2 turns nothing: " + page());
+   act(menu, press({"pageup"}, {}));
+   check(page() == "2/3", "Page Up turns back to 2/3: " + page());
+   act(menu, press({}, {"l"}));
+   check(page() == "1/3", "L1 turns back to 1/3: " + page());
+   act(menu, press({}, {"l"}));
+   check(page() == "1/3", "L1 on the first page stays there: " + page());
+   act(menu, press({"pagedown"}, {}));
+   check(page() == "2/3", "Page Down turns to 2/3: " + page());
+   act(menu, press({}, {"r"}));
+   check(page() == "3/3", "R1 turns to 3/3, where NEXT SLOT is: " + page());
 }
 
 /* QUICK SAVE, QUICK LOAD, PREVIOUS SLOT and NEXT SLOT may be left with no
@@ -731,6 +763,7 @@ int main(int argc, char **argv)
    what_retroarch_reads(menu);
    a_full_row(menu);
    pages(menu);
+   the_page_hotkeys_turn_the_page(menu);
    the_hotkeys_of_play_keep_nothing(menu);
    a_hotkey_of_the_menu_and_one_of_play_share_an_input(menu);
    the_games_inputs_are_not_the_hotkeys_of_play(menu);

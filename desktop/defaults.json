@@ -24,6 +24,8 @@
     "menu": ["key:escape", "pad:home", "pad:l3+r3"],
     "confirm": ["key:enter", "pad:b"],
     "back": ["key:escape", "pad:a"],
+    "previous-page": ["key:pageup", "pad:l"],
+    "next-page": ["key:pagedown", "pad:r"],
     "quick-save": ["key:f2"],
     "quick-load": ["key:f4"],
     "previous-slot": ["key:f6"],

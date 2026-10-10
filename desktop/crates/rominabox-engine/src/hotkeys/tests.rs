@@ -23,6 +23,8 @@ fn the_hotkeys_are_the_players_own() {
             "menu",
             "confirm",
             "back",
+            "previous-page",
+            "next-page",
             "quick-save",
             "quick-load",
             "previous-slot",
@@ -45,7 +47,8 @@ fn the_hotkeys_are_the_players_own() {
 
 /// The builder's defaults: MENU is Escape, the pad's Home and L3+R3. CONFIRM
 /// is Enter and the bottom face button (Cross). BACK is Escape and the right
-/// face button (Circle). QUICK SAVE, QUICK LOAD, PREVIOUS SLOT and NEXT SLOT
+/// face button (Circle). PREVIOUS PAGE and NEXT PAGE are Page Up and Page
+/// Down, and L1 and R1. QUICK SAVE, QUICK LOAD, PREVIOUS SLOT and NEXT SLOT
 /// are RetroArch's desktop keys for them, F2, F4, F6 and F7, with no pad input.
 #[test]
 fn the_builders_defaults_are_todays_menu_keys_and_retroarchs_state_keys() {
@@ -53,6 +56,8 @@ fn the_builders_defaults_are_todays_menu_keys_and_retroarchs_state_keys() {
     assert_eq!(texts(&defaults, "menu"), ["key:escape", "pad:home", "pad:l3+r3"]);
     assert_eq!(texts(&defaults, "confirm"), ["key:enter", "pad:b"]);
     assert_eq!(texts(&defaults, "back"), ["key:escape", "pad:a"]);
+    assert_eq!(texts(&defaults, "previous-page"), ["key:pageup", "pad:l"]);
+    assert_eq!(texts(&defaults, "next-page"), ["key:pagedown", "pad:r"]);
     assert_eq!(texts(&defaults, "quick-save"), ["key:f2"]);
     assert_eq!(texts(&defaults, "quick-load"), ["key:f4"]);
     assert_eq!(texts(&defaults, "previous-slot"), ["key:f6"]);
@@ -79,7 +84,7 @@ fn a_request_changes_the_hotkeys_it_names_and_keeps_the_rest() {
     let error = hotkeys(serde_json::json!({ "pause": ["key:p"] })).unwrap_err();
     assert!(
         error.contains("'pause' is no hotkey")
-            && error.contains("menu, confirm, back, quick-save, quick-load, previous-slot, next-slot"),
+            && error.contains("menu, confirm, back, previous-page, next-page, quick-save, quick-load"),
         "{error}"
     );
 }

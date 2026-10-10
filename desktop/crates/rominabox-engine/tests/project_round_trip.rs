@@ -162,7 +162,7 @@ fn as_saved_before_hotkeys(archive: &Path) {
 }
 
 /// We open a project in the older manifest format, without HOTKEYS. Its menu
-/// controls become the menu hotkeys, the hotkeys for gameplay are the builder
+/// controls become MENU, CONFIRM and BACK, the other hotkeys are the builder
 /// defaults, and its MENU CONTROLS entry becomes the HOTKEYS one.
 #[test]
 fn a_project_saved_with_menu_controls_opens_with_them_as_hotkeys() {
@@ -184,6 +184,8 @@ fn a_project_saved_with_menu_controls_opens_with_them_as_hotkeys() {
             "menu": ["key:f1", "pad:home"],
             "confirm": ["key:enter"],
             "back": ["key:backspace", "pad:b"],
+            "previous-page": defaults["previous-page"],
+            "next-page": defaults["next-page"],
             "quick-save": defaults["quick-save"],
             "quick-load": defaults["quick-load"],
             "previous-slot": defaults["previous-slot"],

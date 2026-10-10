@@ -1923,7 +1923,7 @@
           "hotkey-menu-add",
           "hotkey-confirm-add",
           "hotkey-back-add",
-          "hotkey-quick-save-add",
+          "hotkey-previous-page-add",
           "hotkeys-prev"
         ],
         "focused": [
@@ -2052,11 +2052,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "hotkeys-next"
-        ],
+        "disabled": [],
         "focused": [
-          "hotkey-quick-load-1"
+          "hotkey-next-page-1"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -7938,7 +7936,7 @@
           "hotkey-menu-add",
           "hotkey-confirm-add",
           "hotkey-back-add",
-          "hotkey-quick-save-add",
+          "hotkey-previous-page-add",
           "hotkeys-prev"
         ],
         "focused": [
@@ -8067,11 +8065,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "hotkeys-next"
-        ],
+        "disabled": [],
         "focused": [
-          "hotkey-quick-load-1"
+          "hotkey-next-page-1"
         ],
         "leaving": [],
         "menuOpen": true,
@@ -13979,7 +13975,7 @@
           "hotkey-menu-add",
           "hotkey-confirm-add",
           "hotkey-back-add",
-          "hotkey-quick-save-add",
+          "hotkey-previous-page-add",
           "hotkeys-prev"
         ],
         "focused": [
@@ -14108,11 +14104,9 @@
         "bindsBox": false,
         "captureActive": false,
         "capturing": [],
-        "disabled": [
-          "hotkeys-next"
-        ],
+        "disabled": [],
         "focused": [
-          "hotkey-quick-load-1"
+          "hotkey-next-page-1"
         ],
         "leaving": [],
         "menuOpen": true,
