@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
+#include <cctype>
 #include <cstring>
 
 rib::test::FakeHost rib::test::host;
@@ -103,6 +104,16 @@ extern "C" bool rib_host_pad_input(const char *id, unsigned *bind)
 extern "C" bool rib_host_pad_down(unsigned bind)
 {
    return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) && held(host.pads_down, pad_inputs[bind]);
+}
+extern "C" bool rib_host_pad_value(const char *value)
+{
+   return value && (std::isdigit((unsigned char)value[0])
+         || ((value[0] == '+' || value[0] == '-' || value[0] == 'h')
+               && std::isdigit((unsigned char)value[1])));
+}
+extern "C" bool rib_host_pad_value_down(const char *value)
+{
+   return rib_host_pad_value(value) && held(host.pads_down, value);
 }
 extern "C" const char *rib_host_pad_input_id(unsigned bind)
 {

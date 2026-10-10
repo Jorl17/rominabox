@@ -638,6 +638,29 @@ void the_pad_names_its_own_inputs(const char *assets)
    host.bound_pad = "0";
 }
 
+/* A pad input with no position of the standard pad, as the touchpad of a
+ * DualSense, button 13 through DirectInput, is a binding like any other: we
+ * show it by its number, keep it in the player's file, and read it as the
+ * hotkey it is bound to. */
+void an_input_with_no_position_is_a_hotkey(const char *assets)
+{
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+   void *menu = open(assets);
+   if (!menu)
+      return;
+   capture(menu, "menu", "pad:13");
+   expect_row("menu", {"Escape", "Home", "L3+R3", "Button 13"}, "the touchpad captured for MENU");
+   check(player_file().find("pad:13") != std::string::npos,
+         "the player's file keeps pad:13: " + player_file());
+   check(press({}, {"13"}).menu_pad, "holding the touchpad is MENU");
+   check(!press({}, {}).menu_pad, "without the touchpad, MENU is not held");
+   close(menu);
+   menu = open(assets);
+   expect_row("menu", {"Escape", "Home", "L3+R3", "Button 13"}, "pad:13 read back at the next launch");
+   close(menu);
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+}
+
 int main(int argc, char **argv)
 {
    Utf8Arguments utf8(argc, argv);
@@ -698,6 +721,7 @@ int main(int argc, char **argv)
    close(menu);
 
    the_pad_names_its_own_inputs(argv[1]);
+   an_input_with_no_position_is_a_hotkey(argv[1]);
 
    if (failures)
       std::fprintf(stderr, "hotkeys: %d failures\n", failures);
