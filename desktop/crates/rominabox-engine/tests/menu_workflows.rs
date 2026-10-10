@@ -21,8 +21,8 @@
 //!
 //! With `ROMINABOX_WORKFLOW_OBSERVED=<file>` we write what we observed in
 //! every case, in the format of the baseline. With
-//! `ROMINABOX_WORKFLOW_RECORD=<key>,<key>` we replace the baseline entries of
-//! those cases with what we observed. Name each one, and why, in the commit.
+//! `ROMINABOX_WORKFLOW_RECORD=<key>,<key>` we record those cases again with
+//! what we observed (`recorded`). Name each one, and why, in the commit.
 
 mod support;
 
@@ -767,9 +767,16 @@ fn every_workflow_case_reports_what_the_launched_player_recorded() {
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }
 
-/// The baseline entry we record for a case, from what we observed.
-fn recorded(_before: &Value, seen: &Value) -> Value {
-    seen.clone()
+/// The baseline entry we record for a case: what we observed, and every
+/// field that only the launched runner records, as it was.
+fn recorded(before: &Value, seen: &Value) -> Value {
+    let mut entry = seen.clone();
+    if let (Some(entry), Some(before)) = (entry.as_object_mut(), before.as_object()) {
+        for (field, value) in before {
+            entry.entry(field.clone()).or_insert_with(|| value.clone());
+        }
+    }
+    entry
 }
 
 /// We record a case again with what we observed, and keep the size of the
