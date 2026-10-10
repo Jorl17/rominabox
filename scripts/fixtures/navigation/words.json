@@ -43,10 +43,10 @@
       "text": {
         "*": [
           {
-            "control-binding-up": "Button 0, 1"
+            "control-binding-up": "D-pad up, 1"
           },
           {
-            "control-binding-up": "Button 0, 1"
+            "control-binding-up": "D-pad up, 1"
           }
         ]
       }

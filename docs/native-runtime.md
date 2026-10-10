@@ -146,7 +146,7 @@ has its own).
 
 ```sh
 uv run python scripts/prepare_rmlui.py
-uv run python scripts/test.py bridge padbinds shaderstate achievement-client account-input
+uv run python scripts/test.py bridge shaderstate achievement-client account-input
 cargo test --manifest-path desktop/crates/rominabox-engine/Cargo.toml --test design_contract --test design_composition
 uv run python scripts/test.py workflows
 ```

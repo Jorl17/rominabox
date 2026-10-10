@@ -8,11 +8,17 @@
  * We connect N pads (1 when not given), each with PROFILE and each playing
  * as player 1, or each as a player of its own with --separate. For each
  * POSITION of the standard pad we give player 1 the pad input VALUE, in the
- * form of RetroArch's config ("13", "h0up", "+3"), as a rebind on CONTROLS
- * does, and then give the binds of player 1 to the other pads as after such
- * a rebind. We print one line for the positions LEFT and RIGHT:
+ * form of RetroArch's config ("13", "h0up", "+3"), or the mouse button
+ * mouse:VALUE, as in mouse_buttons.inc, as a rebind on CONTROLS does. Then we
+ * give the binds of player 1 to the other pads as after such a rebind. We
+ * print one line for the positions LEFT and RIGHT:
  *
  *   conflict <yes or no>
+ *
+ * then the lines of LEFT on CONTROLS, each as its kind and its text, in the
+ * order we show them (bind_lines.h):
+ *
+ *   lines <KIND:text ...>
  *
  * and then, for each port P from 1, the pad input of LEFT in the binds of
  * that port, which RetroArch reads for the pad there:
@@ -31,6 +37,7 @@
 #include "runloop.h"
 #include "input/input_driver.h"
 #include "input/input_remapping.h"
+#include "menu/drivers/rmlui/bind_lines.h"
 #include "menu/drivers/rmlui/pad_inputs.h"
 
 static runloop_state_t runloop;
@@ -101,6 +108,12 @@ int main(int argc, char **argv)
          return 2;
       }
       bound = &input_config_binds[0][bind];
+      if (!strncmp(value + 1, "mouse:", 6))
+      {
+#define RIB_MOUSE_BUTTON(name, id, word) if (!strcmp(value + 7, name)) bound->mbutton = id;
+#include "menu/drivers/rmlui/mouse_buttons.inc"
+         continue;
+      }
       if (!rib_pad_input_parse(value + 1, &bound->joykey, &bound->joyaxis))
       {
          fprintf(stderr, "%s is no pad input\n", value + 1);
@@ -111,6 +124,19 @@ int main(int argc, char **argv)
       return 2;
    rib_pad_input_share_player_one_binds();
    printf("conflict %s\n", rib_pad_input_binds_conflict(left, right) ? "yes" : "no");
+   {
+      char details[RIB_BIND_LINE_MAX][64];
+      char kinds[RIB_BIND_LINE_MAX][8];
+      struct retro_keybind effective;
+      int count = 0;
+      int line;
+      rib_pad_input_effective(left, &effective);
+      rib_lines_from_bind(&effective, details, kinds, &count);
+      printf("lines");
+      for (line = 0; line < count; ++line)
+         printf(" %s:%s", kinds[line], details[line]);
+      printf("\n");
+   }
    for (port = 0; port < pads; ++port)
    {
       char value[RIB_PAD_INPUT_VALUE_MAX];

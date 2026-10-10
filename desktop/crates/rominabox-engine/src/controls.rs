@@ -541,8 +541,14 @@ mod tests {
     use super::*;
     use crate::retroarch_probe::Probe;
 
-    /// Whether two positions clash on CONTROLS, on a pad with `profile` from
-    /// the kit and with the player's `rebinds` (POSITION=VALUE), from
+    fn controls_binds() -> Probe {
+        use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER, PAD_INPUTS};
+        Probe::build_defining("controls_binds", CONFIGURED, &[INPUT_LAYER, PAD_INPUTS].concat())
+    }
+
+    /// Whether two positions clash on CONTROLS, the lines of the first, and
+    /// its pad input on each port, on a pad with `profile` from the kit and
+    /// with the player's `rebinds` (POSITION=VALUE), from
     /// `scripts/native_runtime/controls_binds.c`.
     fn clash(probe: &Probe, profile: &str, rebinds: &[&str], left: &str, right: &str) -> String {
         let staged = crate::repo::builder_resources().join("runtime/autoconfig").join(profile);
@@ -560,13 +566,31 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn a_rebind_onto_an_input_of_the_profile_is_a_clash() {
-        use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER, PAD_INPUTS};
-        let probe = Probe::build_defining("controls_binds", CONFIGURED, &[INPUT_LAYER, PAD_INPUTS].concat());
+        let probe = controls_binds();
         let dualsense = "dinput/DualSense5.cfg";
-        assert_eq!(clash(&probe, dualsense, &["a=1"], "a", "b"), "conflict yes\nport 1 1");
-        assert_eq!(clash(&probe, dualsense, &["a=1", "b=0"], "a", "b"), "conflict no\nport 1 1");
-        assert_eq!(clash(&probe, dualsense, &["a=1", "b=1"], "a", "b"), "conflict yes\nport 1 1");
-        assert_eq!(clash(&probe, dualsense, &["a=13"], "a", "b"), "conflict no\nport 1 13");
+        let conflict = |rebinds: &[&str]| clash(&probe, dualsense, rebinds, "a", "b").lines().next().unwrap().to_string();
+        assert_eq!(conflict(&["a=1"]), "conflict yes");
+        assert_eq!(conflict(&["a=1", "b=0"]), "conflict no");
+        assert_eq!(conflict(&["a=1", "b=1"]), "conflict yes");
+        assert_eq!(conflict(&["a=13"]), "conflict no");
+    }
+
+    /// On CONTROLS we list every input a press of a control can come from, as
+    /// RetroArch reads it: for each kind of input, the player's own, or else
+    /// the one in the profile of the pad. On a DualSense through DirectInput,
+    /// Up is the hat of the d-pad and L2 the axis of the trigger.
+    #[test]
+    #[cfg(windows)]
+    fn a_control_lists_every_input_a_press_can_come_from() {
+        let probe = controls_binds();
+        let dualsense = "dinput/DualSense5.cfg";
+        let lines = |rebinds: &[&str], position: &str| {
+            clash(&probe, dualsense, rebinds, position, "select").lines().nth(1).unwrap().to_string()
+        };
+        assert_eq!(lines(&[], "up"), "lines KEY:up PAD:h0up");
+        assert_eq!(lines(&["up=9"], "up"), "lines KEY:up PAD:9");
+        assert_eq!(lines(&["l2=9"], "l2"), "lines PAD:9 AXIS:+3");
+        assert_eq!(lines(&["up=mouse:wu"], "up"), "lines KEY:up PAD:h0up MOUSE:Wheel up");
     }
 
     /// With every pad playing as player 1, every pad reads the rebinds of
@@ -575,17 +599,15 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn every_pad_that_plays_as_player_one_reads_the_rebinds() {
-        use crate::retroarch_probe::{CONFIGURED, INPUT_LAYER, PAD_INPUTS};
-        let probe = Probe::build_defining("controls_binds", CONFIGURED, &[INPUT_LAYER, PAD_INPUTS].concat());
+        let probe = controls_binds();
         let dualsense = "dinput/DualSense5.cfg";
-        assert_eq!(
-            clash(&probe, dualsense, &["--pads", "2", "start=13"], "start", "select"),
-            "conflict no\nport 1 13\nport 2 13"
-        );
-        assert_eq!(
-            clash(&probe, dualsense, &["--pads", "2", "--separate", "start=13"], "start", "select"),
-            "conflict no\nport 1 13\nport 2 none"
-        );
+        let ports = |options: &[&str]| {
+            let mut rebinds = options.to_vec();
+            rebinds.push("start=13");
+            clash(&probe, dualsense, &rebinds, "start", "select").lines().skip(2).collect::<Vec<_>>().join("\n")
+        };
+        assert_eq!(ports(&["--pads", "2"]), "port 1 13\nport 2 13");
+        assert_eq!(ports(&["--pads", "2", "--separate"]), "port 1 13\nport 2 none");
     }
 
     fn key_names_probe() -> Probe {
