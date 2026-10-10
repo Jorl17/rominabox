@@ -1,12 +1,11 @@
-"""Check that an automated launch makes no sound.
+"""Check that a launch is quiet exactly when the harness sets the switch.
 
-A launch by a person is unaffected. A shot, a quit run, and the isolation
-and autoconfig launches are quiet. In the launcher we make every launch
-quiet when its parent is not Launch Services. In a harness we can also set
-the switch declared in exported_game. In the plan check we compile the
-launcher, write the config and exit before a core is loaded, so no audio
-opens. The check also shows that the launcher and the harness use the same
-names for the switch and its opt-out, which we never read from the launcher.
+A shot, a quit run, and the isolation and autoconfig launches set the switch
+declared in exported_game, and make no sound. A launch without it is a
+normal game, whatever started it. In the plan check we compile the launcher,
+write the config and exit before a core is loaded, so no audio opens. The
+check also shows that the launcher and the harness use the same name for the
+switch, which we never read from the launcher.
 
     uv run python scripts/test_quiet.py
 """
@@ -66,20 +65,17 @@ def write_plan(resources: Path, data: str, driver: str = FROZEN_DRIVER) -> None:
     ).encode("utf-8"))
 
 
-def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False, sound: bool = False) -> str:
+def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False) -> str:
     """Return the config we write in a plan-only launch with `user_data` as the
     per-user folder, into the folder `data` below it."""
     env = os.environ.copy()
     env["ROMINABOX_PLAN_ONLY"] = "1"
     env[TEST_USER_DATA_ENV] = str(user_data)
-    # The parent process of the harness is not launchd. We remove the variables,
-    # so that a value left in this process cannot hide the default.
+    # We remove the switch, so that a value left in this process cannot hide
+    # the default.
     env.pop(exported_game.QUIET_ENV, None)
-    env.pop(exported_game.SOUND_ENV, None)
     if quiet:
         env[exported_game.QUIET_ENV] = "1"
-    if sound:
-        env[exported_game.SOUND_ENV] = "1"
     ran = subprocess.run(
         [str(binary)],
         env=env,
@@ -96,42 +92,40 @@ def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False, soun
 
 
 def plan_check() -> list[str]:
-    """With the switch the frozen driver goes, and with the opt-out it stays.
+    """With the switch the frozen driver goes, and without it it stays.
 
-    We make four plans and start no game. Quiet is only ever the switch: a
-    launch with neither variable keeps the frozen driver, whatever started
-    it, and this harness is neither Explorer nor Launch Services. With the
-    switch, alone or with the opt-out, the frozen driver goes, which shows
-    that the launcher and the harness use the same name for the switch.
+    We make two plans and start no game. Quiet is only ever the switch: a
+    launch without it keeps the frozen driver, whatever started it, and this
+    harness is neither Explorer nor Launch Services. With the switch the
+    frozen driver goes, which shows that the launcher and the harness use the
+    same name for it.
     """
     free_space.require(20)
     with scratch.scratch("rominabox-quiet-plan-") as made:
         root = Path(made)
         binary, resources = compile_plan(root)
         written = {}
-        for name, quiet, sound in (("neither", False, False), ("sound", False, True),
-                                   ("switch", True, False), ("both", True, True)):
+        for name, quiet in (("plain", False), ("switch", True)):
             write_plan(resources, name)
-            written[name] = run_plan(binary, root, name, quiet=quiet, sound=sound)
+            written[name] = run_plan(binary, root, name, quiet=quiet)
     failures = []
-    expected = {"neither": FROZEN_DRIVER, "sound": FROZEN_DRIVER,
-                "switch": QUIET_DRIVER, "both": QUIET_DRIVER}
+    expected = {"plain": FROZEN_DRIVER, "switch": QUIET_DRIVER}
     for name, driver in expected.items():
         got = _config_value(written[name], "audio_driver")
         enabled = _config_value(written[name], "audio_enable")
         quiet = driver == QUIET_DRIVER
         if got != driver or (quiet and enabled != "false"):
             failures.append(
-                f"a launch with {name} ({exported_game.QUIET_ENV}, {exported_game.SOUND_ENV}) wrote "
+                f"a {name} launch ({exported_game.QUIET_ENV}) wrote "
                 f"audio_driver={got!r} audio_enable={enabled!r}, not {driver!r}"
                 + (" disabled" if quiet else "")
             )
         # A quiet run is never in front, so a pause would stop it before its
-        # frame limit. For a launch by a person we keep the player's choice.
+        # frame limit. For any other launch we keep the player's choice.
         paused = _config_value(written[name], "pause_nonactive")
         if paused != ("false" if quiet else "true"):
             failures.append(
-                f"a launch with {name} ({exported_game.QUIET_ENV}, {exported_game.SOUND_ENV}) wrote "
+                f"a {name} launch ({exported_game.QUIET_ENV}) wrote "
                 f"pause_nonactive={paused!r}"
             )
     return failures
@@ -146,7 +140,7 @@ def _config_value(config: str, key: str) -> str | None:
 
 
 def decision_check() -> list[str]:
-    """Check the four cases by calling the function directly, with no config or core."""
+    """Check both cases by calling the function directly, with no config or core."""
     free_space.require(20)
     toolchain.activate()
     declared = toolchain.describe()
@@ -162,24 +156,12 @@ def decision_check() -> list[str]:
         )
         if compiled.returncode != 0:
             raise SystemExit(compiled.stderr[-400:] or "the decision tool did not compile")
-        cases = (
-            ("person", "", "", "sound"),
-            ("harness", "", "", "quiet"),
-            ("harness", "", "1", "sound"),
-            ("person", "1", "", "quiet"),
-        )
         failures = []
-        for opener, quiet, sound, expect in cases:
-            ran = subprocess.run(
-                [str(binary), opener, quiet, sound],
-                capture_output=True, text=True, timeout=15,
-            )
+        for quiet, expect in (("", "sound"), ("1", "quiet")):
+            ran = subprocess.run([str(binary), quiet], capture_output=True, text=True, timeout=15)
             got = ran.stdout.strip()
             if ran.returncode != 0 or got != expect:
-                failures.append(
-                    f"a {opener}'s launch with quiet={quiet!r} sound={sound!r} "
-                    f"decided {got!r}, not {expect!r}"
-                )
+                failures.append(f"a launch with quiet={quiet!r} decided {got!r}, not {expect!r}")
         return failures
 
 

@@ -606,7 +606,7 @@ SCOPES = [
     ),
     Scope(
         "quiet",
-        "quiet launch decisions, null audio, transparent windows, hands-on opt-outs, and safe native timeout handling",
+        "that a launch is quiet exactly when the switch is set, null audio, transparent windows, and safe native timeout handling",
         "actual GL presentation or hands-on focus/fullscreen; the window probe never orders its window in",
         [PYTHON, str(ROOT / "scripts/test_quiet.py")],
         slow=True,

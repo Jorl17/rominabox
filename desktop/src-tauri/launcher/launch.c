@@ -71,8 +71,8 @@ void rominabox_launch_refuse(const char *sentence) {
     exit(1);
 }
 
-int rominabox_launch_tells_person(int opened_by_person) {
-    return opened_by_person && !getenv(RIB_ENV_QUIET) && !getenv(ROMINABOX_PLAN_ONLY_ENV);
+int rominabox_launch_tells_person(void) {
+    return !rominabox_launch_is_quiet(getenv(RIB_ENV_QUIET)) && !getenv(ROMINABOX_PLAN_ONLY_ENV);
 }
 
 static void die_errno(const char *message) {
@@ -516,7 +516,7 @@ static void prepare_game_data(const char *plan, const LaunchGame *game, const ch
         return;
     fprintf(stderr, ROMINABOX_NAME ": %s\n", error);
     snprintf(said, sizeof said, "We could not import the data you chose.\n\n%s", error);
-    if (rominabox_launch_tells_person(places->opened_by_person))
+    if (rominabox_launch_tells_person())
         rominabox_launch_tell(said);
 }
 
@@ -571,15 +571,8 @@ static int shader_preset_of(const char *assets, const char *id, char *out, size_
     return found;
 }
 
-/* Quiet unless a person started the game, or sound is turned on in the
- * environment. Quiet is opt-out, so a run from a harness is quiet even when
- * nothing is set. ROMINABOX_QUIET makes even a person's launch quiet. */
-int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const char *sound) {
-    if (quiet && quiet[0])
-        return 1;
-    if (sound && sound[0])
-        return 0;
-    return !opened_by_person;
+int rominabox_launch_is_quiet(const char *quiet) {
+    return quiet && quiet[0];
 }
 
 static void set_variable(Launch *launch, const char *name, const char *value) {
@@ -857,10 +850,9 @@ void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch) {
     apply_player_file(&lines, &line_count, &line_capacity, controls_defaults);
     apply_player_file(&lines, &line_count, &line_capacity, controls_override);
     apply_player_settings(&lines, &line_count, &line_capacity, plan, data_dir);
-    /* Quiet is opt-out. We publish ROMINABOX_QUIET so that we can apply the
-     * same setting in the fork. */
-    launch->quiet = rominabox_launch_is_quiet(
-        places->opened_by_person, getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV));
+    /* We publish ROMINABOX_QUIET so that we can apply the same setting in the
+     * fork. */
+    launch->quiet = rominabox_launch_is_quiet(getenv(RIB_ENV_QUIET));
     if (launch->quiet)
         set_variable(launch, RIB_ENV_QUIET, LAUNCH_SWITCH_ON);
     /* The window of a quiet run is never in front, and we take a screenshot

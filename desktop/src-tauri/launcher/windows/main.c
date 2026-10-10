@@ -9,7 +9,6 @@
 #include <knownfolders.h>
 #include <sddl.h>
 #include <shlobj.h>
-#include <tlhelp32.h>
 #include <userenv.h>
 
 #include <ctype.h>
@@ -125,39 +124,11 @@ static char *local_application_data(void) {
     return path;
 }
 
-/* When a person double-clicks the game or opens it from a shortcut or the
- * Start menu, Explorer is its parent. Otherwise a script or a harness
- * started it. */
-static int opened_by_explorer(void) {
-    DWORD own = GetCurrentProcessId();
-    DWORD parent = 0;
-    int found = 0;
-    PROCESSENTRY32W entry;
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snapshot == INVALID_HANDLE_VALUE)
-        return 0;
-    entry.dwSize = sizeof entry;
-    for (BOOL more = Process32FirstW(snapshot, &entry); more; more = Process32NextW(snapshot, &entry))
-        if (entry.th32ProcessID == own) {
-            parent = entry.th32ParentProcessID;
-            break;
-        }
-    entry.dwSize = sizeof entry;
-    for (BOOL more = parent ? Process32FirstW(snapshot, &entry) : FALSE; more;
-         more = Process32NextW(snapshot, &entry))
-        if (entry.th32ProcessID == parent) {
-            found = _wcsicmp(entry.szExeFile, L"explorer.exe") == 0;
-            break;
-        }
-    CloseHandle(snapshot);
-    return found;
-}
-
-/* When a person opens a game again while it runs, we bring it to the front
- * instead of starting it a second time, as on a Mac, because two players
- * would use one data folder. In the running game's launcher we keep a mapping
- * named after its data folder, with the player's process id, while it runs.
- * This rule does not apply to a launch from a test or a script. */
+/* When a game is opened again while it runs, we bring the running game to
+ * the front and quit, instead of starting it a second time, as on a Mac,
+ * because two players would use one data folder. In the launcher of the
+ * running game we keep a mapping named after its data folder, with the
+ * process id of the player, while it runs. */
 static DWORD *running_player;
 
 static BOOL CALLBACK bring_forward(HWND window, LPARAM player) {
@@ -246,7 +217,6 @@ static void append_argument(wchar_t **line, size_t *length, size_t *capacity, co
  * inside it. Inside, Windows reports the sandbox's own per-user folder, so we
  * pass the values known only outside in these. */
 static const wchar_t outside_user_data[] = L"ROMINABOX_OUTSIDE_USER_DATA";
-static const wchar_t outside_opened_by_person[] = L"ROMINABOX_OPENED_BY_PERSON";
 /* The program that the person opened, also started from a taskbar pin. */
 static const wchar_t outside_program[] = L"ROMINABOX_OUTSIDE_PROGRAM";
 /* internetClient, the capability to open connections to the internet. */
@@ -432,7 +402,6 @@ static int start_in_sandbox(const char *folder, const LaunchGame *game, int *res
         SetEnvironmentVariableW(test_user_data, NULL);
         free(test_user_data);
     }
-    SetEnvironmentVariableW(outside_opened_by_person, opened_by_explorer() ? L"" LAUNCH_SWITCH_ON : NULL);
     {
         static wchar_t opened[WIDE_PATH_CAP];
         own_path(opened, sizeof opened / sizeof opened[0]);
@@ -551,7 +520,7 @@ static char *from_outside(const wchar_t *name) {
 /* The launch itself. `accounts_root` is the real per-user folder, with the
  * accounts for QUICK SIGN IN. Inside the sandbox the per-user folder is the
  * sandbox's own, and `previous_user_data` is the real one too. */
-static int run(char *accounts_root, char *previous_user_data, int opened_by_person) {
+static int run(char *accounts_root, char *previous_user_data) {
     char folder[LAUNCH_PATH_CAP];
     char resources[LAUNCH_PATH_CAP];
     char player[LAUNCH_PATH_CAP];
@@ -582,8 +551,7 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     places.user_data = user_data;
     places.accounts_root = accounts_root;
     places.previous_user_data = previous_user_data;
-    places.opened_by_person = opened_by_person;
-    places.before_data_folder = places.opened_by_person ? one_game_per_data_folder : NULL;
+    places.before_data_folder = one_game_per_data_folder;
     /* The program the person opened, which the game's manifest names and a
      * pin from the game's window starts. */
     {
@@ -667,16 +635,11 @@ static int run(char *accounts_root, char *previous_user_data, int opened_by_pers
     return (int)code;
 }
 
-/* Whether a person opened this game, once we have found out. Until then we
- * do not show a failure. */
-static int person_opened;
-
 /* A Windows game has no console, so we show why it cannot start in a message
- * box to a person who opened it. We never show one in a quiet run or a dry
- * run. */
+ * box. We never show one in a quiet run or a dry run. */
 void rominabox_launch_tell(const char *message) {
     wchar_t text[1024];
-    if (!rominabox_launch_tells_person(person_opened))
+    if (!rominabox_launch_tells_person())
         return;
     if (MultiByteToWideChar(CP_UTF8, 0, message, -1, text, (int)(sizeof text / sizeof text[0])))
         MessageBoxW(NULL, text, L"" ROMINABOX_NAME, MB_OK | MB_ICONERROR);
@@ -688,12 +651,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
     (void)arguments;
     (void)show;
     if (inside_sandbox()) {
-        char *person = from_outside(outside_opened_by_person);
         char *outside = from_outside(outside_user_data);
-        person_opened = person && strcmp(person, LAUNCH_SWITCH_ON) == 0;
-        return run(outside, outside, person_opened);
+        return run(outside, outside);
     }
-    person_opened = opened_by_explorer();
     /* We started this from outside and it is still not in a sandbox, so
      * going on would start it again and again. */
     if (GetEnvironmentVariableW(outside_user_data, NULL, 0))
@@ -707,7 +667,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
         own_path(self, sizeof self / sizeof self[0]);
         /* Shown only when the game would play sound, so not in a quiet launch. */
         unpack_game(self, user_data,
-                    !rominabox_launch_is_quiet(opened_by_explorer(), getenv(RIB_ENV_QUIET), getenv(ROMINABOX_SOUND_ENV)),
+                    !rominabox_launch_is_quiet(getenv(RIB_ENV_QUIET)),
                     unpacked_folder, sizeof unpacked_folder, unpacked_program,
                     sizeof unpacked_program / sizeof unpacked_program[0]);
         free(user_data);
@@ -722,7 +682,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
             do {
                 restart = 0;
                 code = game.sandbox ? start_in_sandbox(folder, &game, &restart)
-                                    : run(local_application_data(), NULL, opened_by_explorer());
+                                    : run(local_application_data(), NULL);
             } while (restart);
             forget_if_asked(&game);
             return code;

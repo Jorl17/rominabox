@@ -38,8 +38,6 @@ typedef struct {
      * in the older layout kept its data. On the first sandboxed launch we copy
      * what it contains. NULL when the game is not in a sandbox. */
     const char *previous_user_data;
-    /* The person started this game (not a test, a script or a harness). */
-    int opened_by_person;
     /* What the person opens to play: the app on macOS and the program on
      * Windows, which the game's manifest names. NULL when we do not know. */
     const char *app;
@@ -98,15 +96,10 @@ int rominabox_game_folder_to_forget(const LaunchGame *game, const char *user_dat
  * start at all. */
 void rominabox_prepare_launch(const LaunchPlaces *places, Launch *launch);
 
-/* RIB_ENV_QUIET is one switch for an automated run, and a person who opens
- * the game does not set it. Without it, a screenshot run would open an output
- * device and play sound. ROMINABOX_SOUND turns sound on in any case, and we
- * read it only in the launcher. */
-#define ROMINABOX_SOUND_ENV "ROMINABOX_SOUND"
-
-/* Quiet unless a person started the game or sound is turned on in the
- * environment. ROMINABOX_QUIET makes even that launch quiet. */
-int rominabox_launch_is_quiet(int opened_by_person, const char *quiet, const char *sound);
+/* Whether a launch is quiet: only when `quiet`, the value of RIB_ENV_QUIET,
+ * is set. A test, a harness or a script sets it for every run of a game. We
+ * never decide it from what started the game. */
+int rominabox_launch_is_quiet(const char *quiet);
 
 /* A dry run, in which we write the game's config in the launcher and stop
  * before the player starts. We set it only in tests. */
@@ -127,15 +120,14 @@ void rominabox_launch_die(const char *message);
  * which is written for that person, to the error stream and tell it to them. */
 void rominabox_launch_refuse(const char *sentence);
 
-/* Tell a person who opened the game why it cannot start, where the platform
- * allows it. We define it in the launcher for each platform, and show the
- * message only when rominabox_launch_tells_person returns true. */
+/* Tell the person who opened the game why it cannot start, where the
+ * platform allows it. We define it in the launcher for each platform, and
+ * show the message only when rominabox_launch_tells_person returns true. */
 void rominabox_launch_tell(const char *message);
 
-/* Whether we show why a launch cannot start. We show it only for a launch
- * that a person opened, and in a quiet run or a dry run we only write to
- * the error stream. */
-int rominabox_launch_tells_person(int opened_by_person);
+/* Whether we show why a launch cannot start: in every launch but a quiet run
+ * or a dry run, where we only write to the error stream. */
+int rominabox_launch_tells_person(void);
 
 /* `left`, a separator unless it ends in one, and `right`. Stop the process
  * when the result does not fit. */

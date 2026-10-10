@@ -254,9 +254,12 @@ fn a_game_opened_again_while_it_runs_is_not_started_twice() {
         std::thread::sleep(Duration::from_millis(50));
     }
     let second = launch(&game.program, &root);
-    assert_eq!(second.code, Some(0), "{}", second.errors);
-    assert_eq!(ran_at(&game).len(), 1, "the second launch started a second player");
+    let players_meanwhile = ran_at(&game).len();
+    // We wait for the first launch before any check, so that a failure leaves
+    // no game running for the cleanup to find.
     let first = first.join().unwrap();
+    assert_eq!(second.code, Some(0), "{}", second.errors);
+    assert_eq!(players_meanwhile, 1, "the second launch started a second player");
     assert_eq!(first.code, Some(PLAYED), "{}", first.errors);
     assert_eq!(ran_at(&game).len(), 1);
 }

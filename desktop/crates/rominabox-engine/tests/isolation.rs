@@ -538,13 +538,10 @@ fn author_background_play_survives_an_old_controls_file() {
     fs::write(&controls, leftover).unwrap();
 
     platform::assert_keeps_the_sandbox(&app);
-    // Launch as a person would, because we never pause an automated run in
-    // the background, whatever the author chose. The stub has no sound.
+    // Launch without the quiet switch, because we never pause a quiet run
+    // in the background, whatever the author chose. The stub has no sound.
     let mut person = Command::new(platform::launcher_of(&app));
-    person
-        .env_remove("ROMINABOX_QUIET")
-        .env("ROMINABOX_SOUND", "1")
-        .env_remove("ROMINABOX_MENU_SHOT");
+    person.env_remove("ROMINABOX_QUIET").env_remove("ROMINABOX_MENU_SHOT");
     let status = run_until(&mut person, Duration::from_secs(20));
     assert!(status.success(), "the stub did not exit");
     let config = fs::read_to_string(data.join("retroarch.cfg")).unwrap();

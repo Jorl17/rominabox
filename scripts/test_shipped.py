@@ -38,7 +38,7 @@ import toolchain  # noqa: E402
 from launcher_plan import compile_plan, windows_part  # noqa: E402
 import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
-from exported_game import QUIET_ENV, SOUND_ENV  # noqa: E402
+from exported_game import QUIET_ENV  # noqa: E402
 from launch_header import TEST_USER_DATA_ENV, launch_declaration  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -123,11 +123,9 @@ def plan_tool(binary: Path, home: Path, user_data: Path | None) -> subprocess.Co
     env.pop(TEST_USER_DATA_ENV, None)
     if user_data is not None:
         env[TEST_USER_DATA_ENV] = str(user_data)
-    # A launch by a person. This harness is not Launch Services, so otherwise
-    # we would treat it in the launcher as an automated run, which never
-    # pauses in the background and so hides the player's background-play choice.
+    # A launch that is not quiet. A quiet run never pauses in the background,
+    # which would hide the player's background-play choice.
     env.pop(QUIET_ENV, None)
-    env[SOUND_ENV] = "1"
     return subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=30)
 
 
@@ -558,7 +556,6 @@ def run_forget_places() -> list[str]:
             ship_plan(resources, data_dir)
             env = os.environ.copy()
             env.pop("ROMINABOX_PLAN_ONLY", None)
-            env.pop(SOUND_ENV, None)
             env[QUIET_ENV] = "1"
             env[TEST_USER_DATA_ENV] = str(user_data)
             ran = subprocess.run([str(binary)], env=env, stdin=subprocess.DEVNULL, capture_output=True,

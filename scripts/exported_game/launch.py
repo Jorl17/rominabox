@@ -11,7 +11,6 @@ from pathlib import Path
 # testing by hand can set. We take the names from here in harnesses, and in
 # the quiet tests we check them against the launcher (test_quiet.plan_check).
 QUIET_ENV = "ROMINABOX_QUIET"
-SOUND_ENV = "ROMINABOX_SOUND"
 # The menu script that we run in the player of a test build. In the launcher
 # we also give such a run no controller (checked in the quiet tests).
 SCRIPT_ENV = "ROMINABOX_MENU_SCRIPT"

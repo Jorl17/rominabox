@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core_source import host_target  # noqa: E402
 
 from . import launch, macos, windows  # noqa: E402
-from .launch import QUIET_ENV, SCRIPT_ENV, SOUND_ENV  # noqa: E402,F401
+from .launch import QUIET_ENV, SCRIPT_ENV  # noqa: E402,F401
 
 PLATFORM = host_target().split("-", 1)[0]
 # The module for each platform we export games for.

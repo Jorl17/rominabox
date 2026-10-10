@@ -25,9 +25,6 @@
 #include "../../../../vendor/retroarch/rominabox_launch.h"
 #include "arguments.h"
 
-/* launchd, the parent of what a person opens with a double-click or from
- * the Dock. */
-#define LAUNCHD 1
 /* The Application Support folder of a home, as a format string with the home. */
 #define APPLICATION_SUPPORT_IN "%s/Library/Application Support"
 /* Where an app keeps its own files, inside its bundle. */
@@ -44,17 +41,13 @@ static void die_errno(const char *message) {
     rominabox_launch_die(said);
 }
 
-/* Whether a person opened this game, once we have found out. Until then we
- * do not show a failure. */
-static int person_opened;
-
 /* We run a Mac game's launcher inside the player before there is a window or
  * a run loop, so we show why a game cannot start in a CoreFoundation alert,
  * and wait for the person who opened it. We never show an alert in a quiet
  * run or a dry run. */
 void rominabox_launch_tell(const char *message) {
     CFStringRef text;
-    if (!rominabox_launch_tells_person(person_opened))
+    if (!rominabox_launch_tells_person())
         return;
     text = CFStringCreateWithCString(kCFAllocatorDefault, message, kCFStringEncodingUTF8);
     if (!text)
@@ -128,9 +121,6 @@ static void prepare(void) {
     Launch launch;
     size_t index;
 
-    /* When a person double-clicks the game or opens it from the Dock, it
-     * starts through launchd. Otherwise a script or a harness started it. */
-    person_opened = getppid() == LAUNCHD;
     if (_NSGetExecutablePath(executable, &exec_path_size) != 0)
         rominabox_launch_die("could not find the launcher");
     if (!realpath(executable, bundle))
@@ -190,7 +180,6 @@ static void prepare(void) {
                 places.previous_user_data = accounts_root;
         }
     }
-    places.opened_by_person = person_opened;
     rominabox_prepare_launch(&places, &launch);
 
     for (index = 0; index < launch.variable_count; index++) {
