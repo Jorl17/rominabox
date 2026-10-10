@@ -801,6 +801,53 @@ void the_hints_name_the_bindings_in_use(const char *assets)
    filestream_delete((data + "/hotkeys.cfg").c_str());
 }
 
+/* A Back button and the arrows of a list carry a badge with a binding of
+ * BACK and of the page hotkeys, of the kind of input in use. The arrows of
+ * the list the page hotkeys turn are marked page-target: on HOTKEYS its
+ * list, on OPTIONS the list of Options, and on Pause, which has none, no
+ * list at all. */
+void the_badges_name_the_bindings_of_their_buttons(const char *assets)
+{
+   filestream_delete((data + "/hotkeys.cfg").c_str());
+   void *menu = open(assets);
+   if (!menu)
+      return;
+   const auto badge = [](const char *button) {
+      Rml::Element *on = view.document.root()->GetElementById(button);
+      Rml::Element *found = on ? on->QuerySelector("[data-binding]") : nullptr;
+      return found ? rib::words_of(found) : std::string("none");
+   };
+   const auto target = [] {
+      Rml::ElementList found;
+      view.document.root()->QuerySelectorAll(found, ".page-target");
+      std::string ids;
+      for (Rml::Element *list : found)
+         ids += (ids.empty() ? "" : " ") + list->GetId();
+      return ids.empty() ? std::string("none") : ids;
+   };
+   rib_rmlui_keyboard_used();
+   check(badge("hotkeys-back") == "Escape" && badge("hotkeys-prev") == "Page Up"
+         && badge("hotkeys-next") == "Page Down",
+         "with the keyboard, the badges name keys: " + badge("hotkeys-back") + ", "
+         + badge("hotkeys-prev") + ", " + badge("hotkeys-next"));
+   host.pads_down = {"x"};
+   rib_rmlui_play_hotkeys();
+   host.pads_down.clear();
+   rib_rmlui_play_hotkeys();
+   check(badge("hotkeys-back") == "Right button" && badge("hotkeys-prev") == "L1"
+         && badge("hotkeys-next") == "R1",
+         "with a pad, the badges name pad inputs: " + badge("hotkeys-back") + ", "
+         + badge("hotkeys-prev") + ", " + badge("hotkeys-next"));
+   check(target() == "hotkeys-list", "on HOTKEYS the page hotkeys turn its list: " + target());
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+   check(target() == "options-list", "on OPTIONS they turn the list of Options: " + target());
+   rib_menu_key(menu, RIB_KEY_CANCEL);
+   frame(menu);
+   check(target() == "none", "on Pause they turn nothing: " + target());
+   close(menu);
+}
+
 int main(int argc, char **argv)
 {
    Utf8Arguments utf8(argc, argv);
@@ -867,6 +914,7 @@ int main(int argc, char **argv)
    an_input_with_no_position_is_a_hotkey(argv[1]);
    the_games_inputs_are_its_rebinds(argv[1]);
    the_hints_name_the_bindings_in_use(argv[1]);
+   the_badges_name_the_bindings_of_their_buttons(argv[1]);
 
    if (failures)
       std::fprintf(stderr, "hotkeys: %d failures\n", failures);

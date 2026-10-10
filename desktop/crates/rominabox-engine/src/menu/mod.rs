@@ -7,6 +7,7 @@
 //! page, in `scene` the controller scene, in `tokens` we fill in values, in
 //! `declarations` we write `design.cfg`, and in `stage` we join the pieces.
 
+pub(crate) mod badges;
 pub mod contract;
 pub(crate) mod declarations;
 mod document;

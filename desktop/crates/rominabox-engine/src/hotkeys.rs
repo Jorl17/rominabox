@@ -106,6 +106,11 @@ fn declarations() -> &'static [Declaration] {
 
 /// The hotkey that a game has only with fast forward on.
 pub const FAST_FORWARD: &str = "fast-forward";
+/// The hotkeys of the buttons we write with a badge (menu::badges): BACK on
+/// a Back button, and the page hotkeys on the arrows of a list.
+pub const BACK: &str = "back";
+pub const PREVIOUS_PAGE: &str = "previous-page";
+pub const NEXT_PAGE: &str = "next-page";
 
 /// The hotkey settings of an export beyond the bindings: the hotkeys the
 /// game does not have, and the starting way of each hotkey with ways.

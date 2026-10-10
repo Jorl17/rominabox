@@ -848,3 +848,38 @@ fn a_design_customizes_account_controls_without_copying_the_screen() {
     );
     assert!(!design.join("screen-achievements.rml").exists());
 }
+
+/// In a design with a badge, which all of ours have, every Back button and
+/// every arrow of a list carries one, with the hotkey the button does.
+#[test]
+fn every_back_button_and_arrow_of_a_list_carries_a_badge() {
+    let root = rominabox_scratch::Scratch::dir("rominabox-badges");
+    let kit = support::kit(&root);
+    let (mut checked, mut missing) = (0, Vec::new());
+    for design in support::designs() {
+        let composed = support::compose(&kit, &design, None, 2, &root.join(&design));
+        for button in composed.menu.split("<button").skip(1) {
+            let button = &button[..button.find("</button>").unwrap_or(button.len())];
+            let id = button
+                .split("id=\"")
+                .nth(1)
+                .and_then(|rest| rest.split('"').next())
+                .unwrap_or_default();
+            let hotkey = if id.ends_with("-back") {
+                "back"
+            } else if button.contains("list-pager-prev") {
+                "previous-page"
+            } else if button.contains("list-pager-next") {
+                "next-page"
+            } else {
+                continue;
+            };
+            checked += 1;
+            if !button.contains(&format!("data-binding=\"{hotkey}\"")) {
+                missing.push(format!("{design}: #{id} has no badge of {hotkey}"));
+            }
+        }
+    }
+    assert!(checked > 0, "no Back button or arrow of a list in any design");
+    assert!(missing.is_empty(), "{}", missing.join("\n"));
+}

@@ -60,6 +60,17 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
 /* The key in a hint, the ESCAPE of "ESCAPE  BACK", as a keycap in the colour of
  * the lettering, so the key and its action look like two separate things. */
 .hint-key { padding: 0 4dp; background-color: design(ink); color: design(screen); text-transform: uppercase; }
+/* A binding of the hotkey a button does, BACK on a Back button and the page
+ * hotkeys on the arrows of a list, as a small keycap over its lower right
+ * corner. The badge reaches far to the left, so a long key keeps its width,
+ * and the keycap sits at its right end. The arrows show theirs only on the
+ * list the page hotkeys turn. */
+.binding-badge { position: absolute; left: -200dp; right: -8dp; bottom: -9dp; font-size: 11dp; line-height: 15dp; text-align: right; white-space: nowrap; text-transform: uppercase; pointer-events: none; }
+.binding-key { display: inline-block; padding: 0 4dp; background-color: design(ink); color: design(screen); }
+.disabled .binding-key { opacity: 0.45; }
+.list-pager .binding-badge { display: none; }
+.page-target .list-pager .binding-badge { display: block; }
+.binding-key.unbound { display: none; }
 /* The ROM-in-a-Box logo beside the name: pixel art on the same 2dp pixel as
  * the lettering, in its colour, one space away with the one-pixel side
  * bearing of a glyph, and two pixels lower to centre it on the capitals. */

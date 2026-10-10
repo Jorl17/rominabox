@@ -390,6 +390,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
         menu = document::add_class(&menu, "actions", "no-options");
     }
     let (menu, installed) = crate::lists::install(&manifest, &menu, &staged, &lists)?;
+    let menu = hotkeys.bound_words(&super::badges::place(&manifest, &menu)?)?;
     super::contract::validate(&manifest, &menu, &staged.iter().collect::<Vec<_>>())?;
     // Where the game has HOTKEYS, each row must show every default binding
     // for its hotkey.
@@ -407,8 +408,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
             Content::Copy(document::parts_root(&manifest.design)?.join(tick)),
         );
     }
-    // After the parts, which can name a hotkey as the design's own markup does.
-    let mut menu = hotkeys.bound_words(&parts(&mut composition, &manifest, &values, &menu)?)?;
+    let mut menu = parts(&mut composition, &manifest, &values, &menu)?;
     // The author picks the picture and the design places it (by default
     // behind #screen, with the shared part, unless the design restyles it,
     // in the screen's colour where the author asked for a tint).

@@ -289,15 +289,17 @@ pub fn paged(id: &str, attributes: &str, screen: &str, rows: &str, page_size: us
 fn pager(screen: &str) -> String {
     format!(
         "<div id=\"{screen}-pager\" class=\"{pager}\" style=\"display:none;\">\
-         <button id=\"{screen}-prev\" class=\"{action} {previous}\">&lt;</button>\
+         <button id=\"{screen}-prev\" class=\"{action} {previous}\">&lt;{previous_badge}</button>\
          <div id=\"{screen}{count_id}\" class=\"{count_class}\"></div>\
-         <button id=\"{screen}-next\" class=\"{action} {next}\">&gt;</button></div>",
+         <button id=\"{screen}-next\" class=\"{action} {next}\">&gt;{next_badge}</button></div>",
         pager = contract!(ListPager),
         action = contract!(MenuAction),
         previous = contract!(ListPagerPrev),
+        previous_badge = crate::menu::badges::marker(crate::hotkeys::PREVIOUS_PAGE),
         count_id = contract!(PageCountSuffix),
         count_class = contract!(ListPagerCount),
         next = contract!(ListPagerNext),
+        next_badge = crate::menu::badges::marker(crate::hotkeys::NEXT_PAGE),
     )
 }
 
@@ -442,11 +444,12 @@ pub fn install(
         }
         let own = screen_actions(manifest, &list.screen.id)?;
         let actions = format!(
-            "<div class=\"list-actions\"{up}>{own}<button class=\"{action} {list_back}\" id=\"{id}\">{back}</button></div>",
+            "<div class=\"list-actions\"{up}>{own}<button class=\"{action} {list_back}\" id=\"{id}\">{back}{badge}</button></div>",
             action = contract!(MenuAction),
             list_back = contract!(ListBack),
             id = list.screen.back_button(),
             back = rml_text(&back),
+            badge = crate::menu::badges::marker(crate::hotkeys::BACK),
         );
         let status = format!(
             "<div id=\"{}{}\" class=\"list-status\"{up}>{}</div>",

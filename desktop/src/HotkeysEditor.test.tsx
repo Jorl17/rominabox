@@ -97,6 +97,8 @@ describe("the builder's hotkeys", () => {
     expect(chips("Menu")).toEqual(["Escape", "Home", "L3 + R3"]);
     expect(chips("Confirm")).toEqual(["Enter", "Bottom button"]);
     expect(chips("Back")).toEqual(["Escape", "Right button"]);
+    expect(chips("Previous page")).toEqual(["Page Up", "L1"]);
+    expect(chips("Next page")).toEqual(["Page Down", "R1"]);
     expect(chips("Quick save")).toEqual(["F2"]);
     expect(chips("Quick load")).toEqual(["F4"]);
     expect(chips("Previous slot")).toEqual(["F6"]);

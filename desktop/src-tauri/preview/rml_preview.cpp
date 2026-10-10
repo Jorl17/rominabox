@@ -25,7 +25,8 @@
  * of a game, at the values declared in its export (setting_display.hpp), and
  * before the changes, so a change can still set them otherwise. Once we have
  * made the changes, we split every list into pages by the player's own rules
- * (paging.hpp), from its first page, as in the menu when it loads. */
+ * (paging.hpp), from its first page, as in the menu when it loads, and mark
+ * the list the page hotkeys turn. */
 
 #include "rml_preview.h"
 #include "gl_context.h"
@@ -241,6 +242,12 @@ int render(const std::string& document_path, const std::string& output, int widt
          failed = 2;
    if (!failed)
       rib::paging::split_all(document);
+   /* The list the page hotkeys turn, by the player's rule, from the element a
+    * state marks focused. */
+   if (!failed)
+      if (Rml::Element *list = rib::paging::page_target(document,
+               rib::find_class(document, rib::document_contract::Focused)))
+         list->SetClass(rib::document_contract::PageTarget, true);
    /* The footer's hint, written as in the player (Screens::set_footer_hint).
     * We make the key in brackets an element of its own. We write it so for a
     * footer that still has the words it was composed or set with. A footer

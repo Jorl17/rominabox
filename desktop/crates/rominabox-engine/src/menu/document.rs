@@ -550,11 +550,12 @@ pub(crate) fn apply_options(
         } else {
             let back = options.back_label.clone().unwrap_or_else(|| "BACK".into());
             format!(
-                "<div {panel_id} class=\"{panel_class}\" style=\"display:none;\"><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"{action} {options_back}\" id=\"{OPTIONS_BACK}\">{back}</button></div>",
+                "<div {panel_id} class=\"{panel_class}\" style=\"display:none;\"><div id=\"options-entries\"><!--OPTIONS--></div><button class=\"{action} {options_back}\" id=\"{OPTIONS_BACK}\">{back}{badge}</button></div>",
                 panel_class = contract!(ScreenPanel),
                 action = contract!(MenuAction),
                 options_back = contract!(OptionsBack),
                 back = crate::lists::rml_text(&back),
+                badge = super::badges::marker(crate::hotkeys::BACK),
             )
         };
         if !shell.contains(&panel_id) {
