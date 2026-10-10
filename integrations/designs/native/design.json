@@ -52,6 +52,9 @@
     "hoverAfterMs": 300,
     "width": 320
   },
+  "noticeRow": {
+    "leaveMs": 300
+  },
   "overlays": [
     {
       "id": "splash",

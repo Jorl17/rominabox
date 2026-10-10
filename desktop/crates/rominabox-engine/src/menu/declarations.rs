@@ -287,6 +287,11 @@ pub(crate) fn write(
     )?;
     line(&mut text, key!(BindsWidth), &binds.width.to_string())?;
     line(&mut text, key!(BindsList), super::scene::BIND_LIST)?;
+    line(
+        &mut text,
+        key!(NoticeRowLeave),
+        &manifest.notice_row.leave_ms.to_string(),
+    )?;
     // The font files staged beside the document, which we load in the player.
     let fonts: Vec<&str> = manifest.fonts.iter().map(|font| font.file.as_str()).collect();
     line(&mut text, key!(Fonts), &fonts.join(" "))?;

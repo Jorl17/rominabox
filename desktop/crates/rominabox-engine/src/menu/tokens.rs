@@ -54,6 +54,10 @@ pub fn design(manifest: &Manifest, palette: &Palette) -> Tokens {
             seconds(overlay.leave_ms),
         );
     }
+    tokens.insert(
+        "notice-row-leave".to_string(),
+        seconds(manifest.notice_row.leave_ms),
+    );
     for (name, value) in [
         ("screen", &palette.screen),
         ("background", &palette.background),
