@@ -358,9 +358,12 @@ body.overlay .notice.leaving { opacity: 0; bottom: 16dp; transition: opacity bot
  * overlay uses that id.
  *
  * The box is as wide as its contents: it is centred in the row, it is as wide
- * as its words, and a long description wraps.
+ * as its words, and a long description wraps. It slides down into place from
+ * above the screen as it comes, and back up as it goes.
  */
-#unlock-row { position: absolute; left: 0; top: 24dp; width: 100%; text-align: center; z-index: 90; }
+#unlock-row { position: absolute; left: 0; top: -120dp; width: 100%; text-align: center; z-index: 90; opacity: 0; }
+#unlock-row.showing { top: 24dp; opacity: 1; transition: top opacity 0.25s cubic-out; }
+#unlock-row.leaving { top: -120dp; opacity: 0; transition: top opacity 0.3s cubic-in; }
 #unlock { display: inline-block; text-align: left; padding: 10dp; background-color: #061a48; border: 3dp #fff13d; }
 #unlock-badge { display: inline-block; vertical-align: top; width: 64dp; height: 64dp; border-top: 2dp #041738; border-left: 2dp #041738; border-right: 2dp #75b2e4; border-bottom: 2dp #75b2e4; }
 #unlock-words { display: inline-block; vertical-align: top; margin-left: 12dp; max-width: 560dp; }

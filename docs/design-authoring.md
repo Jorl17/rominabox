@@ -152,6 +152,8 @@ file is a complete example.
   its `width`.
 - **`overlays`**: the timing of the splash and of the "PRESS ESC" notice (see
   [Overlays](#overlays)).
+- **`noticeRow`**: `leaveMs`, how long the unlock pop-up takes to leave (see
+  [Overlays](#overlays)). A design without it takes Native's.
 - **`documents`**: your `style` and `splash` files. Only Native can set
   `menu`, the page skeleton.
 - **`words`** and **`tokens`**: see below.
@@ -279,7 +281,7 @@ attributes, and your RCSS decides what each one looks like:
 | `.on` | a switch that is on |
 | `.dragging` | the slider while it is dragged |
 | `.capturing` | a control waiting for a new input |
-| `.showing`, `.leaving` | an overlay appearing and going |
+| `.showing`, `.leaving` | an overlay, or the unlock pop-up (`#unlock-row`), appearing and going |
 | `.overlay` | on the body while the game runs with the menu closed |
 | `.paused-in-background` | on the body while the game waits, paused, because its window is in the background and the player keeps it from playing there; we then draw over the game |
 | `data-notice="<notice>"` | on `#unlock-row`: the current notice, `achievement` (an achievement unlocked) or `slot` (the result of a hotkey for the save slots during play: `SAVED TO SLOT 3`, `LOADED SLOT 3`, `SLOT 3 IS EMPTY`, `SLOT 4`) |
@@ -439,6 +441,12 @@ then leave. With `overlays` in `design.json` you set when each one appears
 (`leaveMs`). The element gets `showing`, then `leaving`. Animate the leaving
 in RCSS for `design(overlay-leave-<id>)s`, so the motion and the timing come
 from one number.
+
+The unlock pop-up (`#unlock-row`) comes when an achievement is earned or a
+save slot hotkey is used. It is drawn from the frame before it gets `showing`,
+so a transition to `showing` animates its arrival. It stays for the time its
+notice is read, then gets `leaving` for `noticeRow.leaveMs`, and is hidden.
+Animate its leaving for `design(notice-row-leave)s`.
 
 ## Checking a design
 

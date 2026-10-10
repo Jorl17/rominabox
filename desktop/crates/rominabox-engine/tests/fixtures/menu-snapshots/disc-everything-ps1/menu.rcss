@@ -303,8 +303,12 @@ body.overlay .notice.leaving { opacity: 0; top: -44dp; transition: top opacity 0
 #control-binds .list-pager-count { left: 80dp; width: 110dp; }
 #control-binds .list-pager-next { left: 198dp; width: 72dp; }
 
-/* The inherited achievement notice, with the thin rules and compact type of this design. */
-#unlock-row { position: absolute; left: 0; top: 24dp; width: 100%; text-align: center; z-index: 90; }
+/* The inherited achievement notice, with the thin rules and compact type of
+ * this design. It slides down into place from above the screen as it comes,
+ * and back up as it goes. */
+#unlock-row { position: absolute; left: 0; top: -100dp; width: 100%; text-align: center; z-index: 90; opacity: 0; }
+#unlock-row.showing { top: 24dp; opacity: 1; transition: top opacity 0.2s cubic-out; }
+#unlock-row.leaving { top: -100dp; opacity: 0; transition: top opacity 0.3s cubic-in; }
 #unlock { display: inline-block; text-align: left; padding: 8dp; background-color: #061a48; border: 1dp #fff13d; }
 #unlock-badge { display: inline-block; vertical-align: top; width: 48dp; height: 48dp; border: 1dp #476eab; }
 #unlock-words { display: inline-block; vertical-align: top; margin-left: 12dp; max-width: 560dp; }
