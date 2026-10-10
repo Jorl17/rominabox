@@ -361,9 +361,9 @@ impl fmt::Display for Refusal {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Refusal::NoBinding { hotkey } => {
-                write!(formatter, "hotkeys: {hotkey:?} has no binding, and must keep one")
+                write!(formatter, "hotkeys: {hotkey:?} has no binding, and must have one")
             }
-            Refusal::NoKey { hotkey } => write!(formatter, "hotkeys: {hotkey:?} has no key, and must keep one"),
+            Refusal::NoKey { hotkey } => write!(formatter, "hotkeys: {hotkey:?} has no key, and must have one"),
             Refusal::Twice { hotkey, binding } => {
                 write!(formatter, "hotkeys: {hotkey:?} holds {} twice", binding.text())
             }

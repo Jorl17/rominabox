@@ -286,18 +286,18 @@ void capture_look_and_ends(void *menu)
 void nobody_is_locked_out(void *menu)
 {
    click(menu, "hotkey-menu-1");
-   expect_status("MENU MUST KEEP A KEY", "removing MENU's only key");
+   expect_status("MENU MUST HAVE A KEY", "removing MENU's only key");
    expect_row("menu", {"Escape", "Home", "L3+R3"}, "a refused removal");
 
    click(menu, "hotkey-confirm-2");
    click(menu, "hotkey-confirm-1");
-   expect_status("CONFIRM MUST KEEP A BINDING", "removing CONFIRM's last binding");
+   expect_status("CONFIRM MUST HAVE A BINDING", "removing CONFIRM's last binding");
    expect_row("confirm", {"Enter"}, "a refused removal");
 
    /* Taking the only binding of CONFIRM leaves it with none, and BACK has no
     * key to give back, because Escape also belongs to MENU, so we refuse. */
    capture(menu, "back", "key:enter");
-   expect_status("CONFIRM MUST KEEP A BINDING", "a capture that would leave CONFIRM nothing");
+   expect_status("CONFIRM MUST HAVE A BINDING", "a capture that would leave CONFIRM nothing");
    expect_row("confirm", {"Enter"}, "a refused capture");
    expect_row("back", {"Escape", "Right button"}, "a refused capture");
 
