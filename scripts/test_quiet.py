@@ -98,12 +98,11 @@ def run_plan(binary: Path, user_data: Path, data: str, quiet: bool = False, soun
 def plan_check() -> list[str]:
     """With the switch the frozen driver goes, and with the opt-out it stays.
 
-    We make four plans and start no game. The harness is not Launch Services,
-    so a launch with neither variable is quiet. With the opt-out alone the
-    frozen driver stays, which shows that the launcher and the harness use the
-    same name for the opt-out. With both, the switch takes precedence, which
-    shows the same for the switch. With a different name in the launcher, the
-    opt-out would take precedence and the frozen driver would stay.
+    We make four plans and start no game. Quiet is only ever the switch: a
+    launch with neither variable keeps the frozen driver, whatever started
+    it, and this harness is neither Explorer nor Launch Services. With the
+    switch, alone or with the opt-out, the frozen driver goes, which shows
+    that the launcher and the harness use the same name for the switch.
     """
     free_space.require(20)
     with scratch.scratch("rominabox-quiet-plan-") as made:
@@ -115,7 +114,7 @@ def plan_check() -> list[str]:
             write_plan(resources, name)
             written[name] = run_plan(binary, root, name, quiet=quiet, sound=sound)
     failures = []
-    expected = {"neither": QUIET_DRIVER, "sound": FROZEN_DRIVER,
+    expected = {"neither": FROZEN_DRIVER, "sound": FROZEN_DRIVER,
                 "switch": QUIET_DRIVER, "both": QUIET_DRIVER}
     for name, driver in expected.items():
         got = _config_value(written[name], "audio_driver")
