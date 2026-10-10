@@ -438,6 +438,28 @@ fn a_dualsense_trigger_pressed_at_all_is_l2_or_r2() {
     }
 }
 
+/// A DualSense trigger through DirectInput is held in the menu only when
+/// pulled most of the way, and we take it at a touch. So a touch does not end
+/// its capture: it ends when the player lets go of the trigger, or pulls it
+/// far enough to be held, and the menu then waits for its release as for any
+/// input held when a capture ends. Ended on the touch, the rest of the same
+/// press would be a new press of the hotkey or control just bound, and
+/// CONFIRM bound to R2 would confirm.
+#[test]
+#[cfg(windows)]
+fn a_touched_trigger_ends_its_capture_only_when_let_go_or_held() {
+    let probe = pad_capture();
+    let rest = "a3:-32768 a4:-32768";
+    let touched = "b7 a3:-32768 a4:-30000";
+    let pulled = "b7 a3:-32768 a4:32767";
+    for screen in [&[][..], &["--controls", "start"][..]] {
+        let capture = |frames: &[&str]| captured_on(&probe, screen, "dinput/DualSense5.cfg", frames);
+        assert_eq!(capture(&[rest, rest, touched]), "captured nothing", "R2 touched, {screen:?}");
+        assert_eq!(capture(&[rest, rest, touched, rest]), "captured r2 on pad 1", "R2 let go, {screen:?}");
+        assert_eq!(capture(&[rest, rest, touched, pulled]), "captured r2 on pad 1", "R2 pulled, {screen:?}");
+    }
+}
+
 /// The touchpad of a DualSense is button 13 through DirectInput, and has no
 /// position in its profile. On HOTKEYS and on CONTROLS, we capture it when
 /// the player releases it.
