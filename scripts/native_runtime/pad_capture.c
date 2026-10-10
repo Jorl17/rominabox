@@ -27,6 +27,7 @@
  *
  *   value <13, h0up or +3>
  *   named <the name of its position in the profile of the first pad, or none>
+ *   read <the input we read for it in a binding to a hotkey, as above>
  *
  * We do not start RetroArch, and link retroarch_unreached.c in place of the
  * rest of it. */
@@ -136,6 +137,9 @@ static void print_named(const struct retro_keybind *captured)
       printf("named %s\n", name);
    else
       printf("named none\n");
+   if (rib_pad_input_of(captured->joykey, captured->joyaxis, &bind))
+      rib_pad_input_value_of(rib_pad_input_id(bind), value, sizeof(value));
+   printf("read %s\n", value);
 }
 
 static void print_captured(const struct retro_keybind *captured)

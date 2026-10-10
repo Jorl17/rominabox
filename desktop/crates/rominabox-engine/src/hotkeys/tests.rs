@@ -440,12 +440,12 @@ fn the_profile_of_a_dualsense_names_its_inputs() {
     let named = |frame: &str| {
         captured_on(&probe, &["--named"], "dinput/DualSense5.cfg", &[rest, rest, &format!("{frame} {rest}"), rest])
     };
-    assert_eq!(named("b1"), "captured b on pad 1\nvalue 1\nnamed Cross");
+    assert_eq!(named("b1"), "captured b on pad 1\nvalue 1\nnamed Cross\nread 1");
     assert_eq!(
         captured_on(&probe, &["--named"], "dinput/DualSense5.cfg", &[rest, rest, "a3:32767 a4:-32768"]),
-        "captured l2 on pad 1\nvalue +3\nnamed L2"
+        "captured l2 on pad 1\nvalue +3\nnamed L2\nread +3"
     );
-    assert_eq!(named("b13"), "captured button 13 on pad 1\nvalue 13\nnamed none");
+    assert_eq!(named("b13"), "captured button 13 on pad 1\nvalue 13\nnamed none\nread 13");
 }
 
 /// With every pad playing as player 1, we capture a press on any of them,
