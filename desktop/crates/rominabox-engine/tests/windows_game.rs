@@ -33,11 +33,17 @@ use std::{
 /// player, while a launcher that stops early exits with 1.
 const PLAYED: i32 = 42;
 const RAN_AT: &str = "stand-in player ran at ";
-const STAND_IN: &str = "#include <stdio.h>\n#include <windows.h>\n\
+/// With STAND_IN_RUN_MS, the stand-in player keeps running for that many
+/// milliseconds after it writes its folder.
+const STAND_IN: &str = "#include <stdio.h>\n#include <stdlib.h>\n#include <windows.h>\n\
     int main(void) {\n\
         static char path[32768];\n\
+        const char *run = getenv(\"STAND_IN_RUN_MS\");\n\
         GetModuleFileNameA(NULL, path, sizeof path);\n\
         printf(\"stand-in player ran at %s\\n\", path);\n\
+        fflush(stdout);\n\
+        if (run)\n\
+            Sleep((DWORD)atoi(run));\n\
         return 42;\n\
     }\n";
 
@@ -123,6 +129,11 @@ fn launch(program: &Path, root: &Path) -> Launched {
 /// Open the game as in `launch`, with `user_data`, when there is one, in
 /// place of the person's per-user folder.
 fn launch_in(program: &Path, root: &Path, user_data: Option<&Path>) -> Launched {
+    launch_with(program, root, user_data, &[])
+}
+
+/// Open the game as in `launch_in`, with the variables `extra` set.
+fn launch_with(program: &Path, root: &Path, user_data: Option<&Path>, extra: &[(&str, &str)]) -> Launched {
     static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let errors = root.join(format!(
         "launch-{}.err",
@@ -134,12 +145,12 @@ fn launch_in(program: &Path, root: &Path, user_data: Option<&Path>) -> Launched 
         Some(folder) => command.env(&test_user_data, folder),
         None => command.env_remove(&test_user_data),
     };
+    command.envs(extra.iter().copied());
     let mut child = command
         .env("ROMINABOX_QUIET", "1")
         .env_remove("ROMINABOX_PLAN_ONLY")
         .env_remove("ROMINABOX_MENU_SCRIPT")
         .env_remove("ROMINABOX_MENU_SHOT")
-        .env_remove("ROMINABOX_SOUND")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(fs::File::create(&errors).unwrap())
@@ -219,6 +230,35 @@ fn the_first_launch_unpacks_the_game_and_the_next_runs_that_copy() {
     assert_eq!(copies(&game.identity), [game.runtime.clone()]);
     assert!(files(&copy) == unpacked, "the second launch wrote the game's files again");
     assert_eq!(ran_at(&game), [player_in(&copy), player_in(&copy)]);
+}
+
+/// When the game is opened again while it runs, we start no second copy,
+/// whatever started it: the second launch quits at once, and only the first
+/// reaches the player, because two players would use one data folder.
+#[test]
+#[ignore = "launches a stand-in game in its sandbox; the wingame scope runs it"]
+fn a_game_opened_again_while_it_runs_is_not_started_twice() {
+    let root = workspace();
+    let kit = kit(&root);
+    let game = export(&request(&root, &kit, "Opened Twice", "out"), &root);
+    let _kept = kept(&game.identity);
+
+    let first = std::thread::spawn({
+        let program = game.program.clone();
+        let root = root.to_path_buf();
+        move || launch_with(&program, &root, None, &[("STAND_IN_RUN_MS", "8000")])
+    });
+    let started = Instant::now();
+    while ran_at(&game).is_empty() {
+        assert!(started.elapsed() < Duration::from_secs(60), "the first launch never reached the player");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let second = launch(&game.program, &root);
+    assert_eq!(second.code, Some(0), "{}", second.errors);
+    assert_eq!(ran_at(&game).len(), 1, "the second launch started a second player");
+    let first = first.join().unwrap();
+    assert_eq!(first.code, Some(PLAYED), "{}", first.errors);
+    assert_eq!(ran_at(&game).len(), 1);
 }
 
 /// We unpack a game into a folder with a longer name than the game's, then
