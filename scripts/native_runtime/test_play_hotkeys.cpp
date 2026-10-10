@@ -18,6 +18,7 @@
 #include "rmlui/elements.hpp"
 #include "menu_test_view.hpp"
 #include "menu_host_fake.h"
+#include "achievements_fake.hpp"
 #include "test_arguments.h"
 #include "test_environment.h"
 #include <streams/file_stream.h>
@@ -285,6 +286,23 @@ void the_game_waiting_in_the_background_is_drawn_over(void *menu)
    check(!says(), "with the window in front again, the body no longer says so");
 }
 
+/* An achievement earned while the game plays and nothing is drawn over it:
+ * we draw over the game at once for its popup, with the menu closed. */
+void an_achievement_earned_while_playing_is_drawn_over(void *menu)
+{
+   const bool was_open = host.menu_open;
+   host.menu_open = false;
+   play(menu);
+   host.overlay_frames = false;
+   pending_unlock.id = 7;
+   pending_unlock.points = 10;
+   std::snprintf(pending_unlock.title, sizeof(pending_unlock.title), "EARNED WHILE PLAYING");
+   rib_rmlui_play_hotkeys();
+   check(host.overlay_frames, "an achievement earned while playing is drawn over the game at once");
+   pending_unlock = {};
+   host.menu_open = was_open;
+}
+
 int main(int argc, char **argv)
 {
    Utf8Arguments utf8(argc, argv);
@@ -322,6 +340,7 @@ int main(int argc, char **argv)
    the_menu_shows_the_chosen_slot(menu);
    fullscreen_acts_in_play_and_in_the_menu(menu);
    the_game_waiting_in_the_background_is_drawn_over(menu);
+   an_achievement_earned_while_playing_is_drawn_over(menu);
    rib_menu_destroy(menu);
 
    /* The game closed and opened again, on the same data. */

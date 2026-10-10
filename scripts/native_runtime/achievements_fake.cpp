@@ -23,7 +23,7 @@ void rib_achievements_list_shown(bool shown)
 {
    if (list_shown_reports.empty() || list_shown_reports.back() != shown) list_shown_reports.push_back(shown);
 }
-bool rib_achievements_has_unlocks() { return false; }
+bool rib_achievements_has_unlocks() { return pending_unlock.id != 0; }
 bool rib_achievements_take_unlock(rib_achievement_unlock_t *out)
 {
    if (!pending_unlock.id) return false;

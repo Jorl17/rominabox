@@ -385,6 +385,7 @@ def main() -> int:
             HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c",
             ROOT / "vendor/retroarch/libretro-common/file/config_file_io.c")
     harness(PLAY_HOTKEYS, HERE / "test_play_hotkeys.cpp", HERE / "menu_host_fake.cpp",
+            HERE / "achievements_fake.cpp",
             HERE / "text_test_host.cpp", ROOT / "vendor/retroarch/libretro-common/file/config_file.c",
             ROOT / "vendor/retroarch/libretro-common/file/config_file_io.c")
     hotkeys_ok = hotkeys()
