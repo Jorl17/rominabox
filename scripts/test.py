@@ -633,6 +633,12 @@ BY_NAME = {scope.name: scope for scope in SCOPES}
 # code page of the system.
 RUN_ENVIRONMENT = {"ROMINABOX_PYTHON": PYTHON, "PYTHONUTF8": "1"}
 
+# We print what the programs of a run write, which may hold any character, in
+# UTF-8 also when this process's output goes to a file or a pipe, where we
+# would otherwise write in the code page of the system.
+for _stream in (sys.stdout, sys.stderr):
+    _stream.reconfigure(encoding="utf-8", errors="replace")
+
 
 def execute(command: list[str], env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """`command`, given the run's environment and the scope's `env`."""
