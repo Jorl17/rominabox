@@ -119,6 +119,20 @@ extern "C" bool rib_host_pad_down(unsigned bind)
 {
    return bind < sizeof(pad_inputs) / sizeof(pad_inputs[0]) && held(host.pads_down, pad_inputs[bind]);
 }
+extern "C" bool rib_host_pad_pressed(unsigned *pad)
+{
+   if (host.pads_down.empty() || !pad)
+      return false;
+   *pad = host.pad_index;
+   return true;
+}
+extern "C" bool rib_host_pad_connected(unsigned *pad)
+{
+   if (!host.pad_connected || !pad)
+      return false;
+   *pad = host.pad_index;
+   return true;
+}
 extern "C" void rib_host_share_player_one_binds(void) {}
 extern "C" bool rib_host_pad_value(const char *value)
 {

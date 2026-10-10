@@ -32,6 +32,10 @@ struct FakeHost
     * pad input in the form of RetroArch's config: "13" for a button, "h0up"
     * for a direction of a hat, "+3" for an axis. */
    std::map<std::string, std::string> pad_names, rebinds;
+   /* Whether a pad that plays as player 1 is connected, and the joypad index
+    * of the pad that holds `pads_down`. */
+   bool pad_connected = false;
+   unsigned pad_index = 0;
    /* The control whose new binding clashes with every other, or none. */
    std::string clashing;
    std::string captured_id;

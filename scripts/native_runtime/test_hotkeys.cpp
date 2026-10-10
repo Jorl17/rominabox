@@ -399,6 +399,40 @@ void the_input_that_binds_a_control_acts_once_let_go(void *menu)
    check(view.screens.current() == "hotkeys", "HOTKEYS is open again after CONTROLS");
 }
 
+/* The document says which kind of input the player used last. Before any
+ * input, a connected pad. Then a key or the mouse makes it the keyboard, and
+ * a press on a pad the pad, though not a pad input held since before the
+ * key. */
+void the_input_in_use_is_on_the_document(void *menu)
+{
+   const auto input = [] {
+      return std::string(view.document.root()->GetAttribute<Rml::String>("data-input", ""));
+   };
+   check(input() == "keyboard", "with no pad, the keyboard: " + input());
+   host.pad_connected = true;
+   rib_rmlui_play_hotkeys();
+   check(input() == "pad", "before any input, a connected pad: " + input());
+   rib_rmlui_keyboard_used();
+   check(input() == "keyboard", "a key makes it the keyboard: " + input());
+   host.pads_down = {"x"};
+   rib_rmlui_play_hotkeys();
+   check(input() == "pad", "a press on a pad makes it the pad: " + input());
+   rib_rmlui_keyboard_used();
+   rib_rmlui_play_hotkeys();
+   check(input() == "keyboard", "a pad input held from before does not take it back from a key: " + input());
+   host.pads_down.clear();
+   rib_rmlui_play_hotkeys();
+   host.pads_down = {"x"};
+   rib_rmlui_play_hotkeys();
+   check(input() == "pad", "pressed again, the pad: " + input());
+   host.pads_down.clear();
+   rib_rmlui_play_hotkeys();
+   host.pointer.x += 10;
+   frame(menu);
+   check(input() == "keyboard", "the mouse makes it the keyboard: " + input());
+   host.pad_connected = false;
+}
+
 void one_capture_swaps_confirm_and_back(void *menu)
 {
    capture(menu, "confirm", "pad:a");
@@ -751,6 +785,7 @@ int main(int argc, char **argv)
    if (!menu)
       return 1;
    check(view.screens.current() == "hotkeys", "Options opens HOTKEYS");
+   the_input_in_use_is_on_the_document(menu);
    defaults_and_words(menu);
    add_and_remove(menu);
    capture_look_and_ends(menu);
