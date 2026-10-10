@@ -735,7 +735,7 @@ fn every_workflow_case_reports_what_the_launched_player_recorded() {
                 else {
                     continue;
                 };
-                baseline[&case.key] = observed[&case.key].clone();
+                baseline[&case.key] = recorded(&baseline[&case.key], &observed[&case.key]);
                 changed = true;
             }
             if changed {
@@ -765,4 +765,22 @@ fn every_workflow_case_reports_what_the_launched_player_recorded() {
     );
     assert!(checkpoints > 0, "no checkpoint was taken");
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
+}
+
+/// The baseline entry we record for a case, from what we observed.
+fn recorded(_before: &Value, seen: &Value) -> Value {
+    seen.clone()
+}
+
+/// We record a case again with what we observed, and keep the size of the
+/// launched player's picture, which only the launched runner measures
+/// (scripts/menu_workflows.py).
+#[test]
+fn recording_a_case_keeps_what_only_the_launched_runner_records() {
+    let before = json!({"script": ["a"], "reports": {}, "size": [1920, 1200]});
+    let seen = json!({"script": ["a", "b"], "reports": {"x": 1}});
+    assert_eq!(
+        recorded(&before, &seen),
+        json!({"script": ["a", "b"], "reports": {"x": 1}, "size": [1920, 1200]})
+    );
 }
