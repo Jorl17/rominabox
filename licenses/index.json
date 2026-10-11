@@ -208,6 +208,15 @@
  },
  {
   "group": "crates",
+  "name": "atomic-waker-1.1.2",
+  "title": "atomic-waker",
+  "version": "1.1.2",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/atomic-waker-1.1.2.txt"
+ },
+ {
+  "group": "crates",
   "name": "autocfg-1.5.1",
   "title": "autocfg",
   "version": "1.5.1",
@@ -511,6 +520,15 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/core-foundation-0.10.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "core-foundation-0.9.4",
+  "title": "core-foundation",
+  "version": "0.9.4",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/core-foundation-0.9.4.txt"
  },
  {
   "group": "crates",
@@ -928,6 +946,15 @@
  },
  {
   "group": "crates",
+  "name": "errno-0.3.14",
+  "title": "errno",
+  "version": "0.3.14",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/errno-0.3.14.txt"
+ },
+ {
+  "group": "crates",
   "name": "fastrand-2.5.0",
   "title": "fastrand",
   "version": "2.5.0",
@@ -952,6 +979,15 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/fdeflate-0.3.7.txt"
+ },
+ {
+  "group": "crates",
+  "name": "filetime-0.2.29",
+  "title": "filetime",
+  "version": "0.2.29",
+  "licence": "MIT/Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/filetime-0.2.29.txt"
  },
  {
   "group": "crates",
@@ -1024,6 +1060,69 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/form_urlencoded-1.2.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-channel-0.3.34",
+  "title": "futures-channel",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-channel-0.3.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-core-0.3.34",
+  "title": "futures-core",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-core-0.3.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-io-0.3.34",
+  "title": "futures-io",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-io-0.3.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-macro-0.3.34",
+  "title": "futures-macro",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-macro-0.3.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-sink-0.3.34",
+  "title": "futures-sink",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-sink-0.3.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-task-0.3.34",
+  "title": "futures-task",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-task-0.3.34.txt"
+ },
+ {
+  "group": "crates",
+  "name": "futures-util-0.3.34",
+  "title": "futures-util",
+  "version": "0.3.34",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/futures-util-0.3.34.txt"
  },
  {
   "group": "crates",
@@ -1162,12 +1261,66 @@
  },
  {
   "group": "crates",
+  "name": "http-body-1.1.0",
+  "title": "http-body",
+  "version": "1.1.0",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/http-body-1.1.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "http-body-util-0.1.5",
+  "title": "http-body-util",
+  "version": "0.1.5",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/http-body-util-0.1.5.txt"
+ },
+ {
+  "group": "crates",
+  "name": "httparse-1.10.1",
+  "title": "httparse",
+  "version": "1.10.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/httparse-1.10.1.txt"
+ },
+ {
+  "group": "crates",
   "name": "hybrid-array-0.4.15",
   "title": "hybrid-array",
   "version": "0.4.15",
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/hybrid-array-0.4.15.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hyper-1.11.1",
+  "title": "hyper",
+  "version": "1.11.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/hyper-1.11.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hyper-rustls-0.27.10",
+  "title": "hyper-rustls",
+  "version": "0.27.10",
+  "licence": "Apache-2.0 OR ISC OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/hyper-rustls-0.27.10.txt"
+ },
+ {
+  "group": "crates",
+  "name": "hyper-util-0.1.20",
+  "title": "hyper-util",
+  "version": "0.1.20",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/hyper-util-0.1.20.txt"
  },
  {
   "group": "crates",
@@ -1333,6 +1486,15 @@
  },
  {
   "group": "crates",
+  "name": "ipnet-2.12.2",
+  "title": "ipnet",
+  "version": "2.12.2",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/ipnet-2.12.2.txt"
+ },
+ {
+  "group": "crates",
   "name": "itoa-1.0.18",
   "title": "itoa",
   "version": "1.0.18",
@@ -1492,6 +1654,15 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/mime-0.3.17.txt"
+ },
+ {
+  "group": "crates",
+  "name": "minisign-verify-0.2.5",
+  "title": "minisign-verify",
+  "version": "0.2.5",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/minisign-verify-0.2.5.txt"
  },
  {
   "group": "crates",
@@ -1657,6 +1828,15 @@
  },
  {
   "group": "crates",
+  "name": "objc2-osa-kit-0.3.2",
+  "title": "objc2-osa-kit",
+  "version": "0.3.2",
+  "licence": "Zlib OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/objc2-osa-kit-0.3.2.txt"
+ },
+ {
+  "group": "crates",
   "name": "objc2-quartz-core-0.3.2",
   "title": "objc2-quartz-core",
   "version": "0.3.2",
@@ -1699,6 +1879,15 @@
   "licence": "MPL-2.0",
   "usedBy": "the builder",
   "file": "crates/option-ext-0.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "osakit-0.3.1",
+  "title": "osakit",
+  "version": "0.3.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/osakit-0.3.1.txt"
  },
  {
   "group": "crates",
@@ -1945,6 +2134,15 @@
  },
  {
   "group": "crates",
+  "name": "reqwest-0.13.5",
+  "title": "reqwest",
+  "version": "0.13.5",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/reqwest-0.13.5.txt"
+ },
+ {
+  "group": "crates",
   "name": "rfd-0.16.0",
   "title": "rfd",
   "version": "0.16.0",
@@ -1981,6 +2179,15 @@
  },
  {
   "group": "crates",
+  "name": "rustix-1.1.5",
+  "title": "rustix",
+  "version": "1.1.5",
+  "licence": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/rustix-1.1.5.txt"
+ },
+ {
+  "group": "crates",
   "name": "rustls-0.23.45",
   "title": "rustls",
   "version": "0.23.45",
@@ -1996,6 +2203,15 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/rustls-pki-types-1.15.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "rustls-platform-verifier-0.7.1",
+  "title": "rustls-platform-verifier",
+  "version": "0.7.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/rustls-platform-verifier-0.7.1.txt"
  },
  {
   "group": "crates",
@@ -2068,6 +2284,24 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/scopeguard-1.2.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "security-framework-3.7.0",
+  "title": "security-framework",
+  "version": "3.7.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/security-framework-3.7.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "security-framework-sys-2.17.0",
+  "title": "security-framework-sys",
+  "version": "2.17.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/security-framework-sys-2.17.0.txt"
  },
  {
   "group": "crates",
@@ -2260,6 +2494,15 @@
  },
  {
   "group": "crates",
+  "name": "slab-0.4.12",
+  "title": "slab",
+  "version": "0.4.12",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/slab-0.4.12.txt"
+ },
+ {
+  "group": "crates",
   "name": "smallvec-1.16.1",
   "title": "smallvec",
   "version": "1.16.1",
@@ -2359,6 +2602,15 @@
  },
  {
   "group": "crates",
+  "name": "sync_wrapper-1.0.2",
+  "title": "sync_wrapper",
+  "version": "1.0.2",
+  "licence": "Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/sync_wrapper-1.0.2.txt"
+ },
+ {
+  "group": "crates",
   "name": "synstructure-0.14.0",
   "title": "synstructure",
   "version": "0.14.0",
@@ -2368,12 +2620,39 @@
  },
  {
   "group": "crates",
+  "name": "system-configuration-0.7.0",
+  "title": "system-configuration",
+  "version": "0.7.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/system-configuration-0.7.0.txt"
+ },
+ {
+  "group": "crates",
+  "name": "system-configuration-sys-0.6.0",
+  "title": "system-configuration-sys",
+  "version": "0.6.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/system-configuration-sys-0.6.0.txt"
+ },
+ {
+  "group": "crates",
   "name": "tao-0.35.3",
   "title": "tao",
   "version": "0.35.3",
   "licence": "Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/tao-0.35.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tar-0.4.46",
+  "title": "tar",
+  "version": "0.4.46",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/tar-0.4.46.txt"
  },
  {
   "group": "crates",
@@ -2449,6 +2728,15 @@
  },
  {
   "group": "crates",
+  "name": "tauri-plugin-updater-2.12.0",
+  "title": "tauri-plugin-updater",
+  "version": "2.12.0",
+  "licence": "Apache-2.0 OR MIT",
+  "usedBy": "the builder",
+  "file": "crates/tauri-plugin-updater-2.12.0.txt"
+ },
+ {
+  "group": "crates",
   "name": "tauri-runtime-2.11.3",
   "title": "tauri-runtime",
   "version": "2.11.3",
@@ -2482,6 +2770,15 @@
   "licence": "MIT",
   "usedBy": "the builder",
   "file": "crates/tauri-winres-0.3.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tempfile-3.27.0",
+  "title": "tempfile",
+  "version": "3.27.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/tempfile-3.27.0.txt"
  },
  {
   "group": "crates",
@@ -2602,6 +2899,24 @@
  },
  {
   "group": "crates",
+  "name": "tokio-rustls-0.26.6",
+  "title": "tokio-rustls",
+  "version": "0.26.6",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/tokio-rustls-0.26.6.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tokio-util-0.7.19",
+  "title": "tokio-util",
+  "version": "0.7.19",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tokio-util-0.7.19.txt"
+ },
+ {
+  "group": "crates",
   "name": "toml-0.9.12+spec-1.1.0",
   "title": "toml",
   "version": "0.9.12+spec-1.1.0",
@@ -2656,6 +2971,42 @@
  },
  {
   "group": "crates",
+  "name": "tower-0.5.3",
+  "title": "tower",
+  "version": "0.5.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tower-0.5.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tower-http-0.6.11",
+  "title": "tower-http",
+  "version": "0.6.11",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tower-http-0.6.11.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tower-layer-0.3.3",
+  "title": "tower-layer",
+  "version": "0.3.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tower-layer-0.3.3.txt"
+ },
+ {
+  "group": "crates",
+  "name": "tower-service-0.3.3",
+  "title": "tower-service",
+  "version": "0.3.3",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/tower-service-0.3.3.txt"
+ },
+ {
+  "group": "crates",
   "name": "tracing-0.1.44",
   "title": "tracing",
   "version": "0.1.44",
@@ -2689,6 +3040,15 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/tray-icon-0.24.2.txt"
+ },
+ {
+  "group": "crates",
+  "name": "try-lock-0.2.5",
+  "title": "try-lock",
+  "version": "0.2.5",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/try-lock-0.2.5.txt"
  },
  {
   "group": "crates",
@@ -2881,6 +3241,15 @@
  },
  {
   "group": "crates",
+  "name": "want-0.3.1",
+  "title": "want",
+  "version": "0.3.1",
+  "licence": "MIT",
+  "usedBy": "the builder",
+  "file": "crates/want-0.3.1.txt"
+ },
+ {
+  "group": "crates",
   "name": "web_atoms-0.2.6",
   "title": "web_atoms",
   "version": "0.2.6",
@@ -3052,6 +3421,15 @@
  },
  {
   "group": "crates",
+  "name": "windows-registry-0.6.1",
+  "title": "windows-registry",
+  "version": "0.6.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-registry-0.6.1.txt"
+ },
+ {
+  "group": "crates",
   "name": "windows-result-0.3.4",
   "title": "windows-result",
   "version": "0.3.4",
@@ -3085,6 +3463,15 @@
   "licence": "MIT OR Apache-2.0",
   "usedBy": "the builder",
   "file": "crates/windows-strings-0.5.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "windows-sys-0.52.0",
+  "title": "windows-sys",
+  "version": "0.52.0",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/windows-sys-0.52.0.txt"
  },
  {
   "group": "crates",
@@ -3211,6 +3598,15 @@
   "licence": "Apache-2.0 OR MIT",
   "usedBy": "the builder",
   "file": "crates/wry-0.55.1.txt"
+ },
+ {
+  "group": "crates",
+  "name": "xattr-1.6.1",
+  "title": "xattr",
+  "version": "1.6.1",
+  "licence": "MIT OR Apache-2.0",
+  "usedBy": "the builder",
+  "file": "crates/xattr-1.6.1.txt"
  },
  {
   "group": "crates",
