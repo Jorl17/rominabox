@@ -27,7 +27,9 @@ fn installed(library: &Library, game: &Game, save: &str, present: bool) -> PathB
     game_data::write_manifest(&data, game).unwrap();
     fs::write(data.join(format!("saves/{}.srm", game.content)), save).unwrap();
     if present {
-        fs::create_dir_all(&game.app).unwrap();
+        let app = Path::new(&game.app);
+        fs::create_dir_all(app.parent().unwrap()).unwrap();
+        app_of(library.layout, &game.identity, app);
     }
     data
 }
@@ -451,7 +453,10 @@ fn an_uninstall_deletes_only_the_games_own_app() {
 
         app_of(layout, KNUCKLES, &app);
         let error = library.uninstall(SONIC).unwrap_err();
-        assert_eq!(error, format!("{} is not the app of \u{201c}Sonic 3\u{201d}, so we did not delete it.", sonic.app));
+        assert_eq!(
+            error,
+            format!("\u{201c}Sonic 3\u{201d} is not installed at {} any more. Remove its data instead.", sonic.app)
+        );
         assert!(app.exists(), "{layout:?}: another game's app was deleted");
         assert_eq!(save(&library, &sonic), "rings");
 

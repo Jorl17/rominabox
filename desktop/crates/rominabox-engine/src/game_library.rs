@@ -130,7 +130,10 @@ pub struct InstalledGame {
     /// The game's icon beside its manifest, when we copied one there in the
     /// launcher.
     pub icon: Option<PathBuf>,
-    /// Whether the app named in the manifest is still there.
+    /// Whether the app named in the manifest is still there and is still the
+    /// app of this game (`Layout::is_app_of`). After an export with another
+    /// identity to the same place, the data of the old identity names an app
+    /// of the new one.
     pub app_present: bool,
     /// Whether the game is running now.
     pub running: bool,
@@ -214,8 +217,9 @@ impl Library {
         let game = game_data::read_manifest(&data).filter(|game| game.identity == identity)?;
         let icon = Some(data.join(game_file!(Icon))).filter(|icon| icon.is_file());
         let app = Path::new(&game.app);
-        let app_present = !game.app.is_empty() && app.exists();
-        let running = app_present && running(app);
+        let app_present = !game.app.is_empty() && self.layout.is_app_of(app, identity);
+        // Any program at that path, which we do not change data under.
+        let running = !game.app.is_empty() && running(app);
         let file_name = game_data::file_name(&game);
         Some(InstalledGame { game, icon, app_present, running, file_name, data })
     }
@@ -350,25 +354,18 @@ impl Library {
         self.forget(identity)
     }
 
-    /// The app of the game `game`, when it is installed and is that game's
-    /// app. A game can write its own manifest, which contains the path to its
-    /// app, so we do nothing at that path unless it is this game's app. `verb`
-    /// is what we did not do with any other path.
+    /// The app of the game `game`, when it is installed. A game can write its
+    /// own manifest, which contains the path to its app, so we do nothing at
+    /// that path unless it is this game's app (`app_present`). `verb` is what
+    /// we did not do with any other path.
     fn own_app(&self, game: &InstalledGame, verb: &str) -> Result<PathBuf, String> {
-        let app = PathBuf::from(&game.game.app);
         if !game.app_present {
-            return Err(format!(
-                "\u{201c}{}\u{201d} is not installed at {} any more.",
-                game.game.title, game.game.app
-            ));
-        }
-        if !self.layout.is_app_of(&app, &game.game.identity) {
             return Err(format!(
                 "{} is not the app of \u{201c}{}\u{201d}, so we did not {verb} it.",
                 game.game.app, game.game.title
             ));
         }
-        Ok(app)
+        Ok(PathBuf::from(&game.game.app))
     }
 
     /// The app of the game `identity`, to open it. A game that is already
