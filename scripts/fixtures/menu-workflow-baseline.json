@@ -4047,7 +4047,9 @@
         "selected": [
           "slot-1"
         ],
-        "showing": [],
+        "showing": [
+          "notice"
+        ],
         "sliders": {
           "brightness-level": 0.5,
           "contrast-level": 0.5,
@@ -4263,6 +4265,10 @@
       }
     },
     "script": [
+      "toggle",
+      "wait-ms:300",
+      "toggle",
+      "wait-ms:300",
       "report:empty",
       "key:start",
       "wait-ms:500",
@@ -10244,7 +10250,9 @@
         "selected": [
           "slot-1"
         ],
-        "showing": [],
+        "showing": [
+          "notice"
+        ],
         "sliders": {
           "brightness-level": 0.5,
           "contrast-level": 0.5,
@@ -10286,6 +10294,10 @@
       }
     },
     "script": [
+      "toggle",
+      "wait-ms:300",
+      "toggle",
+      "wait-ms:300",
       "report:empty",
       "key:start",
       "wait-ms:500",
@@ -16283,7 +16295,9 @@
         "selected": [
           "slot-1"
         ],
-        "showing": [],
+        "showing": [
+          "notice"
+        ],
         "sliders": {
           "brightness-level": 0.5,
           "contrast-level": 0.5,
@@ -16325,6 +16339,10 @@
       }
     },
     "script": [
+      "toggle",
+      "wait-ms:300",
+      "toggle",
+      "wait-ms:300",
       "report:empty",
       "key:start",
       "wait-ms:500",
