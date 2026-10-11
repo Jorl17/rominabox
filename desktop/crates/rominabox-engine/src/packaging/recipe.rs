@@ -29,6 +29,16 @@ pub(crate) struct Recipe {
     pub game: Game,
 }
 
+/// `path` with "/" between its parts, as we write every path in a recipe.
+fn portable(path: &Path) -> PathBuf {
+    PathBuf::from(
+        path.components()
+            .map(|part| part.as_os_str().to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join("/"),
+    )
+}
+
 fn failed(path: &Path) -> impl Fn(std::io::Error) -> ExportError + '_ {
     move |error| ExportError::io(ErrorStage::Stage, path, error)
 }
@@ -51,7 +61,7 @@ pub(super) fn write(
             fs::create_dir_all(parent).map_err(failed(parent))?;
         }
         fs::copy(source, &destination).map_err(failed(source))?;
-        Ok(Path::new(FOLDER).join(name))
+        Ok(portable(&Path::new(FOLDER).join(name)))
     };
     let named = |stem: &str, path: &Path| match path.extension() {
         Some(extension) => format!("{stem}.{}", extension.to_string_lossy()),
@@ -71,7 +81,7 @@ pub(super) fn write(
         .files
         .iter()
         .filter(|file| file.role == FileRole::Added)
-        .map(|file| Path::new("content").join(&file.relative))
+        .map(|file| portable(&Path::new("content").join(&file.relative)))
         .collect();
     for patch in &content.played_patches {
         added.push(copy_in(patch, &format!("patches/{}", file_name(patch)))?);
@@ -81,7 +91,7 @@ pub(super) fn write(
         .firmware
         .iter()
         .filter_map(|path| firmware_destination_name(path, system))
-        .map(|name| Path::new(shipped!(Firmware).0).join(name))
+        .map(|name| portable(&Path::new(shipped!(Firmware).0).join(name)))
         .collect();
     let (mut shaders, shader_files) = crate::shaders::pack_selection(&request.game.shaders)
         .map_err(|message| ExportError::new(ErrorStage::Stage, message))?;
@@ -89,13 +99,13 @@ pub(super) fn write(
         copy_in(source, name)?;
     }
     for custom in &mut shaders.custom {
-        custom.path = Path::new(FOLDER).join(&custom.path);
+        custom.path = portable(&Path::new(FOLDER).join(&custom.path));
     }
     let recipe = Recipe {
         format_version: FORMAT_VERSION,
         identity: identity.to_string(),
         game: Game {
-            rom: rom_relative.to_path_buf(),
+            rom: portable(rom_relative),
             icon,
             background,
             firmware,
