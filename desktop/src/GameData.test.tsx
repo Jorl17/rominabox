@@ -129,6 +129,15 @@ function actions(title: string): string[] {
 async function click(element: HTMLElement) {
   await act(async () => element.click());
 }
+/** The entry `label` in the menu `menu`, once we have opened the menu. */
+async function menuItem(menu: string, label: string): Promise<HTMLButtonElement> {
+  await click(labelled(menu));
+  const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
+    (element) => element.querySelector(".action-menu-label")?.textContent === label,
+  );
+  if (!item) throw new Error(`no entry ${label} in ${menu}`);
+  return item;
+}
 function rows(): string[][] {
   return [...container.querySelectorAll("tbody tr")].map((row) =>
     [...row.querySelectorAll("td")].map((cell) => cell.textContent ?? ""),
@@ -150,11 +159,10 @@ describe("the Game data section", () => {
     expect(actions("Knuckles")).toEqual(["Remove the data of Knuckles"]);
     expect(actions("Sonic 3")).toEqual([
       "Play Sonic 3",
-      "Reset the data of Sonic 3",
       "Uninstall Sonic 3",
-      "Update Sonic 3",
+      "More actions for Sonic 3",
     ]);
-    expect(labelled("Reset the data of Pokemon Gold").disabled).toBe(true);
+    expect((await menuItem("More actions for Pokemon Gold", "Reset data")).disabled).toBe(true);
     expect(labelled("Uninstall Pokemon Gold").disabled).toBe(true);
     const icon = container.querySelector<HTMLImageElement>("tbody img");
     expect(icon?.getAttribute("src")).toBe("blob:/data/aaaa/game-icon.png");
@@ -277,11 +285,11 @@ describe("the Game data section", () => {
 
   it("resets a game's data only once confirmed", async () => {
     await shown();
-    await click(labelled("Reset the data of Sonic 3"));
+    await click(await menuItem("More actions for Sonic 3", "Reset data"));
     expect(popUp()).toContain("Reset the data of “Sonic 3”?");
     await click(button("No, keep my data"));
     expect(asked("resetGameData")).toEqual([]);
-    await click(labelled("Reset the data of Sonic 3"));
+    await click(await menuItem("More actions for Sonic 3", "Reset data"));
     await click(button("Yes, reset"));
     expect(asked("resetGameData")).toEqual([["aaaa"]]);
     expect(container.textContent).toContain("Reset the data of “Sonic 3”.");

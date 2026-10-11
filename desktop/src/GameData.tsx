@@ -319,18 +319,6 @@ export function GameData() {
                           <Play size={18} />
                         </IconButton>
                         <IconButton
-                          label={`Reset the data of ${game.title}`}
-                          tip={
-                            game.running
-                              ? "Quit the game to reset its data."
-                              : "Reset its data. The game stays installed."
-                          }
-                          disabled={busy || game.running}
-                          onClick={() => setAsking({ kind: "reset", game })}
-                        >
-                          <RotateCcw size={18} />
-                        </IconButton>
-                        <IconButton
                           label={`Uninstall ${game.title}`}
                           tip={
                             game.running
@@ -344,7 +332,7 @@ export function GameData() {
                           <Trash2 size={18} />
                         </IconButton>
                         <ActionMenu
-                          label={`Update ${game.title}`}
+                          label={`More actions for ${game.title}`}
                           items={[
                             {
                               label: "Update core",
@@ -363,6 +351,16 @@ export function GameData() {
                               icon: <Cpu size={18} />,
                               disabled: busy || game.running,
                               onSelect: () => notBuilt("Update engine"),
+                            },
+                            "separator",
+                            {
+                              label: "Reset data",
+                              detail: game.running
+                                ? "Quit the game to reset its data."
+                                : "Reset its data. The game stays installed.",
+                              icon: <RotateCcw size={18} />,
+                              disabled: busy || game.running,
+                              onSelect: () => setAsking({ kind: "reset", game }),
                             },
                           ]}
                         />
