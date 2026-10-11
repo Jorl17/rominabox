@@ -458,9 +458,7 @@ fn an_export_with_achievements_reaches_its_accounts_folder_and_nothing_beside_it
     let mut value: serde_json::Value = serde_json::from_slice(&fs::read(&manifest).unwrap()).unwrap();
     value["components"][0]["capabilities"] = serde_json::json!({"achievements": true});
     fs::write(&manifest, serde_json::to_vec(&value).unwrap()).unwrap();
-    support::copy_tree(&repo_at("integrations/designs"), &kit.join("designs"));
-    support::copy_tree(&repo_at("integrations/parts"), &kit.join("parts"));
-    support::copy_tree(&repo_at("desktop/assets/controllers"), &kit.join("menu-assets"));
+    support::with_menu_assets(&kit);
     let mut settings = request(&root, b"rominabox-isolation-accounts-v1", "Accounts Probe", kit, "megadrive");
     settings.game.show_menu = true;
     settings.game.include_achievements = true;
