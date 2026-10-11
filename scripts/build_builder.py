@@ -4,6 +4,7 @@ and never start the builder or an emulator.
 
     uv run python scripts/build_builder.py
     uv run python scripts/build_builder.py --mac x86_64      # or arm64, or universal
+    uv run python scripts/build_builder.py --compile-only [--mac ...]
 
 On macOS, you choose the processors of the builder with --mac: arm64,
 x86_64, or universal for both. Without it, we build for this Mac's own processor. The
@@ -15,10 +16,17 @@ Build the kit and the preview renderer first: scripts/build_player.py for a
 player that ships, then scripts/build_kit.py with that build. What differs
 by platform is in PLATFORMS: how Tauri bundles the app and what we do to it
 afterwards. Everything else is the same everywhere.
+
+With --compile-only we compile the command line and the builder without the
+kit, and bundle nothing, so that the compiling can happen while the kit is
+built elsewhere. Any resource folder that is missing is made empty. A build
+afterwards, with the kit in place, then compiles only the builder's own crate
+again, and bundles.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import stat
@@ -152,8 +160,17 @@ def writable(folder: Path, pattern: str = "*") -> None:
             path.chmod(path.stat().st_mode | stat.S_IWRITE)
 
 
+def resource_folders() -> list[Path]:
+    """The folders that tauri.conf.json bundles as the builder's resources."""
+    config = json.loads((TAURI / "tauri.conf.json").read_text(encoding="utf-8"))
+    return [(TAURI / source).resolve() for source in config["bundle"]["resources"]]
+
+
 def main() -> int:
     arguments = sys.argv[1:]
+    compile_only = arguments[:1] == ["--compile-only"]
+    if compile_only:
+        arguments = arguments[1:]
     processors = None
     if arguments[:1] == ["--mac"] and len(arguments) == 2 and arguments[1] in MAC_CHOICES:
         processors = MAC_CHOICES[arguments[1]]
@@ -165,15 +182,19 @@ def main() -> int:
         raise SystemExit(f"the builder is not built for {target}")
     if processors and not target.startswith("macos-"):
         raise SystemExit("--mac chooses the processors of a builder built on a Mac")
-    if not (KIT / "manifest.json").is_file():
-        raise SystemExit(f"prepare the runtime kit first: no {KIT / 'manifest.json'}")
-    renderer = native_build.preview_resource(target)
-    if not renderer.is_file():
-        raise SystemExit(f"prepare the menu preview renderer first: no {renderer}")
+    if compile_only:
+        for folder in resource_folders():
+            folder.mkdir(parents=True, exist_ok=True)
+    else:
+        if not (KIT / "manifest.json").is_file():
+            raise SystemExit(f"prepare the runtime kit first: no {KIT / 'manifest.json'}")
+        renderer = native_build.preview_resource(target)
+        if not renderer.is_file():
+            raise SystemExit(f"prepare the menu preview renderer first: no {renderer}")
+        # We stage the assets of the kit the same way for every platform.
+        kit_assets.stage(KIT)
 
     built = cargo_output()
-    # We stage the assets of the kit the same way for every platform.
-    kit_assets.stage(KIT)
     writable(RESOURCES)
     if platform["staged"]:
         for profile in ("debug", "release"):
@@ -195,8 +216,12 @@ def main() -> int:
     if not npm:
         raise SystemExit("npm is not installed")
     target_arguments = ["--target", tauri_target(processors)] if processors else []
-    subprocess.run([npm, "run", "tauri", "build", "--", *platform["bundle"], *target_arguments],
+    bundle = ["--no-bundle"] if compile_only else platform["bundle"]
+    subprocess.run([npm, "run", "tauri", "build", "--", *bundle, *target_arguments],
                    cwd=ROOT / "desktop", check=True)
+    if compile_only:
+        print("Compiled the builder; build it again with the kit in place to bundle it.")
+        return 0
     print(f"Built {platform['finish'](built, processors)}")
     return 0
 

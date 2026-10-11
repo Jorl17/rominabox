@@ -11,6 +11,8 @@
 # On macOS we build three builders from one kit, each in a job of its own at
 # the same time: for arm64 (ROM-in-a-Box-<version>-macos.zip, the default
 # download), for Intel (-macos-intel.zip) and universal (-macos-universal.zip).
+# The builder jobs start with the kit job and compile while it runs, then wait
+# for the kit and bundle.
 # The steps that every build job starts with are in .github/actions/setup.
 #
 # Secrets: FORK_DEPLOY_KEY is a read-only key for the private RetroArch fork.
@@ -43,6 +45,8 @@ on:
 
 permissions:
   contents: write
+  # A Mac builder job looks in the run for the resources of the Mac kit.
+  actions: read
 
 jobs:
   windows:
@@ -106,7 +110,7 @@ jobs:
           retention-days: 1
 
   macos-builder:
-    needs: macos-kit
+    if: inputs.platforms != 'windows'
     strategy:
       fail-fast: false
       matrix:
@@ -136,6 +140,27 @@ jobs:
         with:
           platform: macos
           fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
+      - name: Compile the ${{ matrix.variant }} builder while the kit is built
+        run: |
+          (cd desktop && npm ci)
+          uv run python scripts/build_builder.py --compile-only --mac "${{ matrix.variant }}"
+      - name: Wait for the resources of the Mac kit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 120); do
+            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[].name' | grep -qx builder-resources-macos; then
+              exit 0
+            fi
+            ended=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --jq '.jobs[] | select(.name == "macos-kit") | .conclusion')
+            if [ -n "$ended" ] && [ "$ended" != success ]; then
+              echo "The Mac kit job ended with $ended."
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "The resources of the Mac kit were not there after 30 minutes."
+          exit 1
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: builder-resources-macos
