@@ -39,13 +39,7 @@ fn playstation(root: &Path, controls: serde_json::Value) -> ExportRequest {
     request.game.title = "Stick Export".into();
     request.game.show_menu = true;
     // We write the author's defaults in the menu, so the kit contains it.
-    for (from, to) in [
-        ("integrations/designs", "designs"),
-        ("integrations/parts", "parts"),
-        ("desktop/assets/controllers", "menu-assets"),
-    ] {
-        support::copy_tree(&rominabox_engine::repo::at(from), &request.runtime_kit.join(to));
-    }
+    support::with_menu_assets(&request.runtime_kit);
     request.game.controls = serde_json::from_value::<Controls>(controls).unwrap();
     request
 }

@@ -10,26 +10,10 @@ use std::{
     sync::atomic::AtomicBool,
 };
 
-/// The stand-in macOS kit with the Native design, the parts we compose it
-/// with, and a picture for every pad that the player can choose.
+/// The stand-in macOS kit with what we compose a menu from.
 fn fixture_kit(root: &Path) -> PathBuf {
     let kit = export_fixture::fixture_kit(root);
-    let design = rominabox_engine::repo::at("integrations/designs/native");
-    support::copy_tree(&design, &kit.join("designs/native"));
-    support::copy_tree(&rominabox_engine::repo::at("integrations/parts"), &kit.join("parts"));
-    fs::create_dir_all(kit.join("menu-assets")).unwrap();
-    // We read the scene template for the controls from the kit's shared
-    // menu-assets, not from the folder of the selected design.
-    fs::copy(design.join("menu.rml"), kit.join("menu-assets/menu.rml")).unwrap();
-    // Every pad that the player can choose in the picker, because an export
-    // contains them all. Without a drawing for each, the player could choose a
-    // pad, such as the six-button Mega Drive, that we would never show.
-    for entry in rominabox_engine::controls::variants_for_system("megadrive").unwrap() {
-        if !entry.image.is_empty() {
-            fs::write(kit.join("menu-assets").join(&entry.image), []).unwrap();
-        }
-    }
-    fs::write(kit.join("menu-assets/CONTROLLERS.txt"), []).unwrap();
+    support::with_menu_assets(&kit);
     kit
 }
 
