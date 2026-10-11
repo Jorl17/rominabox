@@ -16,6 +16,7 @@ import {
   RemoveGame,
   ResetGame,
   UninstallGame,
+  UpdateAllCores,
   UpdateCoreGame,
 } from "./GameDataDialogs";
 import { Help, IconButton } from "./Help";
@@ -28,6 +29,7 @@ type Asking =
   | { kind: "remove"; game: bridge.InstalledGame }
   | { kind: "reset"; game: bridge.InstalledGame }
   | { kind: "core"; game: bridge.InstalledGame }
+  | { kind: "allCores" }
   | { kind: "uninstall"; game: bridge.InstalledGame };
 
 /** What we say under the buttons after the last action. */
@@ -168,8 +170,33 @@ export function GameData() {
     });
   }
 
-  function notBuilt(action: string) {
-    setSaid({ text: `${action} is not built yet.`, failed: false });
+  /** Run `update` for every installed game that is not open, one after
+   * the other, and say what happened to each. `update` returns "current"
+   * for a game that needed nothing. */
+  function updateEvery(
+    update: (identity: string) => Promise<unknown>,
+    done: string,
+  ) {
+    void act(async () => {
+      const lines: string[] = [];
+      for (const game of installed) {
+        if (game.running) {
+          lines.push(`${quoted(game.title)} is open, so we left it.`);
+          continue;
+        }
+        try {
+          const result = await update(game.identity);
+          lines.push(
+            result === "current"
+              ? `${quoted(game.title)} already has the newest core.`
+              : `${done} ${quoted(game.title)}.`,
+          );
+        } catch (reason) {
+          lines.push(`${quoted(game.title)}: ${String(reason)}`);
+        }
+      }
+      return lines.join("\n");
+    });
   }
   const everyChosen = listed.length > 0 && chosen.size === listed.length;
   return (
@@ -209,7 +236,7 @@ export function GameData() {
                   "Update the emulator core of every game to the latest version, if there is one.",
                 icon: <CloudDownload size={18} />,
                 disabled: busy || installed.length === 0,
-                onSelect: () => notBuilt("Update all cores"),
+                onSelect: () => setAsking({ kind: "allCores" }),
               },
               {
                 label: "Update all engines",
@@ -217,7 +244,8 @@ export function GameData() {
                   "Update the ROM-in-a-Box engine of every game for the latest features.",
                 icon: <Cpu size={18} />,
                 disabled: busy || installed.length === 0,
-                onSelect: () => notBuilt("Update all engines"),
+                onSelect: () =>
+                  updateEvery(bridge.updateEngine, "Updated the engine of"),
               },
             ]}
           />
@@ -451,6 +479,15 @@ export function GameData() {
               await bridge.resetGameData(asking.game.identity);
               return `Reset the data of ${quoted(asking.game.title)}.`;
             });
+          }}
+        />
+      )}
+      {asking?.kind === "allCores" && (
+        <UpdateAllCores
+          close={() => setAsking(null)}
+          confirm={() => {
+            setAsking(null);
+            updateEvery(bridge.updateCore, "Updated the core of");
           }}
         />
       )}

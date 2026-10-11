@@ -335,6 +335,30 @@ describe("the Game data section", () => {
     expect(container.textContent).toContain("Updated the engine of “Sonic 3”.");
   });
 
+  it("updates the core of every installed game that is not open, once the player accepts the warning, and says what happened to each", async () => {
+    await shown();
+    await click(await menuItem("Update every game", "Update all cores"));
+    expect(popUp()).toContain(
+      "Save states made with the current cores might not load with the new ones.",
+    );
+    await click(button("Cancel"));
+    expect(asked("updateCore")).toEqual([]);
+    await click(await menuItem("Update every game", "Update all cores"));
+    await click(button("Update all cores"));
+    expect(asked("updateCore")).toEqual([["aaaa"]]);
+    expect(container.textContent).toContain(
+      "“Pokemon Gold” is open, so we left it.",
+    );
+    expect(container.textContent).toContain("Updated the core of “Sonic 3”.");
+  });
+
+  it("updates the engine of every installed game that is not open", async () => {
+    await shown();
+    await click(await menuItem("Update every game", "Update all engines"));
+    expect(asked("updateEngine")).toEqual([["aaaa"]]);
+    expect(container.textContent).toContain("Updated the engine of “Sonic 3”.");
+  });
+
   it("uninstalls a game only once confirmed, naming its app", async () => {
     await shown();
     await click(labelled("Uninstall Sonic 3"));

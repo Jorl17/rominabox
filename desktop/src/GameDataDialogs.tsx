@@ -263,6 +263,30 @@ export function UpdateCoreGame({
   );
 }
 
+/** The pop-up before we put the newest core into every game. */
+export function UpdateAllCores({
+  close,
+  confirm,
+}: {
+  close: () => void;
+  confirm: () => void;
+}) {
+  return (
+    <Confirm
+      title="Update the core of every game?"
+      keep="Cancel"
+      action="Update all cores"
+      close={close}
+      confirm={confirm}
+    >
+      <p>
+        Save states made with the current cores might not load with the new
+        ones.
+      </p>
+    </Confirm>
+  );
+}
+
 /** The pop-up before we uninstall a game: its app and all of its data. */
 export function UninstallGame({
   game,
