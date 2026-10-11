@@ -396,6 +396,12 @@ async fn game_update_core(app: tauri::AppHandle, identity: String) -> Result<gam
     with_library(move |library| builder::update_core(&library, &identity, &kit, &places)).await
 }
 
+#[tauri::command]
+async fn game_update_engine(app: tauri::AppHandle, identity: String) -> Result<(), String> {
+    let kit = resource(&app, "runtime")?;
+    with_library(move |library| library.update_engine(&identity, &kit)).await
+}
+
 /// Wait for a press on a controller and return its pad position.
 #[tauri::command]
 async fn capture_pad_position(seconds: u64) -> Result<Option<String>, String> {
@@ -600,7 +606,8 @@ fn main() {
             game_data_reset,
             game_uninstall,
             game_play,
-            game_update_core
+            game_update_core,
+            game_update_engine
         ])
         .run(context)
         .expect("failed to run ROM-in-a-Box desktop shell");

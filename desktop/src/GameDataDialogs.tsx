@@ -256,7 +256,9 @@ export function UpdateCoreGame({
       close={close}
       confirm={confirm}
     >
-      <p>Save states made with the current core might not load with the new one.</p>
+      <p>
+        Save states made with the current core might not load with the new one.
+      </p>
     </Confirm>
   );
 }

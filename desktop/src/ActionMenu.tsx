@@ -17,7 +17,13 @@ export type MenuItem =
 
 /** A vertical ellipsis that opens a list of actions under it. A click
  * outside, Escape or a choice closes it. */
-export function ActionMenu({ label, items }: { label: string; items: MenuItem[] }) {
+export function ActionMenu({
+  label,
+  items,
+}: {
+  label: string;
+  items: MenuItem[];
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
 
@@ -38,7 +44,11 @@ export function ActionMenu({ label, items }: { label: string; items: MenuItem[] 
   }, [open]);
 
   return (
-    <span className="action-menu" ref={root} onClick={(event) => event.stopPropagation()}>
+    <span
+      className="action-menu"
+      ref={root}
+      onClick={(event) => event.stopPropagation()}
+    >
       <button
         type="button"
         className="icon-button"
@@ -53,23 +63,33 @@ export function ActionMenu({ label, items }: { label: string; items: MenuItem[] 
         <div className="action-menu-list" role="menu" aria-label={label}>
           {items.map((item, index) =>
             item === "separator" ? (
-              <div key={index} className="action-menu-separator" role="separator" />
+              <div
+                key={index}
+                className="action-menu-separator"
+                role="separator"
+              />
             ) : (
               <button
                 key={item.label}
                 type="button"
                 role="menuitem"
-                className={item.danger ? "action-menu-item danger" : "action-menu-item"}
+                className={
+                  item.danger ? "action-menu-item danger" : "action-menu-item"
+                }
                 disabled={item.disabled}
                 onClick={() => {
                   setOpen(false);
                   item.onSelect();
                 }}
               >
-                {item.icon && <span className="action-menu-icon">{item.icon}</span>}
+                {item.icon && (
+                  <span className="action-menu-icon">{item.icon}</span>
+                )}
                 <span className="action-menu-words">
                   <span className="action-menu-label">{item.label}</span>
-                  {item.detail && <span className="action-menu-detail">{item.detail}</span>}
+                  {item.detail && (
+                    <span className="action-menu-detail">{item.detail}</span>
+                  )}
                 </span>
               </button>
             ),

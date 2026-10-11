@@ -117,7 +117,8 @@ pub(super) fn prepare_core<F>(
 where
     F: FnMut(ExportProgress),
 {
-    let Some(resolved) = resolved else {
+    // An explicit core is the one we ship, so we fetch none.
+    let (Some(resolved), None) = (resolved, &request.core) else {
         return Ok(());
     };
     let wanted: Vec<_> = resolved

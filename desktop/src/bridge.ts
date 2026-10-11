@@ -686,6 +686,12 @@ export function updateCore(identity: string): Promise<CoreUpdate> {
     ? invoke("game_update_core", { identity })
     : Promise.resolve("current");
 }
+/** Build the game `identity` again from its recipe with the builder's engine. */
+export function updateEngine(identity: string): Promise<void> {
+  return native
+    ? invoke("game_update_engine", { identity })
+    : Promise.resolve();
+}
 /** Open the game `identity`, as a double click on its app does. */
 export function playGame(identity: string): Promise<void> {
   return native ? invoke("game_play", { identity }) : Promise.resolve();

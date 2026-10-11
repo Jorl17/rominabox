@@ -487,6 +487,7 @@ fn export_ships_the_profiles_and_the_launcher_seeds_them() {
         core: None,
         core_cache: None,
         accounts_folder: None,
+        identity: None,
     };
     let cancelled = AtomicBool::new(false);
     let result = rominabox_engine::packaging::export_game(&request, &cancelled, |_| {}).unwrap();

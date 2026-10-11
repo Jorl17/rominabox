@@ -22,6 +22,7 @@ impl Game {
             core,
             core_cache: None,
             accounts_folder: None,
+            identity: None,
         }
     }
 }

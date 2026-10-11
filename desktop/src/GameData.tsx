@@ -1,4 +1,11 @@
-import { CloudDownload, Cpu, LoaderCircle, Play, RotateCcw, Trash2 } from "lucide-react";
+import {
+  CloudDownload,
+  Cpu,
+  LoaderCircle,
+  Play,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { ActionMenu } from "./ActionMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as bridge from "./bridge";
@@ -149,9 +156,16 @@ export function GameData() {
   const installed = listed.filter((game) => game.appPresent);
 
   function play(game: bridge.InstalledGame) {
-    bridge.playGame(game.identity).catch((error) =>
-      setSaid({ text: String(error), failed: true }),
-    );
+    bridge
+      .playGame(game.identity)
+      .catch((error) => setSaid({ text: String(error), failed: true }));
+  }
+
+  function updateEngine(game: bridge.InstalledGame) {
+    void act(async () => {
+      await bridge.updateEngine(game.identity);
+      return `Updated the engine of ${quoted(game.title)}.`;
+    });
   }
 
   function notBuilt(action: string) {
@@ -191,14 +205,16 @@ export function GameData() {
             items={[
               {
                 label: "Update all cores",
-                detail: "Update the emulator core of every game to the latest version, if there is one.",
+                detail:
+                  "Update the emulator core of every game to the latest version, if there is one.",
                 icon: <CloudDownload size={18} />,
                 disabled: busy || installed.length === 0,
                 onSelect: () => notBuilt("Update all cores"),
               },
               {
                 label: "Update all engines",
-                detail: "Update the ROM-in-a-Box engine of every game for the latest features.",
+                detail:
+                  "Update the ROM-in-a-Box engine of every game for the latest features.",
                 icon: <Cpu size={18} />,
                 disabled: busy || installed.length === 0,
                 onSelect: () => notBuilt("Update all engines"),
@@ -352,7 +368,7 @@ export function GameData() {
                                 : "Update the ROM-in-a-Box engine for the latest features.",
                               icon: <Cpu size={18} />,
                               disabled: busy || game.running,
-                              onSelect: () => notBuilt("Update engine"),
+                              onSelect: () => updateEngine(game),
                             },
                             "separator",
                             {
@@ -362,7 +378,8 @@ export function GameData() {
                                 : "Reset its data. The game stays installed.",
                               icon: <RotateCcw size={18} />,
                               disabled: busy || game.running,
-                              onSelect: () => setAsking({ kind: "reset", game }),
+                              onSelect: () =>
+                                setAsking({ kind: "reset", game }),
                             },
                           ]}
                         />

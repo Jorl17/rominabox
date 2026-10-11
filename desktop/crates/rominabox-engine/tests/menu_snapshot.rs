@@ -170,6 +170,7 @@ fn request(root: &Path, kit: &Path, case: &Case) -> ExportRequest {
         core: None,
         core_cache: None,
         accounts_folder: None,
+        identity: None,
     };
     match case.menu {
         Menu::Default => {}

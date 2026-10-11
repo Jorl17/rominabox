@@ -17,6 +17,7 @@ mod launch_plan;
 mod legal;
 mod macos;
 mod macos_minimum;
+pub(crate) mod recipe;
 mod slices;
 mod windows;
 mod windows_pack;
@@ -242,7 +243,11 @@ pub struct ExportRequest {
     /// achievements. When absent, we use the folder in ROMINABOX_ACCOUNTS_FOLDER,
     /// or else the one that `achievements::accounts_folder` returns.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub accounts_folder: Option<String>,
+    pub accounts_folder: Option<String>,    /// The identity of a game we build again from its recipe, which keeps the
+    /// identity it had. Otherwise we compute it from the game's files. No
+    /// request from outside the engine sets it.
+    #[serde(skip)]
+    pub identity: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -601,13 +606,16 @@ where
         0.55,
         "Writing isolated game configuration",
     );
-    let identity = stable_identity(
-        &request.game.rom,
-        &collected_content.patches(),
-        &request.game.system,
-        &request.game.title,
-        isolation_namespace().as_deref(),
-    )?;
+    let identity = match &request.identity {
+        Some(identity) => identity.clone(),
+        None => stable_identity(
+            &request.game.rom,
+            &collected_content.patches(),
+            &request.game.system,
+            &request.game.title,
+            isolation_namespace().as_deref(),
+        )?,
+    };
     packager.install_launcher(&request.runtime_kit)?;
     write_launch_plan(
         &resources.join(app_file!(Plan)),
@@ -646,6 +654,7 @@ where
         serde_json::to_vec_pretty(&manifest).unwrap(),
     )
     .map_err(|error| ExportError::io(ErrorStage::Configure, &resources.join("game.json"), error))?;
+    recipe::write(request, &identity, &resources, &rom_relative, &collected_content, system)?;
     packager.describe(request, &identity, staging.path())?;
     check_cancelled(cancelled)?;
 

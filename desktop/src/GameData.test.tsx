@@ -41,6 +41,7 @@ vi.mock("./bridge", async (importOriginal) => {
     uninstallGame: called("uninstallGame", () => undefined),
     playGame: called("playGame", () => undefined),
     updateCore: called("updateCore", () => engine.coreUpdate),
+    updateEngine: called("updateEngine", () => undefined),
   };
 });
 
@@ -133,10 +134,16 @@ async function click(element: HTMLElement) {
   await act(async () => element.click());
 }
 /** The entry `label` in the menu `menu`, once we have opened the menu. */
-async function menuItem(menu: string, label: string): Promise<HTMLButtonElement> {
+async function menuItem(
+  menu: string,
+  label: string,
+): Promise<HTMLButtonElement> {
   await click(labelled(menu));
-  const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
-    (element) => element.querySelector(".action-menu-label")?.textContent === label,
+  const item = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find(
+    (element) =>
+      element.querySelector(".action-menu-label")?.textContent === label,
   );
   if (!item) throw new Error(`no entry ${label} in ${menu}`);
   return item;
@@ -165,7 +172,9 @@ describe("the Game data section", () => {
       "Uninstall Sonic 3",
       "More actions for Sonic 3",
     ]);
-    expect((await menuItem("More actions for Pokemon Gold", "Reset data")).disabled).toBe(true);
+    expect(
+      (await menuItem("More actions for Pokemon Gold", "Reset data")).disabled,
+    ).toBe(true);
     expect(labelled("Uninstall Pokemon Gold").disabled).toBe(true);
     const icon = container.querySelector<HTMLImageElement>("tbody img");
     expect(icon?.getAttribute("src")).toBe("blob:/data/aaaa/game-icon.png");
@@ -302,7 +311,9 @@ describe("the Game data section", () => {
     await shown();
     await click(await menuItem("More actions for Sonic 3", "Update core"));
     expect(popUp()).toContain("Update the core of “Sonic 3”?");
-    expect(popUp()).toContain("Save states made with the current core might not load with the new one.");
+    expect(popUp()).toContain(
+      "Save states made with the current core might not load with the new one.",
+    );
     await click(button("Cancel"));
     expect(asked("updateCore")).toEqual([]);
     await click(await menuItem("More actions for Sonic 3", "Update core"));
@@ -312,7 +323,16 @@ describe("the Game data section", () => {
     engine.coreUpdate = "current";
     await click(await menuItem("More actions for Sonic 3", "Update core"));
     await click(button("Update core"));
-    expect(container.textContent).toContain("“Sonic 3” already has the newest core.");
+    expect(container.textContent).toContain(
+      "“Sonic 3” already has the newest core.",
+    );
+  });
+
+  it("builds a game again with the builder's engine", async () => {
+    await shown();
+    await click(await menuItem("More actions for Sonic 3", "Update engine"));
+    expect(asked("updateEngine")).toEqual([["aaaa"]]);
+    expect(container.textContent).toContain("Updated the engine of “Sonic 3”.");
   });
 
   it("uninstalls a game only once confirmed, naming its app", async () => {

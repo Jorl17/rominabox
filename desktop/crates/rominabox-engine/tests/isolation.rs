@@ -118,6 +118,7 @@ fn request(
         core: None,
         core_cache: None,
         accounts_folder: None,
+        identity: None,
     }
 }
 

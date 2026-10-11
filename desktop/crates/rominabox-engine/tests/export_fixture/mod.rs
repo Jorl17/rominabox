@@ -136,6 +136,7 @@ pub fn export_request_from(root: &Path, runtime_kit: PathBuf) -> ExportRequest {
         core: None,
         core_cache: None,
         accounts_folder: None,
+        identity: None,
     }
 }
 

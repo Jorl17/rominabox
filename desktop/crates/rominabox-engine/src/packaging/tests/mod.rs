@@ -26,6 +26,7 @@ fn request(splash: bool) -> ExportRequest {
         core: None,
         core_cache: None,
         accounts_folder: None,
+        identity: None,
     }
 }
 
