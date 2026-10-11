@@ -223,7 +223,7 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 24
-        package-manager-cache: false
+          package-manager-cache: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: release-*
@@ -279,6 +279,8 @@ jobs:
             echo "- \`$setup\`: the installer for Windows."
             echo
             echo "The Windows installer is not signed with a code-signing certificate, so Microsoft Defender SmartScreen may warn that it comes from an unknown publisher and call it dangerous. It is safe to run: choose **More info**, then **Run anyway**."
+            echo
+            echo "From 0.5.0 on, ROM-in-a-Box updates itself: when a newer version is out, you see **Update to …** at the top of the window. From an older version, download this one by hand once."
             echo
             echo "Games for the other platform are made from the runtime kit of that platform in the release \`$kit\`, which is downloaded on first use."
             echo
