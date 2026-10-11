@@ -313,29 +313,7 @@ fn a_running_windows_game_is_neither_imported_into_nor_reset_nor_uninstalled() {
 /// Mac a bundle with its identifier in its Info.plist, and on Windows one
 /// program with the game's runtime folder in its packed index.
 fn app_of(layout: Layout, identity: &str, app: &Path) {
-    match layout {
-        Layout::Macos => {
-            fs::create_dir_all(app.join("Contents")).unwrap();
-            fs::write(
-                app.join("Contents/Info.plist"),
-                format!("<dict><key>CFBundleIdentifier</key><string>{}</string></dict>", bundle_identifier(identity)),
-            )
-            .unwrap();
-        }
-        Layout::Windows => {
-            let runtime = format!("{}-0123abcd", runtime_folder(identity));
-            let mut program = b"MZ the launcher".to_vec();
-            let index_at = program.len() as u64;
-            program.extend_from_slice(b"RIBPACK1");
-            program.extend_from_slice(&(runtime.len() as u16).to_le_bytes());
-            program.extend_from_slice(runtime.as_bytes());
-            let index_length = program.len() as u64 - index_at;
-            program.extend_from_slice(&index_at.to_le_bytes());
-            program.extend_from_slice(&index_length.to_le_bytes());
-            program.extend_from_slice(b"RIBTAIL1");
-            fs::write(app, program).unwrap();
-        }
-    }
+    stand_in_app(layout, identity, app).unwrap();
 }
 
 /// The path of a game's app for `layout`.

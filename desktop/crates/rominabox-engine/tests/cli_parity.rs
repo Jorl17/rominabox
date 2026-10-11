@@ -344,7 +344,8 @@ fn game_data_commands_print_what_the_builders_section_shows() {
     };
     let sonic = installed_game(&library, "aaaaaaaaaaaaaaaaaaaaaaaa", "Sonic 3", &root.join("Sonic 3.app"));
     let knuckles = installed_game(&library, "bbbbbbbbbbbbbbbbbbbbbbbb", "Knuckles", &root.join("Knuckles.app"));
-    fs::create_dir_all(&knuckles.app).unwrap();
+    rominabox_engine::game_library::stand_in_app(Layout::of_host().unwrap(), &knuckles.identity, Path::new(&knuckles.app))
+        .unwrap();
 
     let listed = result("games", Some(&request(json!({}))));
     assert_eq!(listed["games"], serde_json::to_value(library.games()).unwrap());

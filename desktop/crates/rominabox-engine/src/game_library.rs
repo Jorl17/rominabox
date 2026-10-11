@@ -491,5 +491,36 @@ fn running(_app: &Path) -> bool {
 mod update;
 pub use update::CoreUpdate;
 
+/// A stand-in for the app of the game `identity` at `app`, for tests, with
+/// what `Layout::is_app_of` reads: on a Mac a bundle with the game's bundle
+/// identifier, and on Windows a program that we pack with the game's runtime
+/// folder, as an export packs one. On Windows we lay out what we pack in a
+/// folder beside `app`.
+#[doc(hidden)]
+pub fn stand_in_app(layout: Layout, identity: &str, app: &Path) -> Result<(), String> {
+    let failed = |error: io::Error| format!("{}: {error}", app.display());
+    match layout {
+        Layout::Macos => {
+            fs::create_dir_all(app.join("Contents")).map_err(failed)?;
+            let plist = format!("<dict><key>CFBundleIdentifier</key><string>{}</string></dict>", bundle_identifier(identity));
+            fs::write(app.join("Contents/Info.plist"), plist).map_err(failed)
+        }
+        Layout::Windows => {
+            let folder = app.with_extension("laid-out");
+            let launcher = folder.join("launcher.exe");
+            fs::create_dir_all(folder.join("Resources")).map_err(failed)?;
+            fs::write(&launcher, b"MZ a stand-in launcher").map_err(failed)?;
+            crate::packaging::pack_windows_game(
+                &folder,
+                &launcher,
+                &runtime_folder(identity),
+                app,
+                &std::sync::atomic::AtomicBool::new(false),
+            )
+            .map_err(|error| error.message)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;
