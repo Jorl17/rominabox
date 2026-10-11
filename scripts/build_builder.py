@@ -5,6 +5,7 @@ and never start the builder or an emulator.
     uv run python scripts/build_builder.py
     uv run python scripts/build_builder.py --mac x86_64      # or arm64, or universal
     uv run python scripts/build_builder.py --compile-only [--mac ...]
+    uv run python scripts/build_builder.py --merge-universal ARM64.app X86_64.app OUT.app
 
 On macOS, you choose the processors of the builder with --mac: arm64,
 x86_64, or universal for both. Without it, we build for this Mac's own processor. The
@@ -22,6 +23,11 @@ kit, and bundle nothing, so that the compiling can happen while the kit is
 built elsewhere. Any resource folder that is missing is made empty. A build
 afterwards, with the kit in place, then compiles only the builder's own crate
 again, and bundles.
+
+With --merge-universal we make the universal builder from an arm64 and an
+Intel builder: we join the two slices of each program in them, which differs
+only in its processor, and sign the result as a build signs it. This is what
+Tauri does for a universal build, without compiling both again.
 """
 
 from __future__ import annotations
@@ -89,17 +95,23 @@ def thin_preview(app: Path, processors: list[Architecture]) -> None:
 
 
 def macos_finish(built: Path, processors: list[Architecture] | None = None) -> Path:
-    """The .app, signed after Tauri copied the resources in: each actual Mach-O
-    leaf first, including libraries without the execute bit, then the bundle.
-    --deep signing is no substitute. When ROMINABOX_SIGN_IDENTITY is set to a
-    Developer ID certificate in the keychain, we sign with that certificate,
-    the hardened runtime and a timestamp, as required for notarization. When
-    it is unset, we sign ad hoc."""
+    """The .app, signed after Tauri copied the resources in."""
     app = bundle_folder(built, processors) / "bundle/macos" / f"{PRODUCT}.app"
     if not app.is_dir():
         raise SystemExit(f"missing builder bundle: {app}")
     if processors:
         thin_preview(app, processors)
+    sign_app(app)
+    return app
+
+
+def sign_app(app: Path) -> None:
+    """Sign the builder `app`: each actual Mach-O leaf first, including
+    libraries without the execute bit, then the bundle. --deep signing is no
+    substitute. When ROMINABOX_SIGN_IDENTITY is set to a Developer ID
+    certificate in the keychain, we sign with that certificate, the hardened
+    runtime and a timestamp, as required for notarization. When it is unset,
+    we sign ad hoc."""
     identity = os.environ.get("ROMINABOX_SIGN_IDENTITY", "")
     sign = ["/usr/bin/codesign", "--force", "--sign", identity or "-"]
     if identity:
@@ -111,7 +123,44 @@ def macos_finish(built: Path, processors: list[Architecture] | None = None) -> P
             subprocess.run([*sign, "--", str(path)], check=True)
     subprocess.run([*sign, "--", str(app)], check=True)
     subprocess.run(["/usr/bin/codesign", "--verify", "--deep", "--strict", "--", str(app)], check=True)
-    return app
+
+
+def processors_of(program: Path) -> list[str]:
+    """The processors that `program` has code for, as lipo names them, sorted."""
+    listed = subprocess.run(["lipo", "-archs", str(program)], capture_output=True, text=True, check=True)
+    return sorted(listed.stdout.split())
+
+
+def merge_universal(arm: Path, intel: Path, out: Path) -> Path:
+    """The universal builder `out`, from the arm64 builder `arm` and the Intel
+    builder `intel`. Each Mach-O in them is either one slice in each, which we
+    join, or for the same processors in both, such as the universal player of
+    the kit, which differs only in its signature and which we keep from `arm`.
+    We refuse any other difference, because the two must be the same build,
+    and sign the result again."""
+    if out.exists():
+        raise SystemExit(f"refusing to replace {out}")
+    shutil.copytree(arm, out, symlinks=True)
+    arm_files = {path.relative_to(arm) for path in arm.rglob("*") if path.is_file() and not path.is_symlink()}
+    intel_files = {path.relative_to(intel) for path in intel.rglob("*") if path.is_file() and not path.is_symlink()}
+    if arm_files != intel_files:
+        raise SystemExit(f"the two builders have other files: {sorted(map(str, arm_files ^ intel_files))[:10]}")
+    for relative in sorted(arm_files):
+        if relative.parts[:2] == ("Contents", "_CodeSignature"):
+            continue
+        ours, theirs = arm / relative, intel / relative
+        if ours.read_bytes() == theirs.read_bytes():
+            continue
+        if not (mach_o(ours) and mach_o(theirs)):
+            raise SystemExit(f"{relative} differs between the two builders")
+        pair = (processors_of(ours), processors_of(theirs))
+        if pair[0] == pair[1]:
+            continue
+        if pair != (["arm64"], ["x86_64"]):
+            raise SystemExit(f"{relative} is for {pair[0]} and {pair[1]}")
+        subprocess.run(["lipo", "-create", "-output", str(out / relative), str(ours), str(theirs)], check=True)
+    sign_app(out)
+    return out
 
 
 def windows_finish(built: Path, processors: list[Architecture] | None = None) -> Path:
@@ -168,6 +217,9 @@ def resource_folders() -> list[Path]:
 
 def main() -> int:
     arguments = sys.argv[1:]
+    if arguments[:1] == ["--merge-universal"] and len(arguments) == 4:
+        print(f"Built {merge_universal(*(Path(argument) for argument in arguments[1:]))}")
+        return 0
     compile_only = arguments[:1] == ["--compile-only"]
     if compile_only:
         arguments = arguments[1:]

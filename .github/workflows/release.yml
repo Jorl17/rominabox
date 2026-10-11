@@ -11,8 +11,9 @@
 # On macOS we build three builders from one kit, each in a job of its own at
 # the same time: for arm64 (ROM-in-a-Box-<version>-macos.zip, the default
 # download), for Intel (-macos-intel.zip) and universal (-macos-universal.zip).
-# The builder jobs start with the kit job and compile while it runs, then wait
-# for the kit and bundle.
+# The arm64 and Intel builder jobs start with the kit job and compile while it
+# runs, then wait for the kit and bundle. We join those two into the universal
+# builder without compiling again.
 # The steps that every build job starts with are in .github/actions/setup.
 #
 # Secrets: FORK_DEPLOY_KEY is a read-only key for the private RetroArch fork.
@@ -115,27 +116,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { variant: arm64, triple: aarch64-apple-darwin, processors: "arm64", file: macos, key: darwin-aarch64 }
-          - { variant: x86_64, triple: x86_64-apple-darwin, processors: "x86_64", file: macos-intel, key: darwin-x86_64 }
-          - { variant: universal, triple: universal-apple-darwin, processors: "arm64 x86_64", file: macos-universal, key: darwin-universal }
+          - { variant: arm64, triple: aarch64-apple-darwin, file: macos, key: darwin-aarch64 }
+          - { variant: x86_64, triple: x86_64-apple-darwin, file: macos-intel, key: darwin-x86_64 }
     runs-on: macos-latest
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      # Each secret goes only to the steps that use it. The later steps test
-      # these outputs instead of the secrets.
-      - name: Check which Apple secrets are set
-        id: signing
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
-        run: |
-          echo "apple=$([ -n "$MACOS_CERTIFICATE" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
-          echo "notarize=$([ -n "$MACOS_CERTIFICATE" ] && [ -n "$NOTARY_KEY" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
-
       - uses: ./.github/actions/setup
         with:
           platform: macos
@@ -167,57 +155,87 @@ jobs:
           path: ${{ runner.temp }}
       - name: Put the kit's resources in place
         run: tar -xzf "$RUNNER_TEMP/builder-resources.tar.gz" -C desktop/src-tauri
-
-      - name: Import the Developer ID certificate
-        if: steps.signing.outputs.apple == 'yes'
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      - uses: ./.github/actions/developer-id
+        with:
+          certificate: ${{ secrets.MACOS_CERTIFICATE }}
+          certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          notary-key: ${{ secrets.NOTARY_KEY }}
+      - name: Build and check the ${{ matrix.variant }} builder
         run: |
-          keychain="$RUNNER_TEMP/release.keychain-db"
-          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
-          security create-keychain -p release "$keychain"
-          security set-keychain-settings "$keychain"
-          security unlock-keychain -p release "$keychain"
-          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k release "$keychain" > /dev/null
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
-          identity=$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')
-          test -n "$identity" || { echo "MACOS_CERTIFICATE contains no Developer ID Application certificate"; exit 1; }
-          echo "ROMINABOX_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
-
-      - name: Build, check and notarize the ${{ matrix.variant }} builder
+          (cd desktop && npm ci)
+          uv run python scripts/build_builder.py --mac "${{ matrix.variant }}"
+          app="desktop/target/${{ matrix.triple }}/release/bundle/macos/ROM-in-a-Box.app"
+          uv run python scripts/mac_release.py check "$app" "${{ matrix.variant }}"
+          echo "BUILDER_APP=$app" >> "$GITHUB_ENV"
+          # The signed builder before notarization, from which we make the
+          # universal builder.
+          tar -czf "$RUNNER_TEMP/builder-${{ matrix.variant }}.tar.gz" -C "$(dirname "$app")" "$(basename "$app")"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mac-builder-${{ matrix.variant }}
+          path: ${{ runner.temp }}/builder-${{ matrix.variant }}.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+      - name: Notarize and pack the ${{ matrix.variant }} builder
         env:
-          NOTARIZE: ${{ steps.signing.outputs.notarize }}
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
         run: |
-          (cd desktop && npm ci)
           version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
-          mkdir -p release/installers
-          uv run python scripts/build_builder.py --mac "${{ matrix.variant }}"
-          app="desktop/target/${{ matrix.triple }}/release/bundle/macos/ROM-in-a-Box.app"
-          for program in "$app"/Contents/MacOS/* "$app/Contents/Resources/bin/rominabox-cli" "$app/Contents/Resources/preview/rml-preview"; do
-            held=$(lipo -archs "$program" | tr ' ' '\n' | sort | xargs)
-            test "$held" = "${{ matrix.processors }}" || { echo "$program holds $held, not ${{ matrix.processors }}"; exit 1; }
-          done
-          if [ "$NOTARIZE" = yes ]; then
-            echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
-            ditto -c -k --keepParent "$app" "$RUNNER_TEMP/notarize.zip"
-            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
-              --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
-            xcrun stapler staple "$app"
-            # The update package, only of a notarized builder, without the
-            # extended attributes and resource forks of macOS.
-            package=$(uv run python scripts/update_manifest.py package "${{ matrix.key }}" "$version")
-            COPYFILE_DISABLE=1 tar --no-mac-metadata -czf "release/installers/$package" -C "$(dirname "$app")" "$(basename "$app")"
-          fi
-          ditto -c -k --keepParent "$app" "release/installers/ROM-in-a-Box-${version}-${{ matrix.file }}.zip"
+          uv run python scripts/mac_release.py pack "$BUILDER_APP" "${{ matrix.file }}" "${{ matrix.key }}" "$version" release/installers
           ls -la release/installers
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-macos-${{ matrix.variant }}
+          path: release/
+          if-no-files-found: error
+
+  # The universal builder, made from the arm64 and Intel builders without
+  # compiling again, as Tauri makes one: we join the two slices of each
+  # program and sign the result (scripts/build_builder.py --merge-universal).
+  macos-universal:
+    needs: macos-builder
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: mac-builder-*
+          path: ${{ runner.temp }}
+          merge-multiple: true
+      - uses: ./.github/actions/developer-id
+        with:
+          certificate: ${{ secrets.MACOS_CERTIFICATE }}
+          certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          notary-key: ${{ secrets.NOTARY_KEY }}
+      - name: Join the arm64 and Intel builders into the universal builder
+        run: |
+          for variant in arm64 x86_64; do
+            mkdir -p "$RUNNER_TEMP/$variant"
+            tar -xzf "$RUNNER_TEMP/builder-$variant.tar.gz" -C "$RUNNER_TEMP/$variant"
+          done
+          app="$RUNNER_TEMP/universal/ROM-in-a-Box.app"
+          uv run python scripts/build_builder.py --merge-universal \
+            "$RUNNER_TEMP/arm64/ROM-in-a-Box.app" "$RUNNER_TEMP/x86_64/ROM-in-a-Box.app" "$app"
+          uv run python scripts/mac_release.py check "$app" arm64 x86_64
+          echo "BUILDER_APP=$app" >> "$GITHUB_ENV"
+      - name: Notarize and pack the universal builder
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: |
+          version=$(uv run python -c "import json; print(json.load(open('desktop/src-tauri/tauri.conf.json'))['version'])")
+          uv run python scripts/mac_release.py pack "$BUILDER_APP" macos-universal darwin-universal "$version" release/installers
+          ls -la release/installers
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-macos-universal
           path: release/
           if-no-files-found: error
 
@@ -228,7 +246,7 @@ jobs:
   # runs again without the builds. We run the Tauri command line that npm ci
   # installs from package-lock.json, never one that npx could fetch.
   sign:
-    needs: [windows, macos-builder]
+    needs: [windows, macos-universal]
     # A run by hand for one platform skips the other platform's jobs.
     if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest

@@ -1,0 +1,43 @@
+# The Developer ID certificate in a keychain of its own, for signing a Mac
+# builder (ROMINABOX_SIGN_IDENTITY, scripts/build_builder.py), and NOTARIZE
+# set to "yes" when we can also notarize it (scripts/mac_release.py). Without
+# a certificate, we sign ad hoc and notarize nothing.
+name: Set up the Developer ID
+description: Import the Developer ID certificate, and say whether we can notarize.
+inputs:
+  certificate:
+    description: The certificate and its key, as a base64 .p12
+    required: true
+  certificate-password:
+    description: The password of the .p12
+    required: true
+  notary-key:
+    description: The App Store Connect key, only to know whether it is set
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Say whether we can notarize
+      shell: bash
+      env:
+        MACOS_CERTIFICATE: ${{ inputs.certificate }}
+        NOTARY_KEY: ${{ inputs.notary-key }}
+      run: echo "NOTARIZE=$([ -n "$MACOS_CERTIFICATE" ] && [ -n "$NOTARY_KEY" ] && echo yes || echo no)" >> "$GITHUB_ENV"
+    - name: Import the Developer ID certificate
+      if: inputs.certificate != ''
+      shell: bash
+      env:
+        MACOS_CERTIFICATE: ${{ inputs.certificate }}
+        MACOS_CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
+      run: |
+        keychain="$RUNNER_TEMP/release.keychain-db"
+        echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+        security create-keychain -p release "$keychain"
+        security set-keychain-settings "$keychain"
+        security unlock-keychain -p release "$keychain"
+        security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple: -s -k release "$keychain" > /dev/null
+        security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+        identity=$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')
+        test -n "$identity" || { echo "MACOS_CERTIFICATE contains no Developer ID Application certificate"; exit 1; }
+        echo "ROMINABOX_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
