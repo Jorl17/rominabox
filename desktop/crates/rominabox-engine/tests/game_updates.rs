@@ -66,7 +66,9 @@ fn a_windows_game_built_again_from_its_recipe_is_the_same_game() {
     let manifest: serde_json::Value =
         serde_json::from_slice(&fs::read(before.join("Resources/game.json")).unwrap()).unwrap();
     let identity = manifest["identity"].as_str().unwrap().to_string();
-    assert!(before.join("Resources/Recipe/recipe.json").is_file(), "the game has no recipe");
+    let recipe: serde_json::Value =
+        serde_json::from_slice(&fs::read(before.join("Resources/Recipe/recipe.json")).unwrap()).unwrap();
+    assert_eq!(recipe["game"]["rom"], "content/sonic.bin", "a recipe names files with \"/\" on every platform");
     let library = Library::at(root.join("data"), Layout::Windows);
     install(&library, &made.app_path, &identity, "rings");
 
