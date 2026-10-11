@@ -119,6 +119,11 @@ struct FakeHost
     * whether we last asked for frames to draw over the game. */
    bool waits_in_background = false;
    bool overlay_frames = false;
+   /* Whether the game has run a frame, and whether it resumed its autosave
+    * at launch, with that save's picture, or empty. */
+   bool game_has_run = true;
+   bool resumed_autosave = false;
+   std::string autosave_thumbnail;
    /* The thumbnail beside an occupied slot 1 in RetroArch, or empty. */
    std::string thumbnail;
    /* The aspect ratio of the running game, width over height, as reported

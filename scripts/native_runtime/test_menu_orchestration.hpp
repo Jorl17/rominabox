@@ -81,6 +81,7 @@ inline std::string design_assets(const char *native_assets, const char *design)
 
 /* The chosen save slot, in test_menu_slots.cpp. */
 void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *data);
+void a_save_before_the_game_runs_gets_the_autosave_picture(const char *data);
 /* The player's settings, in test_menu_player_settings.cpp. */
 void background_play_is_the_players(const char *native_assets, const char *data);
 void rumble_is_the_players_where_the_game_rumbles(const char *native_assets, const char *data);

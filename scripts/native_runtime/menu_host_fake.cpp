@@ -16,6 +16,8 @@ extern "C" bool rib_host_menu_open(void) { return host.menu_open; }
 extern "C" void rib_host_open_menu(void) {}
 extern "C" void rib_host_overlay_frames(bool on) { host.overlay_frames = on; }
 extern "C" bool rib_host_game_waits_in_background(void) { return host.waits_in_background; }
+extern "C" bool rib_host_game_has_run(void) { return host.game_has_run; }
+extern "C" bool rib_host_resumed_autosave(void) { return host.resumed_autosave; }
 extern "C" bool rib_host_has_settings(void) { return true; }
 extern "C" bool rib_host_bind_index(const char *id, unsigned *index)
 {
@@ -248,6 +250,8 @@ extern "C" void rib_host_thumbnail(int slot, char *out, size_t length)
    if (out && length) out[0] = '\0';
    if (out && slot == 1 && host.slot_occupied && host.thumbnail.size() < length)
       std::strcpy(out, host.thumbnail.c_str());
+   if (out && slot == -1 && host.autosave_thumbnail.size() < length)
+      std::strcpy(out, host.autosave_thumbnail.c_str());
 }
 extern "C" float rib_host_game_aspect(void) { return host.game_aspect; }
 extern "C" void rib_host_select_state_slot(int slot) { host.selected_slot = slot; }

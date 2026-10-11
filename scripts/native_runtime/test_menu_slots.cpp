@@ -3,7 +3,9 @@
  * click or OK, and only highlighted by the pointer or the arrows. Part of
  * test_menu_orchestration, where main runs it with the other cases. */
 #include "test_menu_orchestration.hpp"
+#include "rmlui_bridge.h"
 #include "test_environment.h"
+#include <streams/file_stream.h>
 
 #include <filesystem>
 #include <string>
@@ -121,6 +123,40 @@ void chosen_slot_shows_on_save_and_load(const char *native_assets, const char *d
    }
    host.slot_occupied = false;
    test_setenv("ROMINABOX_RML_ASSETS", native_assets);
+   test_setenv("ROMINABOX_DATA_DIR", data);
+}
+
+/* A game that resumes its autosave and opens at its menu before its first
+ * frame has no frame of that position either. For a save then, we copy the
+ * picture of the autosave, which RetroArch numbers -1. */
+void a_save_before_the_game_runs_gets_the_autosave_picture(const char *data)
+{
+   const std::string picture = std::string(data) + "/autosave.png";
+   const std::string data_dir = std::string(data) + "/autosave-picture-data";
+   std::filesystem::create_directories(data_dir);
+   test_setenv("ROMINABOX_DATA_DIR", data_dir.c_str());
+   const std::string words = "the picture of the autosave";
+   filestream_write_file(picture.c_str(), words.data(), (int64_t)words.size());
+   host.game_has_run = false;
+   host.resumed_autosave = true;
+   host.autosave_thumbnail = picture;
+   host.save_accepted = true;
+   host.picture_copies.clear();
+   void *menu = open_menu();
+   if (!menu) return;
+   click_and_frame(menu, "slot-2");
+   click_and_frame(menu, "save");
+   const bool copied_picture = rib_rmlui_notify_state_task("", 2, true, true);
+   frame(menu);
+   check(host.picture_copies == std::vector<std::pair<int, int>>{{-1, 2}},
+         "a save before the game has run gets the picture of the autosave it resumed");
+   check(copied_picture, "we take no picture of the game for that save");
+   rib_menu_destroy(menu);
+   std::remove(picture.c_str());
+   host.game_has_run = true;
+   host.resumed_autosave = false;
+   host.autosave_thumbnail.clear();
+   host.save_accepted = false;
    test_setenv("ROMINABOX_DATA_DIR", data);
 }
 }

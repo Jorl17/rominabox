@@ -976,6 +976,7 @@ int main(int argc, char **argv)
    fixes::chosen_slot_shows_on_save_and_load(argv[1], argv[2]);
    fixes::a_save_over_a_picture_shows_the_new_one(argv[2]);
    fixes::a_save_right_after_a_load_gets_the_loaded_picture(argv[2]);
+   fixes::a_save_before_the_game_runs_gets_the_autosave_picture(argv[2]);
    fixes::restart_asks_first();
    fixes::a_menu_load_writes_the_volume_only_off_a_position();
    fixes::a_drag_cut_short_by_closing_is_kept(argv[2]);
