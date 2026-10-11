@@ -60,18 +60,18 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: ./.github/actions/setup
         with:
           platform: ${{ matrix.platform }}
           fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
       - uses: ./.github/actions/kit
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-${{ matrix.platform }}-kit
           path: release/
           if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: builder-resources-${{ matrix.platform }}
           path: work/builder-resources.tar.gz
@@ -91,7 +91,7 @@ jobs:
       # The processors of a Mac builder, for scripts/build_builder.py.
       MAC_PROCESSORS: ${{ matrix.platform == 'macos' && format('--mac {0}', matrix.variant) || '' }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: ./.github/actions/setup
         with:
           platform: ${{ matrix.platform }}
@@ -104,7 +104,7 @@ jobs:
         with:
           artifacts: builder-resources-${{ matrix.platform }}
           jobs: kit (${{ matrix.platform }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: builder-resources-${{ matrix.platform }}
           path: work
@@ -132,7 +132,7 @@ jobs:
           # The signed builder before notarization, from which we make the
           # universal builder.
           tar -czf "work/builder-${{ matrix.variant }}.tar.gz" -C "$(dirname "$app")" "$(basename "$app")"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: matrix.platform == 'macos'
         with:
           name: mac-builder-${{ matrix.variant }}
@@ -148,7 +148,7 @@ jobs:
         run: |
           version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
           uv run python scripts/mac_release.py pack "$BUILDER_APP" "${{ matrix.file }}" "${{ matrix.key }}" "$version" release/installers
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-${{ matrix.platform }}-${{ matrix.variant }}
           path: release/
@@ -166,13 +166,13 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - uses: ./.github/actions/wait-for-artifacts
         with:
           artifacts: mac-builder-arm64 mac-builder-x86_64
           jobs: builder (macos
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: mac-builder-*
           path: work
@@ -201,7 +201,7 @@ jobs:
         run: |
           version=$(uv run python -c "import json; print(json.load(open('desktop/src-tauri/tauri.conf.json'))['version'])")
           uv run python scripts/mac_release.py pack "$BUILDER_APP" macos-universal darwin-universal "$version" release/installers
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-macos-universal
           path: release/
@@ -219,11 +219,12 @@ jobs:
     if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 24
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        package-manager-cache: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: release-*
           path: release
@@ -245,7 +246,7 @@ jobs:
             desktop/node_modules/.bin/tauri signer sign --app-version "$version" "$package" > /dev/null
             echo "signed $package"
           done
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: release-signed
           path: release/
@@ -256,9 +257,9 @@ jobs:
     needs: sign
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: release-signed
           path: release
