@@ -100,8 +100,7 @@ body.game-data-open .app-shell > main {
 }
 .game-data-table th:first-child,
 .game-data-table td:first-child {
-  width: 36px;
-  padding-left: 0;
+  width: 26px;
 }
 .game-data-title {
   display: flex;
