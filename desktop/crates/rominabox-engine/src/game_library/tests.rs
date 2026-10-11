@@ -344,6 +344,27 @@ fn app_path(root: &Path, layout: Layout, title: &str) -> PathBuf {
     })
 }
 
+/// When we export a game again with another identity to the same place, the
+/// data of the old identity still names that app. The app is not the app of
+/// the old identity any more, so we list only the new identity as installed.
+#[test]
+fn an_app_that_now_belongs_to_another_game_is_not_installed_for_the_old_one() {
+    for layout in LAYOUTS {
+        let root = Scratch::dir("rominabox-game-library-replaced");
+        let library = Library::at(root.to_path_buf(), layout);
+        let app = app_path(&root, layout, "Sonic Advance");
+        installed(&library, &manifest(SONIC, "Sonic Advance", "gba", &app), "old rings", false);
+        installed(&library, &manifest(KNUCKLES, "Sonic Advance", "gba", &app), "rings", false);
+        app_of(layout, KNUCKLES, &app);
+
+        let listed: Vec<(String, bool)> =
+            library.games().into_iter().map(|game| (game.game.identity, game.app_present)).collect();
+
+        assert!(listed.contains(&(KNUCKLES.to_string(), true)), "{layout:?}: {listed:?}");
+        assert!(listed.contains(&(SONIC.to_string(), false)), "{layout:?}: {listed:?}");
+    }
+}
+
 /// A reset removes a game's saves and settings, and the game stays listed,
 /// with its manifest, so that it starts as new.
 #[test]
