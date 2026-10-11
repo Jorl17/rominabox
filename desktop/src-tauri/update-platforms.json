@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "platforms": [
+    {
+      "key": "darwin-aarch64",
+      "system": "macos",
+      "processors": ["arm64"],
+      "package": "ROM-in-a-Box-{version}-macos.app.tar.gz"
+    },
+    {
+      "key": "darwin-x86_64",
+      "system": "macos",
+      "processors": ["x86_64"],
+      "package": "ROM-in-a-Box-{version}-macos-intel.app.tar.gz"
+    },
+    {
+      "key": "darwin-universal",
+      "system": "macos",
+      "processors": ["arm64", "x86_64"],
+      "package": "ROM-in-a-Box-{version}-macos-universal.app.tar.gz"
+    },
+    {
+      "key": "windows-x86_64",
+      "system": "windows",
+      "processors": ["x86_64"],
+      "package": "ROM-in-a-Box_{version}_x64-setup.exe"
+    }
+  ]
+}

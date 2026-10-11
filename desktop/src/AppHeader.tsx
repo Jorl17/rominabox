@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import appIcon from "../src-tauri/icons/icon.png";
 import { AboutDialog } from "./AboutDialog";
+import { BuilderUpdateButton } from "./BuilderUpdateButton";
 import { native, onAboutRequested } from "./bridge";
 import { GameData } from "./GameData";
 
@@ -30,6 +31,7 @@ export function AppHeader() {
           <span className="edition">
             {native ? "GAME APP BUILDER" : "BROWSER PREVIEW"}
           </span>
+          <BuilderUpdateButton />
           <button
             className="text-button header-link"
             aria-pressed={gameData}

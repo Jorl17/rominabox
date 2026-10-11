@@ -18,6 +18,8 @@ use std::{
 };
 use tauri::{Emitter, Manager};
 
+mod updates;
+
 #[derive(Default)]
 struct ExportControl(Mutex<Option<Arc<AtomicBool>>>);
 static PREVIEW_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -571,7 +573,9 @@ fn main() {
         })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ExportControl::default())
+        .manage(updates::PendingUpdate::default())
         .invoke_handler(tauri::generate_handler![
             inspect_game,
             image_preview,
@@ -607,7 +611,9 @@ fn main() {
             game_uninstall,
             game_play,
             game_update_core,
-            game_update_engine
+            game_update_engine,
+            updates::builder_update_check,
+            updates::builder_update_install
         ])
         .run(context)
         .expect("failed to run ROM-in-a-Box desktop shell");

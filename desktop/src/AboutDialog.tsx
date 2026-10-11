@@ -6,6 +6,8 @@ import {
   openWebsite,
   type Component,
 } from "./bridge";
+import { Checkbox } from "./Help";
+import { checksForUpdates, setChecksForUpdates } from "./updatePreference";
 
 /** The groups of the licence index, in the order of the dialog. */
 const GROUPS: [Component["group"], string][] = [
@@ -47,6 +49,7 @@ function Entry({ component }: { component: Component }) {
 export function AboutDialog({ onClose }: { onClose: () => void }) {
   const [components, setComponents] = useState<Component[] | null>(null);
   const [version, setVersion] = useState("");
+  const [checks, setChecks] = useState(checksForUpdates);
   useEffect(() => {
     aboutComponents().then(setComponents, () => setComponents([]));
     appVersion().then(setVersion, () => {});
@@ -97,6 +100,16 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
           })}
         </div>
         <div className="pop-up-actions">
+          <Checkbox
+            className="about-updates"
+            label="Check for updates"
+            checked={checks}
+            onChange={(on) => {
+              setChecks(on);
+              setChecksForUpdates(on);
+            }}
+            help="When the builder starts, we look for a newer version on rominabox.app, or on GitHub when the website does not answer."
+          />
           <button className="primary" onClick={onClose} autoFocus>
             Close
           </button>

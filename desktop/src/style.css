@@ -962,6 +962,20 @@ progress::-webkit-progress-value {
   color: var(--paper);
   font-weight: 700;
 }
+/* A newer builder, in the colour of the edition, and why we could not
+   install it. */
+.builder-update {
+  color: var(--highlight);
+  font-weight: 700;
+}
+.builder-update-failure {
+  color: var(--paper);
+  font-size: 12px;
+}
+/* Check for updates, at the start of the row of About's Close. */
+.about-updates {
+  margin-right: auto;
+}
 /* About: every component in a list that scrolls, each opening to its
    licence text. */
 .pop-up.pop-up-about {

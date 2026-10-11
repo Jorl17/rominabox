@@ -62,6 +62,9 @@ mod measure;
 /// The ROM-in-a-Box web address, which is the engine package's homepage.
 pub const WEBSITE: &str = env!("CARGO_PKG_HOMEPAGE");
 
+/// The repository of the engine package, where we publish the releases.
+pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
+
 /// Where a person reports a bug: a new issue in the engine package's repository.
 pub const BUG_REPORTS: &str = concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new");
 

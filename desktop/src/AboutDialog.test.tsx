@@ -104,7 +104,7 @@ describe("the builder's About", () => {
     await shown(onClose);
     await act(async () =>
       container
-        .querySelector<HTMLButtonElement>(".pop-up-actions button")!
+        .querySelector<HTMLButtonElement>(".pop-up-actions .primary")!
         .click(),
     );
     await act(async () =>

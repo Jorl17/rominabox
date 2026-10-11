@@ -1,4 +1,4 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
@@ -552,6 +552,27 @@ export function openWebsite(): Promise<void> {
   if (native) return invoke("open_website");
   window.open(__WEBSITE__, "_blank", "noopener");
   return Promise.resolve();
+}
+/** A newer builder (`updates::UpdateOffer`). When it is not `installable`
+ * where the builder is, we open the website to download it. */
+export type BuilderUpdate = {
+  version: string;
+  notes: string | null;
+  installable: boolean;
+};
+/** The newer builder, if there is one. The browser preview has none. */
+export function checkBuilderUpdate(): Promise<BuilderUpdate | null> {
+  if (!native) return Promise.resolve(null);
+  return invoke("builder_update_check");
+}
+/** Download and install the newer builder, then start it. We call
+ * `onProgress` with the bytes received and the size, when it is known. */
+export function installBuilderUpdate(
+  onProgress: (received: number, total: number | null) => void,
+): Promise<void> {
+  const progress = new Channel<{ received: number; total: number | null }>();
+  progress.onmessage = ({ received, total }) => onProgress(received, total);
+  return invoke("builder_update_install", { progress });
 }
 
 /** What a game's manifest says about it (`game_data::Game`). */
