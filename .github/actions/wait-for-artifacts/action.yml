@@ -1,0 +1,40 @@
+# Wait until artifacts that another job of the same run uploads are there, so
+# that a job can do its own work first, without `needs`. We stop waiting when
+# a job whose name starts with `jobs` ends without success.
+name: Wait for artifacts of this run
+description: Wait until the named artifacts of this run are uploaded.
+inputs:
+  artifacts:
+    description: The names of the artifacts, separated by spaces
+    required: true
+  jobs:
+    description: The start of the names of the jobs that upload them
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ARTIFACTS: ${{ inputs.artifacts }}
+        JOBS: ${{ inputs.jobs }}
+      run: |
+        for attempt in $(seq 1 160); do
+          present=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[].name')
+          missing=""
+          for name in $ARTIFACTS; do
+            grep -qx "$name" <<< "$present" || missing="$missing $name"
+          done
+          if [ -z "$missing" ]; then
+            exit 0
+          fi
+          failed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --paginate \
+            --jq ".jobs[] | select((.name | startswith(\"$JOBS\")) and .conclusion != null and .conclusion != \"success\") | .name")
+          if [ -n "$failed" ]; then
+            echo "Stopped waiting for$missing: $failed ended without success."
+            exit 1
+          fi
+          sleep 15
+        done
+        echo "$missing were not there after 40 minutes."
+        exit 1

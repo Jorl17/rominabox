@@ -1,20 +1,20 @@
 # We make releases only from version tags, v<version>.
 #
-# For each platform, we build the player and its runtime kit on that platform,
-# then the builder from them. We then publish the installers as the version's
-# release, and the kits as the release of their player commit
-# (scripts/publish_kit.py), from which builders download them. When someone
-# starts the workflow by hand (workflow_dispatch), we keep the results as
-# workflow artifacts and publish nothing, and the run can be limited to one
-# platform.
+# For each platform, we build the player and its runtime kit on that platform
+# (the kit job), then the builder from them (the builder job). We then publish
+# the installers as the version's release, and the kits as the release of their
+# player commit (scripts/publish_kit.py), from which builders download them.
+# When someone starts the workflow by hand (workflow_dispatch), we keep the
+# results as workflow artifacts and publish nothing, and the run can be limited
+# to one platform.
 #
-# On macOS we build three builders from one kit, each in a job of its own at
-# the same time: for arm64 (ROM-in-a-Box-<version>-macos.zip, the default
-# download), for Intel (-macos-intel.zip) and universal (-macos-universal.zip).
-# The arm64 and Intel builder jobs start with the kit job and compile while it
-# runs, then wait for the kit and bundle. We join those two into the universal
-# builder without compiling again.
-# The steps that every build job starts with are in .github/actions/setup.
+# A builder job starts with the kit job of its platform and compiles while the
+# kit is built, then waits for the kit and bundles. On macOS we build three
+# builders from one kit: for arm64 (ROM-in-a-Box-<version>-macos.zip, the
+# default download) and for Intel (-macos-intel.zip) in builder jobs of their
+# own, and the universal builder (-macos-universal.zip) by joining those two,
+# without compiling again. The steps that the jobs share are in
+# .github/actions.
 #
 # Secrets: FORK_DEPLOY_KEY is a read-only key for the private RetroArch fork.
 # For the Mac builder's Developer ID signature and notarization, the secrets
@@ -46,79 +46,16 @@ on:
 
 permissions:
   contents: write
-  # A Mac builder job looks in the run for the resources of the Mac kit.
+  # A job waits in the run for artifacts of another (.github/actions/wait-for-artifacts).
   actions: read
 
 jobs:
-  windows:
-    if: inputs.platforms != 'macos'
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/setup
-        with:
-          platform: windows
-          fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
-      - uses: ./.github/actions/kit
-      - name: Build the Windows builder
-        run: |
-          (cd desktop && npm ci)
-          uv run python scripts/build_builder.py
-          mkdir -p release/installers release/kits
-          cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
-          cp work/kits/*.zip release/kits/
-          ls -la release/installers release/kits
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: release-windows
-          path: release/
-          if-no-files-found: error
-
-  # The Mac player and kit, once for the three Mac builders. We pass the
-  # builder's resources on as a tar file, which keeps the executable bits that
-  # an artifact loses.
-  macos-kit:
-    if: inputs.platforms != 'windows'
-    runs-on: macos-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/setup
-        with:
-          platform: macos
-          fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
-      - uses: ./.github/actions/kit
-      - name: Collect the kit and the builder's resources
-        run: |
-          mkdir -p release/kits
-          cp work/kits/*.zip release/kits/
-          tar -czf "$RUNNER_TEMP/builder-resources.tar.gz" -C desktop/src-tauri resources
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: release-macos-kit
-          path: release/
-          if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: builder-resources-macos
-          path: ${{ runner.temp }}/builder-resources.tar.gz
-          if-no-files-found: error
-          retention-days: 1
-
-  macos-builder:
-    if: inputs.platforms != 'windows'
+  kit:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { variant: arm64, triple: aarch64-apple-darwin, file: macos, key: darwin-aarch64 }
-          - { variant: x86_64, triple: x86_64-apple-darwin, file: macos-intel, key: darwin-x86_64 }
-    runs-on: macos-latest
+        include: ${{ fromJSON(inputs.platforms == 'macos' && '[{"platform":"macos","runner":"macos-latest"}]' || (inputs.platforms == 'windows' && '[{"platform":"windows","runner":"windows-latest"}]' || '[{"platform":"windows","runner":"windows-latest"},{"platform":"macos","runner":"macos-latest"}]')) }}
+    runs-on: ${{ matrix.runner }}
     defaults:
       run:
         shell: bash
@@ -126,57 +63,84 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup
         with:
-          platform: macos
+          platform: ${{ matrix.platform }}
           fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
-      - name: Compile the ${{ matrix.variant }} builder while the kit is built
+      - uses: ./.github/actions/kit
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ matrix.platform }}-kit
+          path: release/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-resources-${{ matrix.platform }}
+          path: work/builder-resources.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  builder:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.platforms == 'macos' && '[{"platform":"macos","runner":"macos-latest","variant":"arm64","triple":"aarch64-apple-darwin","file":"macos","key":"darwin-aarch64"},{"platform":"macos","runner":"macos-latest","variant":"x86_64","triple":"x86_64-apple-darwin","file":"macos-intel","key":"darwin-x86_64"}]' || (inputs.platforms == 'windows' && '[{"platform":"windows","runner":"windows-latest","variant":"x86_64"}]' || '[{"platform":"windows","runner":"windows-latest","variant":"x86_64"},{"platform":"macos","runner":"macos-latest","variant":"arm64","triple":"aarch64-apple-darwin","file":"macos","key":"darwin-aarch64"},{"platform":"macos","runner":"macos-latest","variant":"x86_64","triple":"x86_64-apple-darwin","file":"macos-intel","key":"darwin-x86_64"}]')) }}
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      # The processors of a Mac builder, for scripts/build_builder.py.
+      MAC_PROCESSORS: ${{ matrix.platform == 'macos' && format('--mac {0}', matrix.variant) || '' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/setup
+        with:
+          platform: ${{ matrix.platform }}
+          fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
+      - name: Compile the builder while the kit is built
         run: |
           (cd desktop && npm ci)
-          uv run python scripts/build_builder.py --compile-only --mac "${{ matrix.variant }}"
-      - name: Wait for the resources of the Mac kit
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          for attempt in $(seq 1 120); do
-            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[].name' | grep -qx builder-resources-macos; then
-              exit 0
-            fi
-            ended=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --jq '.jobs[] | select(.name == "macos-kit") | .conclusion')
-            if [ -n "$ended" ] && [ "$ended" != success ]; then
-              echo "The Mac kit job ended with $ended."
-              exit 1
-            fi
-            sleep 15
-          done
-          echo "The resources of the Mac kit were not there after 30 minutes."
-          exit 1
+          uv run python scripts/build_builder.py --compile-only $MAC_PROCESSORS
+      - uses: ./.github/actions/wait-for-artifacts
+        with:
+          artifacts: builder-resources-${{ matrix.platform }}
+          jobs: kit (${{ matrix.platform }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: builder-resources-macos
-          path: ${{ runner.temp }}
+          name: builder-resources-${{ matrix.platform }}
+          path: work
       - name: Put the kit's resources in place
-        run: tar -xzf "$RUNNER_TEMP/builder-resources.tar.gz" -C desktop/src-tauri
+        run: tar -xzf work/builder-resources.tar.gz -C desktop/src-tauri
       - uses: ./.github/actions/developer-id
+        if: matrix.platform == 'macos'
         with:
           certificate: ${{ secrets.MACOS_CERTIFICATE }}
           certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           notary-key: ${{ secrets.NOTARY_KEY }}
-      - name: Build and check the ${{ matrix.variant }} builder
+      - name: Build the builder
         run: |
-          (cd desktop && npm ci)
-          uv run python scripts/build_builder.py --mac "${{ matrix.variant }}"
+          uv run python scripts/build_builder.py $MAC_PROCESSORS
+          mkdir -p release/installers
+      - name: Collect the Windows installer
+        if: matrix.platform == 'windows'
+        run: cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
+      - name: Check the ${{ matrix.variant }} builder and keep it for the universal builder
+        if: matrix.platform == 'macos'
+        run: |
           app="desktop/target/${{ matrix.triple }}/release/bundle/macos/ROM-in-a-Box.app"
           uv run python scripts/mac_release.py check "$app" "${{ matrix.variant }}"
           echo "BUILDER_APP=$app" >> "$GITHUB_ENV"
           # The signed builder before notarization, from which we make the
           # universal builder.
-          tar -czf "$RUNNER_TEMP/builder-${{ matrix.variant }}.tar.gz" -C "$(dirname "$app")" "$(basename "$app")"
+          tar -czf "work/builder-${{ matrix.variant }}.tar.gz" -C "$(dirname "$app")" "$(basename "$app")"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.platform == 'macos'
         with:
           name: mac-builder-${{ matrix.variant }}
-          path: ${{ runner.temp }}/builder-${{ matrix.variant }}.tar.gz
+          path: work/builder-${{ matrix.variant }}.tar.gz
           if-no-files-found: error
           retention-days: 1
       - name: Notarize and pack the ${{ matrix.variant }} builder
+        if: matrix.platform == 'macos'
         env:
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
@@ -184,18 +148,19 @@ jobs:
         run: |
           version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
           uv run python scripts/mac_release.py pack "$BUILDER_APP" "${{ matrix.file }}" "${{ matrix.key }}" "$version" release/installers
-          ls -la release/installers
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: release-macos-${{ matrix.variant }}
+          name: release-${{ matrix.platform }}-${{ matrix.variant }}
           path: release/
           if-no-files-found: error
 
   # The universal builder, made from the arm64 and Intel builders without
   # compiling again, as Tauri makes one: we join the two slices of each
   # program and sign the result (scripts/build_builder.py --merge-universal).
+  # It starts with the other jobs and waits for those two builders, not for
+  # the Windows builder.
   macos-universal:
-    needs: macos-builder
+    if: inputs.platforms != 'windows'
     runs-on: macos-latest
     defaults:
       run:
@@ -203,10 +168,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: ./.github/actions/wait-for-artifacts
+        with:
+          artifacts: mac-builder-arm64 mac-builder-x86_64
+          jobs: builder (macos
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: mac-builder-*
-          path: ${{ runner.temp }}
+          path: work
           merge-multiple: true
       - uses: ./.github/actions/developer-id
         with:
@@ -216,12 +185,12 @@ jobs:
       - name: Join the arm64 and Intel builders into the universal builder
         run: |
           for variant in arm64 x86_64; do
-            mkdir -p "$RUNNER_TEMP/$variant"
-            tar -xzf "$RUNNER_TEMP/builder-$variant.tar.gz" -C "$RUNNER_TEMP/$variant"
+            mkdir -p "work/$variant"
+            tar -xzf "work/builder-$variant.tar.gz" -C "work/$variant"
           done
-          app="$RUNNER_TEMP/universal/ROM-in-a-Box.app"
+          app="work/universal/ROM-in-a-Box.app"
           uv run python scripts/build_builder.py --merge-universal \
-            "$RUNNER_TEMP/arm64/ROM-in-a-Box.app" "$RUNNER_TEMP/x86_64/ROM-in-a-Box.app" "$app"
+            work/arm64/ROM-in-a-Box.app work/x86_64/ROM-in-a-Box.app "$app"
           uv run python scripts/mac_release.py check "$app" arm64 x86_64
           echo "BUILDER_APP=$app" >> "$GITHUB_ENV"
       - name: Notarize and pack the universal builder
@@ -232,7 +201,6 @@ jobs:
         run: |
           version=$(uv run python -c "import json; print(json.load(open('desktop/src-tauri/tauri.conf.json'))['version'])")
           uv run python scripts/mac_release.py pack "$BUILDER_APP" macos-universal darwin-universal "$version" release/installers
-          ls -la release/installers
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-macos-universal
@@ -246,7 +214,7 @@ jobs:
   # runs again without the builds. We run the Tauri command line that npm ci
   # installs from package-lock.json, never one that npx could fetch.
   sign:
-    needs: [windows, macos-universal]
+    needs: [kit, builder, macos-universal]
     # A run by hand for one platform skips the other platform's jobs.
     if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest

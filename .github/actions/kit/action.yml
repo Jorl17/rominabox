@@ -1,8 +1,10 @@
-# The player and its runtime kit for the platform of the runner, with the kit
-# packed for publishing in work/kits, as every kit job of the release
-# workflow builds them after .github/actions/setup.
+# The player and its runtime kit for the platform of the runner, after
+# .github/actions/setup. We leave the kit packed for publishing in
+# release/kits, and the builder's resources in
+# work/builder-resources.tar.gz, as a tar file, which keeps the
+# executable bits that an artifact loses.
 name: Build the player and its runtime kit
-description: Build the player for this platform, its runtime kit, and the kit packed for publishing.
+description: Build the player for this platform and its runtime kit, and collect them for the release and the builder.
 runs:
   using: composite
   steps:
@@ -13,3 +15,9 @@ runs:
         uv run python scripts/build_player.py --target "$target" "$GITHUB_WORKSPACE/work/player"
         uv run python scripts/build_kit.py "$GITHUB_WORKSPACE/work/player"
         uv run python scripts/publish_kit.py pack
+    - name: Collect the kit and the builder's resources
+      shell: bash
+      run: |
+        mkdir -p release/kits
+        cp work/kits/*.zip release/kits/
+        tar -czf work/builder-resources.tar.gz -C desktop/src-tauri resources
