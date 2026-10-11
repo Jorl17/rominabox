@@ -503,9 +503,9 @@ fn a_newer_core_goes_into_a_windows_game_and_its_saves_stay() {
     fs::write(cache.join("licenses").join(licence), "the new licence").unwrap();
     let newest = root.join("newest.dll");
     fs::write(&newest, crate::portable_executable::image_importing(&["KERNEL32.dll", "USER32.dll"])).unwrap();
-    let windows = crate::target::Target::WindowsX86_64;
+    let newest_core = |_: &_, _: &[_]| Ok(vec![(crate::target::Target::WindowsX86_64, newest.clone())]);
 
-    let updated = library.change_core(SONIC, &kit, &cache, windows, |_| Ok(newest.clone()));
+    let updated = library.change_core(SONIC, &kit, &cache, newest_core);
 
     assert_eq!(updated, Ok(CoreUpdate::Updated));
     assert_eq!(packed_file(&root, &app, "Resources/game-core.dll"), fs::read(&newest).unwrap());
@@ -515,7 +515,7 @@ fn a_newer_core_goes_into_a_windows_game_and_its_saves_stay() {
     assert_eq!(save(&library, &sonic), "rings");
 
     let before = fs::read(&app).unwrap();
-    assert_eq!(library.change_core(SONIC, &kit, &cache, windows, |_| Ok(newest.clone())), Ok(CoreUpdate::Current));
+    assert_eq!(library.change_core(SONIC, &kit, &cache, newest_core), Ok(CoreUpdate::Current));
     assert_eq!(fs::read(&app).unwrap(), before, "the same core changed the game");
     let left: Vec<_> = fs::read_dir(&root).unwrap().filter_map(|entry| entry.ok()).map(|entry| entry.file_name()).collect();
     assert!(!left.iter().any(|name| name.to_string_lossy().starts_with(".rominabox-update-")), "{left:?}");
@@ -535,7 +535,7 @@ fn a_core_windows_cannot_load_is_refused_and_the_game_stays() {
     let newest = root.join("newest.dll");
     fs::write(&newest, crate::portable_executable::image_importing(&["KERNEL32.dll", "SDL2.dll"])).unwrap();
 
-    let refused = library.change_core(SONIC, &root, &root, crate::target::Target::WindowsX86_64, |_| Ok(newest.clone()));
+    let refused = library.change_core(SONIC, &root, &root, |_, _| Ok(vec![(crate::target::Target::WindowsX86_64, newest.clone())]));
 
     assert!(refused.as_ref().is_err_and(|message| message.contains("which Windows does not include")), "{refused:?}");
     assert_eq!(fs::read(&app).unwrap(), before);

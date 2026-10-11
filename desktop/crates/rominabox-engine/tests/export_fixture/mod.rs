@@ -58,6 +58,17 @@ pub fn write_launch_library_stub(kit: &Path) {
     fs::remove_file(source).unwrap();
 }
 
+/// A Mac library at `path`, compiled from `source` with `cc` and `flags`
+/// (`-arch`, libraries to link).
+pub fn mac_library(path: &Path, source: &str, flags: &[&str]) {
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let file = path.with_extension("c");
+    fs::write(&file, source).unwrap();
+    let status = Command::new("cc").args(flags).arg("-dynamiclib").arg("-o").arg(path).arg(&file).status().unwrap();
+    assert!(status.success(), "could not compile {}", path.display());
+    fs::remove_file(file).unwrap();
+}
+
 /// Put the tree's launch library in the Mac kit `kit`, attached to its
 /// player as in scripts/build_kit.py, for a test that runs the exported
 /// game's launcher.

@@ -36,20 +36,7 @@ pub fn sign_app(seal: &AppSeal<'_>, cancelled: &dyn Fn() -> bool) -> Result<(), 
         if cancelled() {
             return Err("cancelled".into());
         }
-        let bytes = read(path)?;
-        let name = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("code");
-        let signed = sign(
-            &bytes,
-            &Seal {
-                identifier: &identifier_for(name, &bytes),
-                ..Seal::default()
-            },
-        )
-        .map_err(|error| format!("{}: {error}", path.display()))?;
-        write(path, &signed)?;
+        sign_code(path)?;
     }
     let contents = seal.app.join("Contents");
     let resources = code_resources(&contents, seal.executable)?;
@@ -72,6 +59,16 @@ pub fn sign_app(seal: &AppSeal<'_>, cancelled: &dyn Fn() -> bool) -> Result<(), 
     )
     .map_err(|error| format!("{}: {error}", seal.executable.display()))?;
     write(seal.executable, &signed)
+}
+
+/// Sign the code at `path` on its own, as we sign the code inside an app
+/// before its main program, named after its file.
+pub fn sign_code(path: &Path) -> Result<(), String> {
+    let bytes = read(path)?;
+    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or("code");
+    let signed = sign(&bytes, &Seal { identifier: &identifier_for(name, &bytes), ..Seal::default() })
+        .map_err(|error| format!("{}: {error}", path.display()))?;
+    write(path, &signed)
 }
 
 fn read(path: &Path) -> Result<Vec<u8>, String> {

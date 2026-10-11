@@ -3,8 +3,15 @@
 
 mod export_fixture;
 mod support;
+#[cfg(target_os = "macos")]
+#[path = "game_updates/macos.rs"]
+mod macos;
 
-use export_fixture::{export_request_from, unpack, windows_kit, workspace};
+#[cfg(windows)]
+use export_fixture::windows_kit;
+#[cfg(unix)]
+use export_fixture::windows_kit_here as windows_kit;
+use export_fixture::{export_request_from, unpack, workspace};
 use rominabox_engine::game_data::{write_manifest, Game};
 use rominabox_engine::game_library::{Layout, Library};
 use rominabox_engine::packaging::ExportTarget;

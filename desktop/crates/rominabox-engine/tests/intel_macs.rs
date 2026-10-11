@@ -9,7 +9,7 @@
 
 mod export_fixture;
 
-use export_fixture::{export_request, workspace, write_runtime_stub_for};
+use export_fixture::{export_request, mac_library, workspace, write_runtime_stub_for};
 use rominabox_engine::builder::defaults;
 use rominabox_engine::cores::{Response, Transport, Version};
 use rominabox_engine::packaging::{export_game_fetching, ErrorStage, ExportRequest};
@@ -52,17 +52,7 @@ fn carried(app: &Path) -> [Vec<String>; 3] {
 
 /// A core library built for `arch` alone.
 fn core_for(path: &Path, arch: &str) {
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    let source = path.with_extension("c");
-    fs::write(&source, "unsigned retro_api_version(void) { return 1; }\n").unwrap();
-    let status = Command::new("cc")
-        .args(["-arch", arch, "-dynamiclib", "-o"])
-        .arg(path)
-        .arg(&source)
-        .status()
-        .unwrap();
-    assert!(status.success());
-    fs::remove_file(source).unwrap();
+    mac_library(path, "unsigned retro_api_version(void) { return 1; }\n", &["-arch", arch]);
 }
 
 /// The builder's core cache for `target`: `root/core-cache/<target>`.

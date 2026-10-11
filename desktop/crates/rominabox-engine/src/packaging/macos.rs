@@ -23,6 +23,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Where the files are in a Mac kit, which is one kit for every Mac.
 const KIT: Target = Target::MacosArm64;
+/// The player in `Contents/MacOS`, which the Info.plist names.
+const PLAYER: &str = "retroarch";
+/// Where the libraries of an app are, from its player.
+const FRAMEWORKS: &str = "@executable_path/../Frameworks";
 
 /// A macOS app: one bundle, with the player in the launcher process, the
 /// libraries relocated next to it, and a signature with the game's sandbox.
@@ -81,7 +85,7 @@ impl Packager for MacosPackager {
     /// The kit's player, with the slices for the processors of the app and no
     /// others. For an ordinary game we thin a universal player.
     fn place_player(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
-        self.runtime = self.macos.join("retroarch");
+        self.runtime = self.macos.join(PLAYER);
         slices::keep(
             &runtime_kit.join(self.player_in_kit()),
             &self.archs,
@@ -104,25 +108,7 @@ impl Packager for MacosPackager {
         destination: &Path,
         system_name: &str,
     ) -> Result<(), ExportError> {
-        match builds {
-            [(_, only)] => copy_file(only, destination),
-            several => {
-                let parts = several
-                    .iter()
-                    .map(|(target, file)| {
-                        Arch::of(*target).map(|arch| (arch, file.clone())).ok_or_else(|| {
-                            ExportError::new(ErrorStage::Stage, format!("a Mac game has no {target} core"))
-                        })
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                slices::join(
-                    &parts,
-                    destination,
-                    &format!("The {system_name} core"),
-                    ErrorStage::Stage,
-                )
-            }
-        }
+        place_core(builds, destination, system_name)
     }
 
     fn stage_dependencies(
@@ -174,11 +160,7 @@ impl Packager for MacosPackager {
         if let Some(icon) = request.game.icon.as_deref().or(default_icon.as_deref()) {
             icons::create_macos_icon(icon, &self.resources.join("GameIcon.icns"), staging)?;
         }
-        // The standard About panel contains Credits.html from Resources.
-        let credits = self.resources.join("Credits.html");
-        fs::write(&credits, super::legal::credits_html(&self.resources.join("Legal/Licenses"))?)
-            .map_err(|error| ExportError::io(ErrorStage::Stage, &credits, error))?;
-        Ok(())
+        write_credits(&self.resources)
     }
 
     fn finishing(&self) -> Option<&'static str> {
@@ -195,39 +177,8 @@ impl Packager for MacosPackager {
         // A freshly built player still contains the names of the libraries it
         // was linked against, and in the frozen kit we already rewrote them.
         // Either way, the game must load the copies we just staged next to it.
-        relocate_dependencies(
-            &self.mach_objects,
-            "@executable_path/../Frameworks",
-            Some(cancelled),
-        )?;
-        // We sign every Mach-O separately without the entitlements, then the
-        // player last with them, which seals the rest. We seal a stand-in
-        // core that is not code as data.
-        let mut nested = Vec::new();
-        for object in &self.mach_objects[1..] {
-            if is_mach_o_file(object)? {
-                nested.push(object.clone());
-            }
-        }
-        let entitlements =
-            sandbox_entitlements(identity, accounts_folder(request)?.as_deref(), request.game.show_menu);
-        bundle::sign_app(
-            &bundle::AppSeal {
-                app: &self.app,
-                executable: &self.runtime,
-                identifier: &bundle_identifier(identity),
-                entitlements: &entitlements,
-                nested: &nested,
-            },
-            &|| cancelled.load(Ordering::Relaxed),
-        )
-        .map_err(|error| {
-            if cancelled.load(Ordering::Relaxed) {
-                ExportError::new(ErrorStage::Cancelled, "export cancelled while signing")
-            } else {
-                ExportError::new(ErrorStage::Sign, error)
-            }
-        })
+        relocate_dependencies(&self.mach_objects, FRAMEWORKS, Some(cancelled))?;
+        seal(&self.app, &self.mach_objects[1..], request, identity, cancelled)
     }
 
     fn runtime_bytes(&self) -> Result<u64, ExportError> {
@@ -304,7 +255,7 @@ fn write_plist(
 <plist version="1.0"><dict>
 <key>CFBundleDevelopmentRegion</key><string>en</string>
 <key>CFBundleDisplayName</key><string>{}</string>
-<key>CFBundleExecutable</key><string>retroarch</string>
+<key>CFBundleExecutable</key><string>{PLAYER}</string>
 <key>CFBundleIdentifier</key><string>{}</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>{}</string>
@@ -322,6 +273,134 @@ fn write_plist(
         icon
     );
     fs::write(path, plist).map_err(|error| ExportError::io(ErrorStage::Configure, path, error))
+}
+
+/// We copy one core as it is, and join the cores for several processors
+/// into one file with the slice of each.
+fn place_core(builds: &[(Target, PathBuf)], destination: &Path, system_name: &str) -> Result<(), ExportError> {
+    match builds {
+        [(_, only)] => copy_file(only, destination),
+        several => {
+            let parts = several
+                .iter()
+                .map(|(target, file)| {
+                    Arch::of(*target)
+                        .map(|arch| (arch, file.clone()))
+                        .ok_or_else(|| ExportError::new(ErrorStage::Stage, format!("a Mac game has no {target} core")))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            slices::join(&parts, destination, &format!("The {system_name} core"), ErrorStage::Stage)
+        }
+    }
+}
+
+/// Sign the app `app` with the sandbox of the game `request` makes, whose
+/// identity is `identity`. We sign every Mach-O in `others` separately
+/// without the entitlements, then the player last with them, which seals the
+/// rest. We seal a stand-in core that is not code as data.
+fn seal(
+    app: &Path,
+    others: &[PathBuf],
+    request: &ExportRequest,
+    identity: &str,
+    cancelled: &AtomicBool,
+) -> Result<(), ExportError> {
+    let mut nested = Vec::new();
+    for object in others {
+        if is_mach_o_file(object)? {
+            nested.push(object.clone());
+        }
+    }
+    let entitlements = sandbox_entitlements(identity, accounts_folder(request)?.as_deref(), request.game.show_menu);
+    bundle::sign_app(
+        &bundle::AppSeal {
+            app,
+            executable: &app.join("Contents/MacOS").join(PLAYER),
+            identifier: &bundle_identifier(identity),
+            entitlements: &entitlements,
+            nested: &nested,
+        },
+        &|| cancelled.load(Ordering::Relaxed),
+    )
+    .map_err(|error| {
+        if cancelled.load(Ordering::Relaxed) {
+            ExportError::new(ErrorStage::Cancelled, "export cancelled while signing")
+        } else {
+            ExportError::new(ErrorStage::Sign, error)
+        }
+    })
+}
+
+/// The Macs the app `app` runs on, from the slices of its player, Apple
+/// silicon first.
+pub(crate) fn app_targets(app: &Path) -> Result<Vec<Target>, ExportError> {
+    let mut archs = slices::of_file(&app.join("Contents/MacOS").join(PLAYER), ErrorStage::Validate)?.archs;
+    archs.sort();
+    Ok(archs.into_iter().map(Arch::target).collect())
+}
+
+/// Make `destination` the core of the Mac app `app` from `builds`, one for
+/// each processor of the app, as an export makes it: one file with the
+/// slice of each, loading its libraries from the app, signed. We refuse a
+/// core that needs a library the app does not contain.
+pub(crate) fn finish_core(
+    builds: &[(Target, PathBuf)],
+    destination: &Path,
+    app: &Path,
+    system_name: &str,
+) -> Result<(), ExportError> {
+    place_core(builds, destination, system_name)?;
+    let launch_library = launch_library_name();
+    let frameworks = app.join("Contents/Frameworks");
+    for dependency in macho_dependencies(destination)? {
+        let name = Path::new(&dependency).file_name().unwrap_or_default().to_string_lossy().into_owned();
+        if !is_system_dependency(&dependency) && name != launch_library && !frameworks.join(&name).is_file() {
+            return Err(ExportError::new(
+                ErrorStage::Refused,
+                format!(
+                    "The emulator for this console needs {name}, which this game does not include, so the game would not start. Try again later: a newer version of the emulator may not need it."
+                ),
+            ));
+        }
+    }
+    relocate_dependencies(&[destination.to_path_buf()], FRAMEWORKS, None)?;
+    if is_mach_o_file(destination)? {
+        bundle::sign_code(destination).map_err(|error| ExportError::new(ErrorStage::Sign, error))?;
+    }
+    Ok(())
+}
+
+/// The credits in the standard About panel, Credits.html in `resources`,
+/// from the licence texts there.
+fn write_credits(resources: &Path) -> Result<(), ExportError> {
+    let credits = resources.join("Credits.html");
+    fs::write(&credits, super::legal::credits_html(&resources.join("Legal/Licenses"))?)
+        .map_err(|error| ExportError::io(ErrorStage::Stage, &credits, error))
+}
+
+/// Finish the Mac app `app` again after we changed files in it: its credits
+/// from its licence texts, and its signature, with the sandbox of the game
+/// `request` makes, whose identity is `identity`.
+pub(crate) fn seal_app(app: &Path, request: &ExportRequest, identity: &str) -> Result<(), ExportError> {
+    let contents = app.join("Contents");
+    write_credits(&contents.join("Resources"))?;
+    let player = contents.join("MacOS").join(PLAYER);
+    let mut others = Vec::new();
+    let mut waiting = vec![contents.clone()];
+    while let Some(folder) = waiting.pop() {
+        for entry in fs::read_dir(&folder).map_err(|error| ExportError::io(ErrorStage::Sign, &folder, error))? {
+            let path = entry.map_err(|error| ExportError::io(ErrorStage::Sign, &folder, error))?.path();
+            if path.is_dir() {
+                if path != contents.join("_CodeSignature") {
+                    waiting.push(path);
+                }
+            } else if path != player {
+                others.push(path);
+            }
+        }
+    }
+    others.sort();
+    seal(app, &others, request, identity, &AtomicBool::new(false))
 }
 
 #[derive(Deserialize)]

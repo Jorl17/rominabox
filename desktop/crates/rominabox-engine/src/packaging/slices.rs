@@ -34,6 +34,14 @@ impl Arch {
         }
     }
 
+    /// The Mac target with this processor.
+    pub(crate) fn target(self) -> Target {
+        match self {
+            Arch::Arm64 => Target::MacosArm64,
+            Arch::X86_64 => Target::MacosX86_64,
+        }
+    }
+
     /// Its name for `lipo`, for `cc -arch` and in the Mach-O readers.
     pub(crate) fn name(self) -> &'static str {
         match self {
@@ -103,6 +111,11 @@ fn slices_of(bytes: &[u8], path: &Path, stage: ErrorStage) -> Result<Slices, Exp
         }
     }
     Ok(slices)
+}
+
+/// The slices in the file at `path`.
+pub(super) fn of_file(path: &Path, stage: ErrorStage) -> Result<Slices, ExportError> {
+    slices_of(&read_regular(path, stage)?, path, stage)
 }
 
 /// The slice for `arch` in `bytes`, as a separate file.

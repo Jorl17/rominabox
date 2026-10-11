@@ -378,7 +378,7 @@ pub(super) fn copy_file(source: &Path, destination: &Path) -> Result<(), ExportE
     Ok(())
 }
 
-fn copy_optional_tree(source: &Path, destination: &Path) -> Result<(), ExportError> {
+pub(crate) fn copy_optional_tree(source: &Path, destination: &Path) -> Result<(), ExportError> {
     let source_metadata = fs::symlink_metadata(source)
         .map_err(|error| ExportError::io(ErrorStage::Stage, source, error))?;
     if source_metadata.file_type().is_symlink() {
