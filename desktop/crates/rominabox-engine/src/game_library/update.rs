@@ -159,7 +159,9 @@ impl Opened {
             }
             (Self::Windows { .. }, _) => Err("A Windows game has one core.".to_string()),
             (Self::Macos { app }, _) => {
-                let finished = work.path.join("core");
+                // The signature of code outside the player is named after its file.
+                let name = Path::new(&core.file).file_name().ok_or("The game names no file for its core.")?;
+                let finished = work.path.join(name);
                 finish_macos_core(builds, &finished, app, core.system_name).map_err(|error| error.message)?;
                 Ok(finished)
             }
