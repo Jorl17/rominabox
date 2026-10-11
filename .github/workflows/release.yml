@@ -193,10 +193,11 @@ jobs:
             ditto -c -k --keepParent "$app" "release/installers/$name"
           done
 
-      # The signatures that a builder checks before it installs an update.
-      # Only this step gets the key, after every build. We run the Tauri
-      # command line that npm ci installed from package-lock.json, never one
-      # that npx could fetch.
+      # The signatures that a builder checks before it installs an update,
+      # each with the version of the package in it, so that a manifest cannot
+      # offer an older package as a newer version. Only this step gets the
+      # key, after every build. We run the Tauri command line that npm ci
+      # installed from package-lock.json, never one that npx could fetch.
       - name: Sign the update packages
         if: steps.signing.outputs.updates == 'yes'
         env:
@@ -204,8 +205,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           shopt -s nullglob
+          version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
           for package in release/installers/*.app.tar.gz release/installers/*-setup.exe; do
-            desktop/node_modules/.bin/tauri signer sign "$package" > /dev/null
+            desktop/node_modules/.bin/tauri signer sign --app-version "$version" "$package" > /dev/null
           done
 
       - name: Collect the release files

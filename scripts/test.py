@@ -49,8 +49,10 @@ PRINT_LOCK = threading.Lock()
 
 PYTHON = programs.PYTHON
 
-# The engine and the command line. There are no tests in the builder's window code.
+# The engine and the command line.
 CARGO_ENGINE = ["--manifest-path", str(ENGINE_MANIFEST)]
+# The builder's window code, where only the updates of the builder have tests.
+CARGO_BUILDER = ["--manifest-path", str(ROOT / "desktop/src-tauri/Cargo.toml")]
 CARGO_CATALOG = ["--manifest-path", str(ROOT / "desktop/crates/rominabox-catalog/Cargo.toml")]
 # bridge, dcmenu and menu link one RmlUi. We declare it in each scope that
 # uses it, or in a checkout where nobody has compiled it the scope fails.
@@ -309,6 +311,12 @@ SCOPES = [
         "that a kit packed for publishing is named <platform>-<player>.zip with the kit's files at its root, that an archive whose name and manifest disagree is rejected before upload, and that the target repository is the one in the engine package's Cargo.toml",
         "that an upload reaches GitHub, or the download itself, which is tested in kits.rs with a stand-in transport",
         [PYTHON, str(ROOT / "scripts/test_publish_kit.py")],
+    ),
+    Scope(
+        "updater",
+        "that a builder finds a newer version on the second address when the first answers with an error, downloads it when its signature matches the key and the version, refuses a package signed for other data, with another key, for another version or for no version, offers nothing for the same or an older version, and chooses its platform in the manifest from the processors in its own code",
+        "that the package installs, that the builder starts again, or the website's redirect, which need a release and a person on each platform",
+        ["cargo", "test", "--quiet", *CARGO_BUILDER, "updates"],
     ),
     Scope(
         "updatemanifest",

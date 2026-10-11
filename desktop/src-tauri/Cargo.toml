@@ -17,6 +17,12 @@ serde = { version = "1", features = ["derive"] }
 image.workspace = true
 serde_json.workspace = true
 
+[dev-dependencies]
+# A builder with no window, and a key and signatures made in the update tests.
+tauri = { version = "2", features = ["test"] }
+minisign = "0.7"
+base64 = "0.22"
+
 [target.'cfg(windows)'.dependencies]
 # The small icon of the builder window, loaded at the size shown on the screen.
 windows-sys = { workspace = true, features = [

@@ -42,9 +42,9 @@ fn manifest_addresses() -> Vec<String> {
     ]
 }
 
-#[cfg(any(target_os = "macos", test))]
 /// The processors that `program`, a Mach-O file, has code for, by the names
 /// in update-platforms.json, sorted.
+#[cfg(any(target_os = "macos", test))]
 fn mach_o_processors(program: &[u8]) -> Result<Vec<String>, String> {
     use rominabox_engine::mach_o::{slices, Cpu};
     let mut names = Vec::new();
@@ -150,24 +150,33 @@ pub struct UpdateProgress {
     total: Option<u64>,
 }
 
+/// The updater that reads the manifest at `addresses`, in that order, for
+/// the platform `key`.
+fn updater<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    addresses: &[String],
+    key: &str,
+) -> Result<tauri_plugin_updater::Updater, String> {
+    let addresses = addresses
+        .iter()
+        .map(|address| address.parse().map_err(|error| format!("{address}: {error}")))
+        .collect::<Result<Vec<_>, String>>()?;
+    app.updater_builder()
+        .endpoints(addresses)
+        .map_err(|error| error.to_string())?
+        .target(key)
+        .build()
+        .map_err(|error| error.to_string())
+}
+
 /// The newer builder in the manifest, if there is one for this platform.
 #[tauri::command]
 pub async fn builder_update_check(app: tauri::AppHandle) -> Result<Option<UpdateOffer>, String> {
     let Some(key) = own_platform_key()? else {
         return Ok(None);
     };
-    let addresses = manifest_addresses()
-        .iter()
-        .map(|address| address.parse().map_err(|error| format!("{address}: {error}")))
-        .collect::<Result<Vec<_>, String>>()?;
-    let updater = app
-        .updater_builder()
-        .endpoints(addresses)
-        .map_err(|error| error.to_string())?
-        .target(key)
-        .build()
-        .map_err(|error| error.to_string())?;
-    let Some(update) = updater.check().await.map_err(|error| error.to_string())? else {
+    let checked = updater(&app, &manifest_addresses(), &key)?.check().await;
+    let Some(update) = checked.map_err(|error| error.to_string())? else {
         return Ok(None);
     };
     let offer = UpdateOffer { version: update.version.clone(), notes: update.body.clone(), installable: installable() };
@@ -205,49 +214,4 @@ pub async fn builder_update_install(app: tauri::AppHandle, progress: Channel<Upd
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn names(processors: &[&str]) -> Vec<String> {
-        processors.iter().map(|name| name.to_string()).collect()
-    }
-
-    #[test]
-    fn each_builder_has_its_own_key_and_a_universal_one_stays_universal() {
-        assert_eq!(platform_key("macos", &names(&["arm64"])), Ok(Some("darwin-aarch64".into())));
-        assert_eq!(platform_key("macos", &names(&["x86_64"])), Ok(Some("darwin-x86_64".into())));
-        assert_eq!(platform_key("macos", &names(&["arm64", "x86_64"])), Ok(Some("darwin-universal".into())));
-        assert_eq!(platform_key("windows", &names(&["x86_64"])), Ok(Some("windows-x86_64".into())));
-        assert_eq!(platform_key("windows", &names(&["aarch64"])), Ok(None));
-    }
-
-    /// A Mach-O file with the header alone, for `cpu`.
-    fn header_for(cpu: rominabox_engine::mach_o::Cpu) -> Vec<u8> {
-        const MH_MAGIC_64: u32 = 0xfeed_facf;
-        const MH_DYLIB: u32 = 6;
-        [MH_MAGIC_64, cpu.kind, cpu.subtype, MH_DYLIB, 0, 0, 0, 0]
-            .iter()
-            .flat_map(|word| word.to_le_bytes())
-            .collect()
-    }
-
-    #[test]
-    fn the_processors_come_from_the_code_in_the_program() {
-        let arm = header_for(rominabox_engine::mach_o::Cpu::ARM64);
-        let intel = header_for(rominabox_engine::mach_o::Cpu::X86_64);
-        let both = rominabox_engine::mach_o::join(&[&arm, &intel]).unwrap();
-        assert_eq!(mach_o_processors(&arm), Ok(names(&["arm64"])));
-        assert_eq!(mach_o_processors(&both), Ok(names(&["arm64", "x86_64"])));
-    }
-
-    #[test]
-    fn we_look_on_the_website_first_and_then_on_github() {
-        assert_eq!(
-            manifest_addresses(),
-            [
-                "https://www.rominabox.app/updates/latest.json",
-                "https://github.com/Jorl17/rominabox/releases/latest/download/latest.json"
-            ]
-        );
-    }
-}
+mod tests;
