@@ -379,6 +379,13 @@ main {
   box-shadow: 3px 3px 0 var(--highlight);
   pointer-events: none;
 }
+/* A path breaks anywhere, in a wider tooltip. */
+.help-tooltip:has(.tip-path) {
+  width: min(480px, calc(100vw - 24px));
+}
+.tip-path {
+  overflow-wrap: anywhere;
+}
 /* Each paragraph of a longer help text on its own. */
 .help-tooltip p + p {
   margin-top: 8px;

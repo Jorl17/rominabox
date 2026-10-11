@@ -1,4 +1,4 @@
-/* We hide the builder's steps below the header while the Game data section
+/* We hide the builder's steps below the header while the Installed games section
    is open, without losing what the author entered. */
 body.game-data-open .app-shell > main {
   display: none;
@@ -90,6 +90,14 @@ body.game-data-open .app-shell > main {
 .game-data-table tbody tr.chosen td {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
+/* The game column takes up to half the table, with room for the path of
+   the app, and the other columns keep their words on one line. */
+.game-data-table th:nth-child(2) {
+  width: 50%;
+}
+.game-data-table td:nth-child(n + 3) {
+  white-space: nowrap;
+}
 .game-data-table th:first-child,
 .game-data-table td:first-child {
   width: 36px;
@@ -106,6 +114,27 @@ body.game-data-open .app-shell > main {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
+}
+/* The path of the app under the title, small and grey. It takes the width
+   of the column and never widens it. */
+.game-data-name {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.game-data-path {
+  display: flex;
+  width: 0;
+  min-width: 100%;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+/* The tooltip with the whole path shows over the words alone. */
+.game-data-path-tip {
+  display: flex;
+  min-width: 0;
 }
 .game-data-no-icon {
   background: color-mix(in srgb, var(--muted) 18%, var(--paper));

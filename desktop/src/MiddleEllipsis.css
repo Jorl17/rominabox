@@ -1,0 +1,15 @@
+.middle-ellipsis {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+.middle-ellipsis-start,
+.middle-ellipsis-end {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The end gives up its room only when it alone is wider than the line. */
+.middle-ellipsis-end {
+  flex-shrink: 0;
+  max-width: 100%;
+}

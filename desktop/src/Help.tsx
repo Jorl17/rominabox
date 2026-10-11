@@ -135,6 +135,32 @@ export function IconButton({
   );
 }
 
+/** `children` with `tip` in a tooltip while the pointer is over them, as
+ * Help shows its text. */
+export function Tip({
+  tip,
+  className,
+  children,
+}: {
+  tip: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  const { id, anchor, open, setOpen, popup } = useTip<HTMLSpanElement>();
+  return (
+    <span
+      ref={anchor}
+      className={className}
+      aria-describedby={open ? id : undefined}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      {children}
+      {popup(tip)}
+    </span>
+  );
+}
+
 /** The label and its help are one line of words beside the box, so the help
  * follows the last word however the words wrap. The help is outside the
  * label so that pressing it does not tick the box. */

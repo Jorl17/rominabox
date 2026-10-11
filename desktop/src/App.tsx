@@ -622,7 +622,7 @@ export function App() {
   }
   nativeDropHandler.current = (paths, pos) => {
     const under = document.elementFromPoint(pos.x, pos.y);
-    // The Game data section covers the steps and takes no files.
+    // The Installed games section covers the steps and takes no files.
     if (busy || under?.closest(".game-data")) return;
     const target = under?.closest("[data-drop]")?.getAttribute("data-drop");
     // A dropped game comes with its patches, and anything else is one file.

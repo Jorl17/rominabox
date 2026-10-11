@@ -592,6 +592,7 @@ function previewGame(
   title: string,
   console: string,
   appPresent: boolean,
+  folder: string,
 ): InstalledGame {
   return {
     identity,
@@ -599,7 +600,7 @@ function previewGame(
     system: "",
     console,
     content: title,
-    app: `C:\\Users\\you\\Downloads\\ROM-in-a-Box\\${title}.exe`,
+    app: `${folder}\\${title}.exe`,
     madeWith: "",
     playerFiles: [],
     icon: null,
@@ -610,7 +611,8 @@ function previewGame(
   };
 }
 /** The games on this computer, or in the browser preview three examples:
- * one whose app is gone and two that are installed. */
+ * one whose app is gone and two that are installed, one in a short path and
+ * one in a long one. */
 export function games(): Promise<InstalledGame[]> {
   if (native) return invoke("games");
   return Promise.resolve([
@@ -619,18 +621,21 @@ export function games(): Promise<InstalledGame[]> {
       "Hotkey Isolation",
       "Mega Drive / Genesis",
       false,
+      "C:\\Users\\you\\Downloads\\ROM-in-a-Box",
     ),
     previewGame(
       "000000000000000000000002",
       "Sonic 3 & Knuckles",
       "Mega Drive / Genesis",
       true,
+      "C:\\Games",
     ),
     previewGame(
       "000000000000000000000003",
       "Sonic Advance",
       "Game Boy Advance",
       true,
+      "C:\\Users\\you\\OneDrive - A Company With A Long Name\\Documents\\Emulation\\Game Boy Advance\\Platformers\\ROM-in-a-Box exports",
     ),
   ]);
 }

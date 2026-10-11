@@ -46,7 +46,7 @@ async function settle() {
 }
 
 describe("a file dropped on the window", () => {
-  it("is not a game for the builder while the Game data section covers it", async () => {
+  it("is not a game for the builder while the Installed games section covers it", async () => {
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
@@ -59,7 +59,7 @@ describe("a file dropped on the window", () => {
     act(() => root.render(<App />));
     await settle();
     const link = [...container.querySelectorAll("button")].find(
-      (each) => each.textContent === "Game data",
+      (each) => each.textContent === "Installed games",
     )!;
     act(() => link.click());
     await settle();

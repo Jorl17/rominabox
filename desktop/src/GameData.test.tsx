@@ -158,13 +158,31 @@ const asked = (name: string) =>
 const popUp = () =>
   document.querySelector<HTMLElement>(".pop-up")?.textContent ?? "";
 
-describe("the Game data section", () => {
-  it("lists each game with its console and app, offers Remove for a game whose app is gone, and Play, Reset, Uninstall and the updates for one that is there", async () => {
+describe("the Installed games section", () => {
+  it("lists each game with the path of its app, its console and app, offers Remove for a game whose app is gone, and Play, Reset, Uninstall and the updates for one that is there", async () => {
     await shown();
     expect(rows()).toEqual([
-      ["", "Knuckles", "Mega Drive / Genesis", "Not found", ""],
-      ["", "Pokemon Gold", "Mega Drive / Genesis", "Running", ""],
-      ["", "Sonic 3", "Mega Drive / Genesis", "Found", ""],
+      [
+        "",
+        "Knuckles/Applications/Knuckles.app",
+        "Mega Drive / Genesis",
+        "Not found",
+        "",
+      ],
+      [
+        "",
+        "Pokemon Gold/Applications/Pokemon Gold.app",
+        "Mega Drive / Genesis",
+        "Running",
+        "",
+      ],
+      [
+        "",
+        "Sonic 3/Applications/Sonic 3.app",
+        "Mega Drive / Genesis",
+        "Found",
+        "",
+      ],
     ]);
     expect(actions("Knuckles")).toEqual(["Remove the data of Knuckles"]);
     expect(actions("Sonic 3")).toEqual([
@@ -375,7 +393,7 @@ describe("the Game data section", () => {
   it("opens from the header in place of the builder, and closes again", async () => {
     await act(async () => root.render(<AppHeader />));
     expect(container.querySelector(".game-data")).toBeNull();
-    await click(button("Game data"));
+    await click(button("Installed games"));
     expect(container.querySelector(".game-data")).not.toBeNull();
     await click(button("Builder"));
     expect(container.querySelector(".game-data")).toBeNull();

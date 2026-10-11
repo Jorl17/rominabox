@@ -5,7 +5,7 @@ import { native, onAboutRequested } from "./bridge";
 import { GameData } from "./GameData";
 
 /** The band across the top: the wordmark, the edition, the link between the
- * builder and the Game data section, and About. The About dialog is outside
+ * builder and the Installed games section, and About. The About dialog is outside
  * the band so it does not have the colours of the band. We show the section
  * after the band, in place of the builder's steps. */
 export function AppHeader() {
@@ -35,7 +35,7 @@ export function AppHeader() {
             aria-pressed={gameData}
             onClick={() => setGameData(!gameData)}
           >
-            {gameData ? "Builder" : "Game data"}
+            {gameData ? "Builder" : "Installed games"}
           </button>
           <button
             className="text-button about-button"

@@ -19,7 +19,8 @@ import {
   UpdateAllCores,
   UpdateCoreGame,
 } from "./GameDataDialogs";
-import { Help, IconButton } from "./Help";
+import { Help, IconButton, Tip } from "./Help";
+import { MiddleEllipsis } from "./MiddleEllipsis";
 import "./GameData.css";
 
 /** The pop-up open over the list, if any. */
@@ -203,10 +204,10 @@ export function GameData() {
     <section className="game-data" aria-labelledby="game-data-title">
       <div className="heading-row">
         <h1 id="game-data-title">
-          Game data
-          <Help label="About game data">
-            The data (saves, states, settings, etc.) of your games. To appear, a
-            game has to have been started at least once.
+          Installed games
+          <Help label="About installed games">
+            The games on this computer and their data (saves, states, settings,
+            etc.). To appear, a game has to have been started at least once.
           </Help>
         </h1>
         <div className="game-data-actions">
@@ -345,7 +346,17 @@ export function GameData() {
                     ) : (
                       <span className="game-data-no-icon" />
                     )}
-                    {game.title}
+                    <span className="game-data-name">
+                      <span>{game.title}</span>
+                      <span className="game-data-path">
+                        <Tip
+                          className="game-data-path-tip"
+                          tip={<span className="tip-path">{game.app}</span>}
+                        >
+                          <MiddleEllipsis text={game.app} />
+                        </Tip>
+                      </span>
+                    </span>
                   </span>
                 </td>
                 <td>{game.console}</td>
