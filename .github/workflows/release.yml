@@ -1,15 +1,17 @@
 # We make releases only from version tags, v<version>.
 #
-# For each platform, we build the player, its runtime kit and the builder on
-# that platform. We then publish the installers as the version's release, and
-# the kits as the release of their player commit (scripts/publish_kit.py),
-# from which builders download them. When someone starts the workflow by hand
-# (workflow_dispatch), we keep the results as workflow artifacts and publish
-# nothing, and the run can be limited to one platform.
+# For each platform, we build the player and its runtime kit on that platform,
+# then the builder from them. We then publish the installers as the version's
+# release, and the kits as the release of their player commit
+# (scripts/publish_kit.py), from which builders download them. When someone
+# starts the workflow by hand (workflow_dispatch), we keep the results as
+# workflow artifacts and publish nothing, and the run can be limited to one
+# platform.
 #
-# On macOS we build three builders: for arm64 (ROM-in-a-Box-<version>-macos.zip,
-# the default download), for Intel (-macos-intel.zip) and universal
-# (-macos-universal.zip).
+# On macOS we build three builders from one kit, each in a job of its own at
+# the same time: for arm64 (ROM-in-a-Box-<version>-macos.zip, the default
+# download), for Intel (-macos-intel.zip) and universal (-macos-universal.zip).
+# The steps that every build job starts with are in .github/actions/setup.
 #
 # Secrets: FORK_DEPLOY_KEY is a read-only key for the private RetroArch fork.
 # For the Mac builder's Developer ID signature and notarization, the secrets
@@ -43,27 +45,85 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  windows:
+    if: inputs.platforms != 'macos'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/setup
+        with:
+          platform: windows
+          fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
+      - uses: ./.github/actions/kit
+      - name: Build the Windows builder
+        run: |
+          (cd desktop && npm ci)
+          uv run python scripts/build_builder.py
+          mkdir -p release/installers release/kits
+          cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
+          cp work/kits/*.zip release/kits/
+          ls -la release/installers release/kits
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-windows
+          path: release/
+          if-no-files-found: error
+
+  # The Mac player and kit, once for the three Mac builders. We pass the
+  # builder's resources on as a tar file, which keeps the executable bits that
+  # an artifact loses.
+  macos-kit:
+    if: inputs.platforms != 'windows'
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/setup
+        with:
+          platform: macos
+          fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
+      - uses: ./.github/actions/kit
+      - name: Collect the kit and the builder's resources
+        run: |
+          mkdir -p release/kits
+          cp work/kits/*.zip release/kits/
+          tar -czf "$RUNNER_TEMP/builder-resources.tar.gz" -C desktop/src-tauri resources
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-macos-kit
+          path: release/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: builder-resources-macos
+          path: ${{ runner.temp }}/builder-resources.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  macos-builder:
+    needs: macos-kit
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.platforms == 'macos' && '[{"runner":"macos-latest","platform":"macos"}]' || (inputs.platforms == 'windows' && '[{"runner":"windows-latest","platform":"windows"}]' || '[{"runner":"windows-latest","platform":"windows"},{"runner":"macos-latest","platform":"macos"}]')) }}
-    runs-on: ${{ matrix.runner }}
+        include:
+          - { variant: arm64, triple: aarch64-apple-darwin, processors: "arm64", file: macos, key: darwin-aarch64 }
+          - { variant: x86_64, triple: x86_64-apple-darwin, processors: "x86_64", file: macos-intel, key: darwin-x86_64 }
+          - { variant: universal, triple: universal-apple-darwin, processors: "arm64 x86_64", file: macos-universal, key: darwin-universal }
+    runs-on: macos-latest
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Check that the tag matches the builder's version
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
-          test "${GITHUB_REF_NAME}" = "v${version}" || { echo "tag ${GITHUB_REF_NAME} does not match version v${version}"; exit 1; }
-
       # Each secret goes only to the steps that use it. The later steps test
       # these outputs instead of the secrets.
-      - name: Check which signing secrets are set
+      - name: Check which Apple secrets are set
         id: signing
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -72,68 +132,19 @@ jobs:
           echo "apple=$([ -n "$MACOS_CERTIFICATE" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
           echo "notarize=$([ -n "$MACOS_CERTIFICATE" ] && [ -n "$NOTARY_KEY" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
 
-      - name: Load the fork's deploy key
-        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
+      - uses: ./.github/actions/setup
         with:
-          ssh-private-key: ${{ secrets.FORK_DEPLOY_KEY }}
-      - name: Check out the RetroArch fork
-        run: |
-          git config --global url."git@github.com:Jorl17/rominabox-retroarch.git".insteadOf "https://github.com/Jorl17/rominabox-retroarch.git"
-          git submodule update --init --depth 1 vendor/retroarch
-
-      - name: Install MSYS2's UCRT64 toolchain
-        if: matrix.platform == 'windows'
-        id: msys2
-        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
+          platform: macos
+          fork-deploy-key: ${{ secrets.FORK_DEPLOY_KEY }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          msystem: UCRT64
-          update: true
-          install: >-
-            make
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-make
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-pkgconf
-            mingw-w64-ucrt-x86_64-librsvg
-            mingw-w64-ucrt-x86_64-tools
-      - name: Point the build at the MSYS2 installation
-        if: matrix.platform == 'windows'
-        run: echo "ROMINABOX_MSYS2=$(cygpath -w '${{ steps.msys2.outputs.msys2-location }}')" >> "$GITHUB_ENV"
-
-      # The runner has no graphics card, and Windows alone offers OpenGL 1.1, so
-      # we draw the pictures of the builder's Menu step with Mesa's software
-      # OpenGL (scripts/build_kit.py).
-      - name: Install Mesa's software OpenGL
-        if: matrix.platform == 'windows'
-        run: |
-          curl -fsSL -o "$RUNNER_TEMP/mesa.7z" https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z
-          echo "351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695  $RUNNER_TEMP/mesa.7z" | sha256sum --check
-          7z e "$RUNNER_TEMP/mesa.7z" -o"$RUNNER_TEMP/mesa" x64/opengl32.dll x64/libgallium_wgl.dll
-          echo "ROMINABOX_OPENGL_LIBRARIES=$(cygpath -w "$RUNNER_TEMP/mesa")" >> "$GITHUB_ENV"
-          echo "GALLIUM_DRIVER=llvmpipe" >> "$GITHUB_ENV"
-
-      - name: Install CMake, Ninja and pkg-config
-        if: matrix.platform == 'macos'
-        run: brew install cmake ninja pkgconf
-
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 24
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        with:
-          targets: ${{ matrix.platform == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - name: Build the player and its runtime kit
-        run: |
-          target=$(uv run python -c 'import sys; sys.path.insert(0, "scripts"); import core_source, native_build; print(native_build.kit_target(core_source.host_target()))')
-          uv run python scripts/build_player.py --target "$target" "$GITHUB_WORKSPACE/work/player"
-          uv run python scripts/build_kit.py "$GITHUB_WORKSPACE/work/player"
-          uv run python scripts/publish_kit.py pack
+          name: builder-resources-macos
+          path: ${{ runner.temp }}
+      - name: Put the kit's resources in place
+        run: tar -xzf "$RUNNER_TEMP/builder-resources.tar.gz" -C desktop/src-tauri
 
       - name: Import the Developer ID certificate
-        if: matrix.platform == 'macos' && steps.signing.outputs.apple == 'yes'
+        if: steps.signing.outputs.apple == 'yes'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -150,16 +161,7 @@ jobs:
           test -n "$identity" || { echo "MACOS_CERTIFICATE contains no Developer ID Application certificate"; exit 1; }
           echo "ROMINABOX_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
 
-      - name: Build the Windows builder
-        if: matrix.platform == 'windows'
-        run: |
-          (cd desktop && npm ci)
-          uv run python scripts/build_builder.py
-          mkdir -p release/installers
-          cp desktop/target/release/bundle/nsis/*-setup.exe release/installers/
-
-      - name: Build, check and notarize the three Mac builders
-        if: matrix.platform == 'macos'
+      - name: Build, check and notarize the ${{ matrix.variant }} builder
         env:
           NOTARIZE: ${{ steps.signing.outputs.notarize }}
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
@@ -169,40 +171,28 @@ jobs:
           (cd desktop && npm ci)
           version=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
           mkdir -p release/installers
-          for variant in arm64 x86_64 universal; do
-            case $variant in
-              arm64) triple=aarch64-apple-darwin; wanted="arm64"; name="ROM-in-a-Box-${version}-macos.zip"; key=darwin-aarch64 ;;
-              x86_64) triple=x86_64-apple-darwin; wanted="x86_64"; name="ROM-in-a-Box-${version}-macos-intel.zip"; key=darwin-x86_64 ;;
-              universal) triple=universal-apple-darwin; wanted="arm64 x86_64"; name="ROM-in-a-Box-${version}-macos-universal.zip"; key=darwin-universal ;;
-            esac
-            uv run python scripts/build_builder.py --mac "$variant"
-            app="desktop/target/$triple/release/bundle/macos/ROM-in-a-Box.app"
-            for program in "$app"/Contents/MacOS/* "$app/Contents/Resources/bin/rominabox-cli" "$app/Contents/Resources/preview/rml-preview"; do
-              held=$(lipo -archs "$program" | tr ' ' '\n' | sort | xargs)
-              test "$held" = "$wanted" || { echo "$program holds $held, not $wanted"; exit 1; }
-            done
-            if [ "$NOTARIZE" = yes ]; then
-              echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
-              ditto -c -k --keepParent "$app" "$RUNNER_TEMP/notarize.zip"
-              xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
-                --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
-              xcrun stapler staple "$app"
-              # The update package, only of a notarized builder, without the
-              # extended attributes and resource forks of macOS.
-              package=$(uv run python scripts/update_manifest.py package "$key" "$version")
-              COPYFILE_DISABLE=1 tar --no-mac-metadata -czf "release/installers/$package" -C "$(dirname "$app")" "$(basename "$app")"
-            fi
-            ditto -c -k --keepParent "$app" "release/installers/$name"
+          uv run python scripts/build_builder.py --mac "${{ matrix.variant }}"
+          app="desktop/target/${{ matrix.triple }}/release/bundle/macos/ROM-in-a-Box.app"
+          for program in "$app"/Contents/MacOS/* "$app/Contents/Resources/bin/rominabox-cli" "$app/Contents/Resources/preview/rml-preview"; do
+            held=$(lipo -archs "$program" | tr ' ' '\n' | sort | xargs)
+            test "$held" = "${{ matrix.processors }}" || { echo "$program holds $held, not ${{ matrix.processors }}"; exit 1; }
           done
-
-      - name: Collect the release files
-        run: |
-          mkdir -p release/kits
-          cp work/kits/*.zip release/kits/
-          ls -la release/installers release/kits
+          if [ "$NOTARIZE" = yes ]; then
+            echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
+            ditto -c -k --keepParent "$app" "$RUNNER_TEMP/notarize.zip"
+            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
+              --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
+            xcrun stapler staple "$app"
+            # The update package, only of a notarized builder, without the
+            # extended attributes and resource forks of macOS.
+            package=$(uv run python scripts/update_manifest.py package "${{ matrix.key }}" "$version")
+            COPYFILE_DISABLE=1 tar --no-mac-metadata -czf "release/installers/$package" -C "$(dirname "$app")" "$(basename "$app")"
+          fi
+          ditto -c -k --keepParent "$app" "release/installers/ROM-in-a-Box-${version}-${{ matrix.file }}.zip"
+          ls -la release/installers
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: release-${{ matrix.platform }}
+          name: release-macos-${{ matrix.variant }}
           path: release/
           if-no-files-found: error
 
@@ -213,7 +203,9 @@ jobs:
   # runs again without the builds. We run the Tauri command line that npm ci
   # installs from package-lock.json, never one that npx could fetch.
   sign:
-    needs: build
+    needs: [windows, macos-builder]
+    # A run by hand for one platform skips the other platform's jobs.
+    if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
