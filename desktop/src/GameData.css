@@ -16,10 +16,27 @@ body.game-data-open .app-shell > main {
   display: flex;
   align-items: center;
   gap: 10px;
+  white-space: nowrap;
+}
+/* In a narrow window the buttons go onto a line under the heading, each
+   on one line of its own words. */
+.game-data .heading-row {
+  flex-wrap: wrap;
 }
 .game-data-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+.game-data-actions button {
+  white-space: nowrap;
+}
+/* The menu beside the buttons stretches to their height, and its padding
+   makes it about as wide as it is tall. */
+.game-data-actions .action-menu > .icon-button {
+  width: auto;
+  height: auto;
+  padding: 0 12px;
 }
 .game-data-said {
   font-size: 13px;

@@ -678,6 +678,10 @@ export function resetGameData(identity: string): Promise<void> {
 export function uninstallGame(identity: string): Promise<void> {
   return native ? invoke("game_uninstall", { identity }) : Promise.resolve();
 }
+/** Open the game `identity`, as a double click on its app does. */
+export function playGame(identity: string): Promise<void> {
+  return native ? invoke("game_play", { identity }) : Promise.resolve();
+}
 export async function pickDataSave(name: string): Promise<string | null> {
   return save({
     title: "Export game data",

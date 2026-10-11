@@ -1,4 +1,5 @@
-import { LoaderCircle, RotateCcw, Trash2 } from "lucide-react";
+import { CloudDownload, Cpu, LoaderCircle, Play, RotateCcw, Trash2 } from "lucide-react";
+import { ActionMenu } from "./ActionMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as bridge from "./bridge";
 import {
@@ -143,6 +144,17 @@ export function GameData() {
   }
 
   const listed = games ?? [];
+  const installed = listed.filter((game) => game.appPresent);
+
+  function play(game: bridge.InstalledGame) {
+    bridge.playGame(game.identity).catch((error) =>
+      setSaid({ text: String(error), failed: true }),
+    );
+  }
+
+  function notBuilt(action: string) {
+    setSaid({ text: `${action} is not built yet.`, failed: false });
+  }
   const everyChosen = listed.length > 0 && chosen.size === listed.length;
   return (
     <section className="game-data" aria-labelledby="game-data-title">
@@ -172,6 +184,25 @@ export function GameData() {
           >
             Export all
           </button>
+          <ActionMenu
+            label="Update every game"
+            items={[
+              {
+                label: "Update all cores",
+                detail: "Update the emulator core of every game to the latest version, if there is one.",
+                icon: <CloudDownload size={18} />,
+                disabled: busy || installed.length === 0,
+                onSelect: () => notBuilt("Update all cores"),
+              },
+              {
+                label: "Update all engines",
+                detail: "Update the ROM-in-a-Box engine of every game for the latest features.",
+                icon: <Cpu size={18} />,
+                disabled: busy || installed.length === 0,
+                onSelect: () => notBuilt("Update all engines"),
+              },
+            ]}
+          />
         </div>
       </div>
       {said && (
@@ -280,6 +311,14 @@ export function GameData() {
                     {game.appPresent ? (
                       <>
                         <IconButton
+                          label={`Play ${game.title}`}
+                          tip="Play the game."
+                          disabled={busy}
+                          onClick={() => play(game)}
+                        >
+                          <Play size={18} />
+                        </IconButton>
+                        <IconButton
                           label={`Reset the data of ${game.title}`}
                           tip={
                             game.running
@@ -304,6 +343,29 @@ export function GameData() {
                         >
                           <Trash2 size={18} />
                         </IconButton>
+                        <ActionMenu
+                          label={`Update ${game.title}`}
+                          items={[
+                            {
+                              label: "Update core",
+                              detail: game.running
+                                ? "Quit the game first."
+                                : "Update the emulator core to the latest version, if there is one.",
+                              icon: <CloudDownload size={18} />,
+                              disabled: busy || game.running,
+                              onSelect: () => notBuilt("Update core"),
+                            },
+                            {
+                              label: "Update engine",
+                              detail: game.running
+                                ? "Quit the game first."
+                                : "Update the ROM-in-a-Box engine for the latest features.",
+                              icon: <Cpu size={18} />,
+                              disabled: busy || game.running,
+                              onSelect: () => notBuilt("Update engine"),
+                            },
+                          ]}
+                        />
                       </>
                     ) : (
                       <IconButton

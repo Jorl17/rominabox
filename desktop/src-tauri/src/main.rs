@@ -384,6 +384,11 @@ async fn game_uninstall(identity: String) -> Result<(), String> {
     with_library(move |library| library.uninstall(&identity)).await
 }
 
+#[tauri::command]
+async fn game_play(identity: String) -> Result<(), String> {
+    with_library(move |library| library.play(&identity)).await
+}
+
 /// Wait for a press on a controller and return its pad position.
 #[tauri::command]
 async fn capture_pad_position(seconds: u64) -> Result<Option<String>, String> {
@@ -586,7 +591,8 @@ fn main() {
             game_data_import_all,
             game_data_remove,
             game_data_reset,
-            game_uninstall
+            game_uninstall,
+            game_play
         ])
         .run(context)
         .expect("failed to run ROM-in-a-Box desktop shell");

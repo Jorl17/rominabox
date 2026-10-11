@@ -386,6 +386,36 @@ fn an_uninstall_deletes_the_games_app_and_everything_stored_for_it() {
     }
 }
 
+/// Play opens the game's own app, also while the game is open, and nothing
+/// else: not another game's app, not another file, and not an app that is
+/// gone.
+#[test]
+fn play_opens_only_the_games_own_app() {
+    for layout in LAYOUTS {
+        let root = Scratch::dir("rominabox-game-library-play");
+        let library = Library::at(root.to_path_buf(), layout);
+        let app = app_path(&root, layout, "Sonic 3");
+        let sonic = manifest(SONIC, "Sonic 3", "megadrive", &app);
+        installed(&library, &sonic, "rings", false);
+        app_of(layout, SONIC, &app);
+        assert_eq!(library.app_to_play(SONIC), Ok(app.clone()), "{layout:?}");
+
+        let other = root.join("Knuckles.app-or-exe");
+        app_of(layout, KNUCKLES, &other);
+        let pointed = manifest(SONIC, "Sonic 3", "megadrive", &other);
+        game_data::write_manifest(&library.data_dir(SONIC), &pointed).unwrap();
+        assert_eq!(
+            library.app_to_play(SONIC),
+            Err(format!("{} is not the app of \u{201c}Sonic 3\u{201d}, so we did not open it.", pointed.app)),
+            "{layout:?}"
+        );
+
+        let gone = manifest(SONIC, "Sonic 3", "megadrive", &root.join("Gone.exe"));
+        game_data::write_manifest(&library.data_dir(SONIC), &gone).unwrap();
+        assert!(library.app_to_play(SONIC).is_err(), "{layout:?}");
+    }
+}
+
 /// A game can write its own manifest, which contains the path to its app.
 /// We delete nothing at that path unless it is this game's app: not another
 /// file, and not another game's app.

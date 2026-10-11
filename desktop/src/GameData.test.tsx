@@ -38,6 +38,7 @@ vi.mock("./bridge", async (importOriginal) => {
     removeGameData: called("removeGameData", () => undefined),
     resetGameData: called("resetGameData", () => undefined),
     uninstallGame: called("uninstallGame", () => undefined),
+    playGame: called("playGame", () => undefined),
   };
 });
 
@@ -139,7 +140,7 @@ const popUp = () =>
   document.querySelector<HTMLElement>(".pop-up")?.textContent ?? "";
 
 describe("the Game data section", () => {
-  it("lists each game with its console and app, offers Remove for a game whose app is gone, and Reset and Uninstall for one that is there", async () => {
+  it("lists each game with its console and app, offers Remove for a game whose app is gone, and Play, Reset, Uninstall and the updates for one that is there", async () => {
     await shown();
     expect(rows()).toEqual([
       ["", "Knuckles", "Mega Drive / Genesis", "Not found", ""],
@@ -148,13 +149,22 @@ describe("the Game data section", () => {
     ]);
     expect(actions("Knuckles")).toEqual(["Remove the data of Knuckles"]);
     expect(actions("Sonic 3")).toEqual([
+      "Play Sonic 3",
       "Reset the data of Sonic 3",
       "Uninstall Sonic 3",
+      "Update Sonic 3",
     ]);
     expect(labelled("Reset the data of Pokemon Gold").disabled).toBe(true);
     expect(labelled("Uninstall Pokemon Gold").disabled).toBe(true);
     const icon = container.querySelector<HTMLImageElement>("tbody img");
     expect(icon?.getAttribute("src")).toBe("blob:/data/aaaa/game-icon.png");
+  });
+
+  it("opens a game with Play, also one that is running, which comes to the front", async () => {
+    await shown();
+    expect(labelled("Play Pokemon Gold").disabled).toBe(false);
+    await click(labelled("Play Sonic 3"));
+    expect(asked("playGame")).toEqual([["aaaa"]]);
   });
 
   it("says there are no games when there are none", async () => {

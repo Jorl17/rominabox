@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 /// Where a platform keeps the sandboxes of games.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -353,6 +354,51 @@ impl Library {
         };
         deleted.map_err(|error| format!("We could not delete {}: {error}", app.display()))?;
         self.forget(identity)
+    }
+
+    /// The app of the game `identity`, to open it. As for an uninstall, we
+    /// open nothing at the path in the manifest unless it is this game's app.
+    /// A game that is already open stays allowed: on a second launch the
+    /// game brings its window to the front.
+    pub fn app_to_play(&self, identity: &str) -> Result<PathBuf, String> {
+        let game = self.find(identity)?;
+        let app = PathBuf::from(&game.game.app);
+        if !game.app_present {
+            return Err(format!(
+                "\u{201c}{}\u{201d} is not installed at {} any more.",
+                game.game.title, game.game.app
+            ));
+        }
+        if !self.layout.is_app_of(&app, identity) {
+            return Err(format!(
+                "{} is not the app of \u{201c}{}\u{201d}, so we did not open it.",
+                game.game.app, game.game.title
+            ));
+        }
+        Ok(app)
+    }
+
+    /// Open the game `identity`, as a double click on its app does.
+    pub fn play(&self, identity: &str) -> Result<(), String> {
+        let app = self.app_to_play(identity)?;
+        let mut command = match self.layout {
+            Layout::Macos => {
+                let mut open = Command::new("/usr/bin/open");
+                open.arg(&app);
+                open
+            }
+            Layout::Windows => Command::new(&app),
+        };
+        if let Some(folder) = app.parent() {
+            command.current_dir(folder);
+        }
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map(drop)
+            .map_err(|error| format!("We could not open {}: {error}", app.display()))
     }
 
     /// Remove everything stored for the game `identity` besides its app: its
