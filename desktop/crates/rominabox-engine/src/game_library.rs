@@ -335,19 +335,13 @@ impl Library {
     /// path only when it is this game's app (`Layout::is_app_of`).
     pub fn uninstall(&self, identity: &str) -> Result<(), String> {
         let game = self.ready(identity)?;
-        let app = PathBuf::from(&game.game.app);
         if !game.app_present {
             return Err(format!(
                 "\u{201c}{}\u{201d} is not installed at {} any more. Remove its data instead.",
                 game.game.title, game.game.app
             ));
         }
-        if !self.layout.is_app_of(&app, identity) {
-            return Err(format!(
-                "{} is not the app of \u{201c}{}\u{201d}, so we did not delete it.",
-                game.game.app, game.game.title
-            ));
-        }
+        let app = self.own_app(&game, "delete")?;
         let deleted = match self.layout {
             Layout::Macos => remove_folder(&app),
             Layout::Windows => remove_file(&app),
@@ -356,12 +350,11 @@ impl Library {
         self.forget(identity)
     }
 
-    /// The app of the game `identity`, to open it. As for an uninstall, we
-    /// open nothing at the path in the manifest unless it is this game's app.
-    /// A game that is already open stays allowed: on a second launch the
-    /// game brings its window to the front.
-    pub fn app_to_play(&self, identity: &str) -> Result<PathBuf, String> {
-        let game = self.find(identity)?;
+    /// The app of the game `game`, when it is installed and is that game's
+    /// app. A game can write its own manifest, which contains the path to its
+    /// app, so we do nothing at that path unless it is this game's app. `verb`
+    /// is what we did not do with any other path.
+    fn own_app(&self, game: &InstalledGame, verb: &str) -> Result<PathBuf, String> {
         let app = PathBuf::from(&game.game.app);
         if !game.app_present {
             return Err(format!(
@@ -369,13 +362,26 @@ impl Library {
                 game.game.title, game.game.app
             ));
         }
-        if !self.layout.is_app_of(&app, identity) {
+        if !self.layout.is_app_of(&app, &game.game.identity) {
             return Err(format!(
-                "{} is not the app of \u{201c}{}\u{201d}, so we did not open it.",
+                "{} is not the app of \u{201c}{}\u{201d}, so we did not {verb} it.",
                 game.game.app, game.game.title
             ));
         }
         Ok(app)
+    }
+
+    /// The app of the game `identity`, to open it. A game that is already
+    /// open stays allowed: on a second launch the game brings its window to
+    /// the front.
+    pub fn app_to_play(&self, identity: &str) -> Result<PathBuf, String> {
+        self.own_app(&self.find(identity)?, "open")
+    }
+
+    /// The app of the game `identity`, to change it, when the game is not
+    /// running.
+    fn app_to_change(&self, identity: &str, verb: &str) -> Result<PathBuf, String> {
+        self.own_app(&self.ready(identity)?, verb)
     }
 
     /// Open the game `identity`, as a double click on its app does.
@@ -484,6 +490,9 @@ fn running(app: &Path) -> bool {
 fn running(_app: &Path) -> bool {
     false
 }
+
+mod update;
+pub use update::CoreUpdate;
 
 #[cfg(test)]
 mod tests;

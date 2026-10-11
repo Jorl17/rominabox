@@ -103,33 +103,9 @@ impl Packager for WindowsPackager {
         _cancelled: &AtomicBool,
     ) -> Result<(), ExportError> {
         // We checked the player and the launcher when we built them, but a
-        // core comes from a download, so we check it here. With a library that
-        // Windows does not have, the game would fail when the core loads.
+        // core comes from a download, so we check it here.
         self.core = core.to_path_buf();
-        let image = fs::read(core).map_err(|error| ExportError::io(ErrorStage::Dependencies, core, error))?;
-        let imported = crate::portable_executable::imports(&image).map_err(|message| {
-            ExportError::new(ErrorStage::Dependencies, format!("{}: {message}", core.display()))
-        })?;
-        let system = system_libraries(Self::TARGET);
-        let foreign: Vec<String> = imported
-            .into_iter()
-            .filter(|name| {
-                let name = name.to_ascii_lowercase();
-                !system.contains(&name) && !name.starts_with("api-ms-win-")
-            })
-            .collect();
-        if foreign.is_empty() {
-            Ok(())
-        } else {
-            Err(ExportError::new(
-                ErrorStage::CoreLibraries,
-                format!(
-                    "The emulator for this console needs {}, which Windows does not include, so the game \
-                     would not start. Try again later: a newer version of the emulator may not need it.",
-                    spoken(&foreign)
-                ),
-            ))
-        }
+        check_core(core)
     }
 
     fn install_launcher(&mut self, runtime_kit: &Path) -> Result<(), ExportError> {
@@ -207,5 +183,33 @@ fn spoken(names: &[String]) -> String {
         [] => String::new(),
         [only] => only.clone(),
         [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
+
+/// Refuse a Windows core that needs a library Windows does not have, with
+/// which the game would fail when the core loads.
+pub(crate) fn check_core(core: &Path) -> Result<(), ExportError> {
+    let image = fs::read(core).map_err(|error| ExportError::io(ErrorStage::Dependencies, core, error))?;
+    let imported = crate::portable_executable::imports(&image).map_err(|message| {
+        ExportError::new(ErrorStage::Dependencies, format!("{}: {message}", core.display()))
+    })?;
+    let system = system_libraries(Target::WindowsX86_64);
+    let foreign: Vec<String> = imported
+        .into_iter()
+        .filter(|name| {
+            let name = name.to_ascii_lowercase();
+            !system.contains(&name) && !name.starts_with("api-ms-win-")
+        })
+        .collect();
+    if foreign.is_empty() {
+        Ok(())
+    } else {
+        Err(ExportError::new(
+            ErrorStage::CoreLibraries,
+            format!(
+                "The emulator for this console needs {}, which Windows does not include, so the game would not start. Try again later: a newer version of the emulator may not need it.",
+                spoken(&foreign)
+            ),
+        ))
     }
 }

@@ -76,41 +76,42 @@ fn u32_at(image: &[u8], at: usize) -> Result<u32, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::imports;
-
-    /// A 64-bit image with one section that contains an import table naming
-    /// `dlls`, laid out the way a linker writes it.
-    fn image(dlls: &[&str]) -> Vec<u8> {
-        let mut image = vec![0u8; 0x400];
-        image[0..2].copy_from_slice(b"MZ");
-        image[0x3c..0x40].copy_from_slice(&0x80u32.to_le_bytes());
-        image[0x80..0x84].copy_from_slice(b"PE\0\0");
-        let coff = 0x84;
-        image[coff + 2..coff + 4].copy_from_slice(&1u16.to_le_bytes());
-        image[coff + 16..coff + 18].copy_from_slice(&240u16.to_le_bytes());
-        let optional = coff + 20;
-        image[optional..optional + 2].copy_from_slice(&0x20bu16.to_le_bytes());
-        let directories = optional + 112;
-        image[directories - 4..directories].copy_from_slice(&16u32.to_le_bytes());
-        // The section: virtual 0x1000, raw 0x200, 0x200 bytes.
-        let section = optional + 240;
-        image[section..section + 5].copy_from_slice(b".idat");
-        image[section + 8..section + 12].copy_from_slice(&0x200u32.to_le_bytes());
-        image[section + 12..section + 16].copy_from_slice(&0x1000u32.to_le_bytes());
-        image[section + 16..section + 20].copy_from_slice(&0x200u32.to_le_bytes());
-        image[section + 20..section + 24].copy_from_slice(&0x200u32.to_le_bytes());
-        image[directories + 8..directories + 12].copy_from_slice(&0x1000u32.to_le_bytes());
-        let mut name_at = 0x100;
-        for (index, dll) in dlls.iter().enumerate() {
-            let descriptor = 0x200 + index * 20;
-            image[descriptor + 12..descriptor + 16]
-                .copy_from_slice(&(0x1000 + name_at as u32).to_le_bytes());
-            image[0x200 + name_at..0x200 + name_at + dll.len()].copy_from_slice(dll.as_bytes());
-            name_at += dll.len() + 1;
-        }
-        image
+/// A 64-bit image with one section that contains an import table naming
+/// `dlls`, laid out the way a linker writes it.
+pub(crate) fn image_importing(dlls: &[&str]) -> Vec<u8> {
+    let mut image = vec![0u8; 0x400];
+    image[0..2].copy_from_slice(b"MZ");
+    image[0x3c..0x40].copy_from_slice(&0x80u32.to_le_bytes());
+    image[0x80..0x84].copy_from_slice(b"PE\0\0");
+    let coff = 0x84;
+    image[coff + 2..coff + 4].copy_from_slice(&1u16.to_le_bytes());
+    image[coff + 16..coff + 18].copy_from_slice(&240u16.to_le_bytes());
+    let optional = coff + 20;
+    image[optional..optional + 2].copy_from_slice(&0x20bu16.to_le_bytes());
+    let directories = optional + 112;
+    image[directories - 4..directories].copy_from_slice(&16u32.to_le_bytes());
+    // The section: virtual 0x1000, raw 0x200, 0x200 bytes.
+    let section = optional + 240;
+    image[section..section + 5].copy_from_slice(b".idat");
+    image[section + 8..section + 12].copy_from_slice(&0x200u32.to_le_bytes());
+    image[section + 12..section + 16].copy_from_slice(&0x1000u32.to_le_bytes());
+    image[section + 16..section + 20].copy_from_slice(&0x200u32.to_le_bytes());
+    image[section + 20..section + 24].copy_from_slice(&0x200u32.to_le_bytes());
+    image[directories + 8..directories + 12].copy_from_slice(&0x1000u32.to_le_bytes());
+    let mut name_at = 0x100;
+    for (index, dll) in dlls.iter().enumerate() {
+        let descriptor = 0x200 + index * 20;
+        image[descriptor + 12..descriptor + 16]
+            .copy_from_slice(&(0x1000 + name_at as u32).to_le_bytes());
+        image[0x200 + name_at..0x200 + name_at + dll.len()].copy_from_slice(dll.as_bytes());
+        name_at += dll.len() + 1;
     }
+    image
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{image_importing as image, imports};
 
     #[test]
     fn reads_every_imported_library_by_name() {

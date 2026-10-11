@@ -27,7 +27,10 @@ mod tests;
 /// Windows copy, for the list of games on this computer (`game_library`).
 pub(crate) use launch_plan::{game_data_folder, runtime_folder};
 pub(crate) use macos::{bundle_identifier, bundle_identifier_of, BUNDLE_PREFIX};
-pub(crate) use windows_pack::packed_runtime;
+pub(crate) use windows::check_core as check_windows_core;
+pub(crate) use windows_pack::{
+    pack as pack_windows_game, packed_runtime, unpack as unpack_windows_game, Unpacked as UnpackedWindowsGame,
+};
 
 use crate::target::Target;
 use crate::launch_contract::{app_file, shipped};
@@ -48,7 +51,8 @@ use app_files::{
     stage_controller_remap, stage_firmware, stage_legal_materials, stage_pixel_options, tree_size,
 };
 pub use app_files::{menu_request, stage_menu};
-use export_core::{export_core, prepare_core, resolve_cached, shipped_cores, ExportCore};
+pub(crate) use export_core::resolve_cached;
+use export_core::{export_core, prepare_core, shipped_cores, ExportCore};
 use launch_plan::{isolation_namespace, stable_identity, write_launch_plan};
 pub use both::export_for_both;
 pub use launch_plan::MANAGED_DATA_DIRECTORIES;

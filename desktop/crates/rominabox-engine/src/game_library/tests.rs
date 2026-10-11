@@ -443,3 +443,101 @@ fn an_uninstall_deletes_only_the_games_own_app() {
         assert_eq!(save(&library, &sonic), "rings");
     }
 }
+
+/// A Windows game for the console `system`, packed as an export packs it, at
+/// `app`, with `core` as its core and the old text of its core's licence.
+fn packed_windows_game(root: &Path, identity: &str, system: &str, app: &Path, core: &[u8]) {
+    let preferred = crate::systems::find(system).unwrap().preferred_core().unwrap();
+    let laid_out = root.join(format!("laid-out-{identity}"));
+    let resources = laid_out.join("Resources");
+    fs::create_dir_all(resources.join("Legal/Licenses")).unwrap();
+    fs::write(
+        resources.join("game.json"),
+        serde_json::json!({
+            "identity": identity,
+            "system": system,
+            "core": "game-core.dll",
+            "coreSource": preferred.artifact_for(crate::target::Target::WindowsX86_64).unwrap(),
+        })
+        .to_string(),
+    )
+    .unwrap();
+    fs::write(resources.join("game-core.dll"), core).unwrap();
+    fs::write(resources.join("Legal/Licenses").join(&preferred.license_file), "the old licence").unwrap();
+    let launcher = laid_out.join(app.file_name().unwrap());
+    fs::write(&launcher, b"MZ the launcher").unwrap();
+    crate::packaging::pack_windows_game(
+        &laid_out,
+        &launcher,
+        &runtime_folder(identity),
+        app,
+        &std::sync::atomic::AtomicBool::new(false),
+    )
+    .unwrap();
+}
+
+/// The file `path` of the Windows game at `app`.
+fn packed_file(root: &Path, app: &Path, path: &str) -> Vec<u8> {
+    let into = root.join(format!("read-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    fs::create_dir_all(&into).unwrap();
+    crate::packaging::unpack_windows_game(app, &into).unwrap();
+    fs::read(into.join(path)).unwrap()
+}
+
+/// We put a newer core into an installed Windows game, with its licence
+/// text, and keep everything else: the rest of the game, its identity and
+/// its saves. With the same core, we change nothing.
+#[test]
+fn a_newer_core_goes_into_a_windows_game_and_its_saves_stay() {
+    let root = Scratch::dir("rominabox-game-library-core-update");
+    let library = Library::at(root.join("data"), Layout::Windows);
+    let app = root.join("Sonic 3.exe");
+    let sonic = manifest(SONIC, "Sonic 3", "megadrive", &app);
+    installed(&library, &sonic, "rings", false);
+    let old_core = crate::portable_executable::image_importing(&["KERNEL32.dll"]);
+    packed_windows_game(&root, SONIC, "megadrive", &app, &old_core);
+    let kit = root.join("kit");
+    let cache = root.join("cache");
+    let licence = &crate::systems::find("megadrive").unwrap().preferred_core().unwrap().license_file;
+    fs::create_dir_all(cache.join("licenses")).unwrap();
+    fs::write(cache.join("licenses").join(licence), "the new licence").unwrap();
+    let newest = root.join("newest.dll");
+    fs::write(&newest, crate::portable_executable::image_importing(&["KERNEL32.dll", "USER32.dll"])).unwrap();
+    let windows = crate::target::Target::WindowsX86_64;
+
+    let updated = library.change_core(SONIC, &kit, &cache, windows, |_| Ok(newest.clone()));
+
+    assert_eq!(updated, Ok(CoreUpdate::Updated));
+    assert_eq!(packed_file(&root, &app, "Resources/game-core.dll"), fs::read(&newest).unwrap());
+    assert_eq!(packed_file(&root, &app, &format!("Resources/Legal/Licenses/{licence}")), b"the new licence");
+    assert_eq!(packed_file(&root, &app, "Sonic 3.exe"), b"MZ the launcher");
+    assert!(library.layout.is_app_of(&app, SONIC), "the game keeps its identity");
+    assert_eq!(save(&library, &sonic), "rings");
+
+    let before = fs::read(&app).unwrap();
+    assert_eq!(library.change_core(SONIC, &kit, &cache, windows, |_| Ok(newest.clone())), Ok(CoreUpdate::Current));
+    assert_eq!(fs::read(&app).unwrap(), before, "the same core changed the game");
+    let left: Vec<_> = fs::read_dir(&root).unwrap().filter_map(|entry| entry.ok()).map(|entry| entry.file_name()).collect();
+    assert!(!left.iter().any(|name| name.to_string_lossy().starts_with(".rominabox-update-")), "{left:?}");
+}
+
+/// We refuse a core that needs a library Windows does not have, and the game
+/// stays as it was.
+#[test]
+fn a_core_windows_cannot_load_is_refused_and_the_game_stays() {
+    let root = Scratch::dir("rominabox-game-library-core-refused");
+    let library = Library::at(root.join("data"), Layout::Windows);
+    let app = root.join("Sonic 3.exe");
+    let sonic = manifest(SONIC, "Sonic 3", "megadrive", &app);
+    installed(&library, &sonic, "rings", false);
+    packed_windows_game(&root, SONIC, "megadrive", &app, &crate::portable_executable::image_importing(&["KERNEL32.dll"]));
+    let before = fs::read(&app).unwrap();
+    let newest = root.join("newest.dll");
+    fs::write(&newest, crate::portable_executable::image_importing(&["KERNEL32.dll", "SDL2.dll"])).unwrap();
+
+    let refused = library.change_core(SONIC, &root, &root, crate::target::Target::WindowsX86_64, |_| Ok(newest.clone()));
+
+    assert!(refused.as_ref().is_err_and(|message| message.contains("which Windows does not include")), "{refused:?}");
+    assert_eq!(fs::read(&app).unwrap(), before);
+    assert_eq!(save(&library, &sonic), "rings");
+}

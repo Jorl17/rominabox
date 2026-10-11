@@ -9,6 +9,7 @@ const engine = vi.hoisted(() => ({
   backups: [] as bridge.BackupGame[],
   check: { kind: "sameGame" } as bridge.DataCheck,
   bulk: { imported: [], notHere: [], refused: [] } as bridge.BulkImport,
+  coreUpdate: "updated" as bridge.CoreUpdate,
   calls: [] as unknown[][],
 }));
 
@@ -39,6 +40,7 @@ vi.mock("./bridge", async (importOriginal) => {
     resetGameData: called("resetGameData", () => undefined),
     uninstallGame: called("uninstallGame", () => undefined),
     playGame: called("playGame", () => undefined),
+    updateCore: called("updateCore", () => engine.coreUpdate),
   };
 });
 
@@ -90,6 +92,7 @@ beforeEach(() => {
   engine.backups = [];
   engine.check = { kind: "sameGame" };
   engine.bulk = { imported: [], notHere: [], refused: [] };
+  engine.coreUpdate = "updated";
   engine.calls = [];
 });
 
@@ -293,6 +296,23 @@ describe("the Game data section", () => {
     await click(button("Yes, reset"));
     expect(asked("resetGameData")).toEqual([["aaaa"]]);
     expect(container.textContent).toContain("Reset the data of “Sonic 3”.");
+  });
+
+  it("updates a game's core only once the player accepts that save states might not load", async () => {
+    await shown();
+    await click(await menuItem("More actions for Sonic 3", "Update core"));
+    expect(popUp()).toContain("Update the core of “Sonic 3”?");
+    expect(popUp()).toContain("Save states made with the current core might not load with the new one.");
+    await click(button("Cancel"));
+    expect(asked("updateCore")).toEqual([]);
+    await click(await menuItem("More actions for Sonic 3", "Update core"));
+    await click(button("Update core"));
+    expect(asked("updateCore")).toEqual([["aaaa"]]);
+    expect(container.textContent).toContain("Updated the core of “Sonic 3”.");
+    engine.coreUpdate = "current";
+    await click(await menuItem("More actions for Sonic 3", "Update core"));
+    await click(button("Update core"));
+    expect(container.textContent).toContain("“Sonic 3” already has the newest core.");
   });
 
   it("uninstalls a game only once confirmed, naming its app", async () => {

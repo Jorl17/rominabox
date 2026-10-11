@@ -9,6 +9,7 @@ import {
   RemoveGame,
   ResetGame,
   UninstallGame,
+  UpdateCoreGame,
 } from "./GameDataDialogs";
 import { Help, IconButton } from "./Help";
 import "./GameData.css";
@@ -19,6 +20,7 @@ type Asking =
   | { kind: "all"; zip: string; backups: bridge.BackupGame[] }
   | { kind: "remove"; game: bridge.InstalledGame }
   | { kind: "reset"; game: bridge.InstalledGame }
+  | { kind: "core"; game: bridge.InstalledGame }
   | { kind: "uninstall"; game: bridge.InstalledGame };
 
 /** What we say under the buttons after the last action. */
@@ -341,7 +343,7 @@ export function GameData() {
                                 : "Update the emulator core to the latest version, if there is one.",
                               icon: <CloudDownload size={18} />,
                               disabled: busy || game.running,
-                              onSelect: () => notBuilt("Update core"),
+                              onSelect: () => setAsking({ kind: "core", game }),
                             },
                             {
                               label: "Update engine",
@@ -431,6 +433,21 @@ export function GameData() {
             void act(async () => {
               await bridge.resetGameData(asking.game.identity);
               return `Reset the data of ${quoted(asking.game.title)}.`;
+            });
+          }}
+        />
+      )}
+      {asking?.kind === "core" && (
+        <UpdateCoreGame
+          game={asking.game}
+          close={() => setAsking(null)}
+          confirm={() => {
+            setAsking(null);
+            void act(async () => {
+              const done = await bridge.updateCore(asking.game.identity);
+              return done === "updated"
+                ? `Updated the core of ${quoted(asking.game.title)}.`
+                : `${quoted(asking.game.title)} already has the newest core.`;
             });
           }}
         />

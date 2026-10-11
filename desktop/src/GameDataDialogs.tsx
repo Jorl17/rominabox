@@ -238,6 +238,29 @@ export function ResetGame({
   );
 }
 
+/** The pop-up before we put the newest core into a game. */
+export function UpdateCoreGame({
+  game,
+  close,
+  confirm,
+}: {
+  game: bridge.InstalledGame;
+  close: () => void;
+  confirm: () => void;
+}) {
+  return (
+    <Confirm
+      title={`Update the core of ${quoted(game.title)}?`}
+      keep="Cancel"
+      action="Update core"
+      close={close}
+      confirm={confirm}
+    >
+      <p>Save states made with the current core might not load with the new one.</p>
+    </Confirm>
+  );
+}
+
 /** The pop-up before we uninstall a game: its app and all of its data. */
 export function UninstallGame({
   game,

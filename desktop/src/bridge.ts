@@ -678,6 +678,14 @@ export function resetGameData(identity: string): Promise<void> {
 export function uninstallGame(identity: string): Promise<void> {
   return native ? invoke("game_uninstall", { identity }) : Promise.resolve();
 }
+/** What an update of a game's core did. */
+export type CoreUpdate = "updated" | "current";
+/** Put the newest nightly of its core into the game `identity`. */
+export function updateCore(identity: string): Promise<CoreUpdate> {
+  return native
+    ? invoke("game_update_core", { identity })
+    : Promise.resolve("current");
+}
 /** Open the game `identity`, as a double click on its app does. */
 export function playGame(identity: string): Promise<void> {
   return native ? invoke("game_play", { identity }) : Promise.resolve();

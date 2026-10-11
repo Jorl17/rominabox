@@ -499,3 +499,16 @@ mod tests {
         );
     }
 }
+
+/// Bring the core of the installed game `identity` to the newest nightly,
+/// from the builder's core cache for this computer, as an export takes it,
+/// with `kit` as the runtime kit.
+pub fn update_core(
+    library: &crate::game_library::Library,
+    identity: &str,
+    kit: &Path,
+    places: &Places,
+) -> Result<crate::game_library::CoreUpdate, String> {
+    let target = Target::host().ok_or("We update games only on Windows and on a Mac.")?;
+    library.update_core(identity, kit, &places.core_cache(target)?, &crate::cores::UreqTransport)
+}

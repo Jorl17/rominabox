@@ -163,7 +163,7 @@ where
 /// A file that we ship in the export, from the cache or the kit. We look in
 /// the cache first, because it contains what this builder downloaded, and we
 /// put a newer nightly there, not in the kit.
-pub(super) fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
+pub(crate) fn resolve_cached(kit: &Path, cache: Option<&Path>, relative: &Path) -> PathBuf {
     if let Some(cache) = cache {
         let fetched = cache.join(relative);
         if fetched.is_file() {
