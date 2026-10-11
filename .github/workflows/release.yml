@@ -16,7 +16,11 @@
 # are MACOS_CERTIFICATE (the certificate and key as a base64 .p12),
 # MACOS_CERTIFICATE_PASSWORD, and an App Store Connect API key: NOTARY_KEY (the
 # .p8 file's text), NOTARY_KEY_ID and NOTARY_ISSUER. Without them, we sign the
-# Mac builder ad hoc.
+# Mac builder ad hoc. TAURI_SIGNING_PRIVATE_KEY and
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD sign the update packages: the .app.tar.gz
+# of each notarized Mac builder and the Windows installer. In a release, the
+# builders read latest.json (scripts/update_manifest.py) to find the packages,
+# and we publish no release without a signed package for every platform.
 
 name: Release
 
@@ -55,14 +59,16 @@ jobs:
 
       # Each secret goes only to the steps that use it. The later steps test
       # these outputs instead of the secrets.
-      - name: Check which Apple secrets are set
-        id: apple
+      - name: Check which signing secrets are set
+        id: signing
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          echo "sign=$([ -n "$MACOS_CERTIFICATE" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          echo "apple=$([ -n "$MACOS_CERTIFICATE" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
           echo "notarize=$([ -n "$MACOS_CERTIFICATE" ] && [ -n "$NOTARY_KEY" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          echo "updates=$([ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
 
       - name: Load the fork's deploy key
         uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
@@ -125,7 +131,7 @@ jobs:
           uv run python scripts/publish_kit.py pack
 
       - name: Import the Developer ID certificate
-        if: matrix.platform == 'macos' && steps.apple.outputs.sign == 'yes'
+        if: matrix.platform == 'macos' && steps.signing.outputs.apple == 'yes'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -153,7 +159,7 @@ jobs:
       - name: Build, check and notarize the three Mac builders
         if: matrix.platform == 'macos'
         env:
-          NOTARIZE: ${{ steps.apple.outputs.notarize }}
+          NOTARIZE: ${{ steps.signing.outputs.notarize }}
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
@@ -163,9 +169,9 @@ jobs:
           mkdir -p release/installers
           for variant in arm64 x86_64 universal; do
             case $variant in
-              arm64) triple=aarch64-apple-darwin; wanted="arm64"; name="ROM-in-a-Box-${version}-macos.zip" ;;
-              x86_64) triple=x86_64-apple-darwin; wanted="x86_64"; name="ROM-in-a-Box-${version}-macos-intel.zip" ;;
-              universal) triple=universal-apple-darwin; wanted="arm64 x86_64"; name="ROM-in-a-Box-${version}-macos-universal.zip" ;;
+              arm64) triple=aarch64-apple-darwin; wanted="arm64"; name="ROM-in-a-Box-${version}-macos.zip"; key=darwin-aarch64 ;;
+              x86_64) triple=x86_64-apple-darwin; wanted="x86_64"; name="ROM-in-a-Box-${version}-macos-intel.zip"; key=darwin-x86_64 ;;
+              universal) triple=universal-apple-darwin; wanted="arm64 x86_64"; name="ROM-in-a-Box-${version}-macos-universal.zip"; key=darwin-universal ;;
             esac
             uv run python scripts/build_builder.py --mac "$variant"
             app="desktop/target/$triple/release/bundle/macos/ROM-in-a-Box.app"
@@ -179,8 +185,27 @@ jobs:
               xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --key "$RUNNER_TEMP/notary.p8" \
                 --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait
               xcrun stapler staple "$app"
+              # The update package, only of a notarized builder, without the
+              # extended attributes and resource forks of macOS.
+              package=$(uv run python scripts/update_manifest.py package "$key" "$version")
+              COPYFILE_DISABLE=1 tar --no-mac-metadata -czf "release/installers/$package" -C "$(dirname "$app")" "$(basename "$app")"
             fi
             ditto -c -k --keepParent "$app" "release/installers/$name"
+          done
+
+      # The signatures that a builder checks before it installs an update.
+      # Only this step gets the key, after every build. We run the Tauri
+      # command line that npm ci installed from package-lock.json, never one
+      # that npx could fetch.
+      - name: Sign the update packages
+        if: steps.signing.outputs.updates == 'yes'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          shopt -s nullglob
+          for package in release/installers/*.app.tar.gz release/installers/*-setup.exe; do
+            desktop/node_modules/.bin/tauri signer sign "$package" > /dev/null
           done
 
       - name: Collect the release files
@@ -235,6 +260,9 @@ jobs:
             cp "release/installers/ROM-in-a-Box-$version-$variant.zip" "$latest/ROM-in-a-Box-$variant.zip"
           done
           cp "release/installers/$setup" "$latest/ROM-in-a-Box-windows-setup.exe"
+          # The update manifest, which refuses a release without a signed
+          # package for every platform.
+          uv run python scripts/update_manifest.py write "$version" release/installers "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           # The version's release is the latest, which releases/latest/download/
           # links reach. Kit releases are never the latest (publish_kit.py).
           gh release create "$GITHUB_REF_NAME" release/installers/* "$latest"/* --verify-tag --latest \

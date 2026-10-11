@@ -311,6 +311,12 @@ SCOPES = [
         [PYTHON, str(ROOT / "scripts/test_publish_kit.py")],
     ),
     Scope(
+        "updatemanifest",
+        "that the update manifest of a release has an entry for every platform in update-platforms.json, each with the signature of its package and the address of the package in the release of its version, and that we write no manifest when a package or a signature is missing",
+        "that a builder installs an update from the manifest, which needs two releases and a person on each platform",
+        [PYTHON, str(ROOT / "scripts/test_update_manifest.py")],
+    ),
+    Scope(
         "achievement-client",
         "managed account, evaluator, pending uploads and state restoration using the real rcheevos client",
         "RetroArch core-memory mapping or its actual runloop/HTTP/save-task adapters",
