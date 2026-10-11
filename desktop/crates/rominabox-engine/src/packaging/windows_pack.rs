@@ -238,6 +238,110 @@ pub(super) fn pack(
     Ok(())
 }
 
+/// Reads the index of a pack from its start.
+struct Cursor<'a> {
+    bytes: &'a [u8],
+    at: usize,
+}
+
+impl<'a> Cursor<'a> {
+    fn take(&mut self, count: usize) -> Option<&'a [u8]> {
+        let slice = self.bytes.get(self.at..self.at.checked_add(count)?)?;
+        self.at += count;
+        Some(slice)
+    }
+    fn u32(&mut self) -> Option<u32> {
+        Some(u32::from_le_bytes(self.take(4)?.try_into().ok()?))
+    }
+    fn u64(&mut self) -> Option<u64> {
+        Some(u64::from_le_bytes(self.take(8)?.try_into().ok()?))
+    }
+    fn text(&mut self) -> Option<String> {
+        let size = u16::from_le_bytes(self.take(2)?.try_into().ok()?) as usize;
+        String::from_utf8(self.take(size)?.to_vec()).ok()
+    }
+}
+
+/// A game made into one program, unpacked into a folder as we laid it out
+/// before we packed it.
+pub(crate) struct Unpacked {
+    /// The launcher, at its name in the folder.
+    pub launcher: PathBuf,
+    /// The runtime folder without the pack's id, as `pack` takes it.
+    pub runtime: String,
+}
+
+/// Unpack the game in the one program `program` into the empty `folder`: its
+/// launcher, the bytes before the first file, under the launcher's name, and
+/// every other file at its path. We check every file against its SHA-256.
+pub(crate) fn unpack(program: &Path, folder: &Path) -> io::Result<Unpacked> {
+    let invalid = |what: &str| io::Error::new(io::ErrorKind::InvalidData, format!("{}: {what}", program.display()));
+    let bytes = fs::read(program)?;
+    let length = bytes.len();
+    if length < 24 || &bytes[length - 8..] != TRAILER_MAGIC {
+        return Err(invalid("not a packed game"));
+    }
+    let number = |at: usize| -> io::Result<u64> {
+        bytes.get(at..at + 8).map(|slice| u64::from_le_bytes(slice.try_into().unwrap())).ok_or_else(|| invalid("cut short"))
+    };
+    let index_at = number(length - 24)? as usize;
+    let index_length = number(length - 16)? as usize;
+    let index = bytes.get(index_at..index_at + index_length).ok_or_else(|| invalid("index out of the file"))?;
+    let mut index = Cursor { bytes: index, at: 0 };
+    if index.take(8).ok_or_else(|| invalid("index cut short"))? != INDEX_MAGIC {
+        return Err(invalid("no index"));
+    }
+    let mut parse = || -> Option<(String, String, [u8; 32], Vec<(String, [u64; 3], [u8; 32])>)> {
+        let runtime = index.text()?;
+        let program_name = index.text()?;
+        let head_hash: [u8; 32] = index.take(32)?.try_into().ok()?;
+        for _ in 0..2 {
+            let size = index.u32()? as usize;
+            index.take(size)?;
+        }
+        let mut entries = Vec::new();
+        for _ in 0..index.u32()? {
+            let path = index.text()?;
+            let numbers = [index.u64()?, index.u64()?, index.u64()?];
+            let whole: [u8; 32] = index.take(32)?.try_into().ok()?;
+            index.take(1 + 32)?;
+            entries.push((path, numbers, whole));
+        }
+        Some((runtime, program_name, head_hash, entries))
+    };
+    let (runtime, program_name, head_hash, entries) = parse().ok_or_else(|| invalid("index cut short"))?;
+    let first = entries.iter().map(|(_, [offset, _, _], _)| *offset as usize).min().unwrap_or(index_at);
+    let head = &bytes[..first];
+    if <[u8; 32]>::from(Sha256::digest(head)) != head_hash {
+        return Err(invalid("the launcher does not match its hash"));
+    }
+    let id_free = runtime
+        .rsplit_once('-')
+        .filter(|(_, id)| id.len() == PACK_ID_CHARS)
+        .map(|(base, _)| base.to_string())
+        .ok_or_else(|| invalid("the runtime folder has no pack id"))?;
+    let launcher = folder.join(&program_name);
+    fs::write(&launcher, head)?;
+    for (path, [offset, packed, size], whole) in entries {
+        if path.split('/').any(|part| part.is_empty() || part == "." || part == "..") || path.contains('\\') {
+            return Err(invalid("a file outside the game"));
+        }
+        let frame = bytes.get(offset as usize..(offset + packed) as usize).ok_or_else(|| invalid("a file out of the program"))?;
+        let mut decoder = ruzstd::decoding::StreamingDecoder::new(frame).map_err(|error| invalid(&error.to_string()))?;
+        let mut content = Vec::with_capacity(size as usize);
+        decoder.read_to_end(&mut content)?;
+        if content.len() as u64 != size || <[u8; 32]>::from(Sha256::digest(&content)) != whole {
+            return Err(invalid(&format!("{path} does not match its hash")));
+        }
+        let destination = folder.join(&path);
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(destination, content)?;
+    }
+    Ok(Unpacked { launcher, runtime: id_free })
+}
+
 /// The runtime folder in the index of `program`, a game made into one
 /// program, or None when `program` is not one.
 pub(crate) fn packed_runtime(program: &Path) -> Option<String> {
@@ -263,4 +367,63 @@ pub(crate) fn packed_runtime(program: &Path) -> Option<String> {
     let mut runtime = vec![0u8; u16::from_le_bytes([head[8], head[9]]) as usize];
     file.read_exact(&mut runtime).ok()?;
     String::from_utf8(runtime).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rominabox_scratch::Scratch;
+
+    /// What we unpack from a packed game is what we packed: the launcher at
+    /// its name, every other file at its path, and the runtime folder as we
+    /// gave it, so that we can pack the folder again.
+    #[test]
+    fn a_packed_game_unpacks_to_the_folder_it_was_packed_from() {
+        let root = Scratch::dir("rominabox-windows-pack-round-trip");
+        let laid_out = root.join("laid-out");
+        let files = [
+            ("Resources/game.json", b"{\"identity\":\"x\"}".to_vec()),
+            ("Resources/game-core.dll", vec![7u8; 300_000]),
+            ("Resources/content/game.md", b"the game".to_vec()),
+        ];
+        for (path, bytes) in &files {
+            let file = laid_out.join(path);
+            fs::create_dir_all(file.parent().unwrap()).unwrap();
+            fs::write(file, bytes).unwrap();
+        }
+        let launcher = laid_out.join("Game.exe");
+        fs::write(&launcher, b"MZ the launcher").unwrap();
+        let program = root.join("Game.exe");
+        pack(&laid_out, &launcher, "ROM-in-a-Box/Runtimes/x", &program, &AtomicBool::new(false)).unwrap();
+
+        let unpacked_into = root.join("unpacked");
+        fs::create_dir_all(&unpacked_into).unwrap();
+        let unpacked = unpack(&program, &unpacked_into).unwrap();
+
+        assert_eq!(unpacked.runtime, "ROM-in-a-Box/Runtimes/x");
+        assert_eq!(unpacked.launcher, unpacked_into.join("Game.exe"));
+        assert_eq!(fs::read(&unpacked.launcher).unwrap(), b"MZ the launcher");
+        for (path, bytes) in &files {
+            assert_eq!(&fs::read(unpacked_into.join(path)).unwrap(), bytes, "{path}");
+        }
+    }
+
+    /// A pack whose file does not match its hash in the index is refused.
+    #[test]
+    fn a_damaged_pack_is_refused() {
+        let root = Scratch::dir("rominabox-windows-pack-damaged");
+        let laid_out = root.join("laid-out");
+        fs::create_dir_all(laid_out.join("Resources")).unwrap();
+        fs::write(laid_out.join("Resources/game.json"), b"{}").unwrap();
+        let launcher = laid_out.join("Game.exe");
+        fs::write(&launcher, b"MZ the launcher").unwrap();
+        let program = root.join("Game.exe");
+        pack(&laid_out, &launcher, "ROM-in-a-Box/Runtimes/x", &program, &AtomicBool::new(false)).unwrap();
+        let mut bytes = fs::read(&program).unwrap();
+        bytes[0] = b'N';
+        fs::write(&program, bytes).unwrap();
+        let unpacked_into = root.join("unpacked");
+        fs::create_dir_all(&unpacked_into).unwrap();
+        assert!(unpack(&program, &unpacked_into).is_err());
+    }
 }
