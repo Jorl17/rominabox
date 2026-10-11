@@ -10,6 +10,9 @@
 #                         make the kit and install the preview with
 #                         scripts/build_kit.py. In a second build we compile
 #                         only what changed.
+#   --build-builder       build the builder for this Mac with
+#                         scripts/build_builder.py, from the kit that
+#                         --build-player made, and start nothing
 #   --hands-on-game GAME...  export the named games with the work/mac-build
 #                         player into a new work/hands-on-<time> folder, with
 #                         scripts/hands_on_game.py, and launch nothing
@@ -41,6 +44,11 @@ if [[ $# -eq 1 && "$1" == "--build-player" ]]; then
   print -u2 "run-tests: building $kit_target into $player_build"
   py scripts/build_player.py --target "$kit_target" "$player_build"
   py scripts/build_kit.py "$player_build"
+  exit
+fi
+
+if [[ $# -eq 1 && "$1" == "--build-builder" ]]; then
+  py scripts/build_builder.py
   exit
 fi
 
