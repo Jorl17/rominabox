@@ -21,6 +21,10 @@
 # of each notarized Mac builder and the Windows installer. In a release, the
 # builders read latest.json (scripts/update_manifest.py) to find the packages,
 # and we publish no release without a signed package for every platform.
+# The public key is in desktop/src-tauri/tauri.conf.json. To change the key,
+# first publish a release whose tauri.conf.json has the new public key, signed
+# with the old key, and sign with the new key only after it. Builders that
+# never install that release cannot update again.
 
 name: Release
 
