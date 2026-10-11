@@ -3443,7 +3443,7 @@ dependencies = [
 
 [[package]]
 name = "rominabox-desktop"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "base64 0.22.1",
  "image",
@@ -3461,7 +3461,7 @@ dependencies = [
 
 [[package]]
 name = "rominabox-engine"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "cc",
  "chd",
