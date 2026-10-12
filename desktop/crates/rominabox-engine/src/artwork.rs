@@ -268,6 +268,12 @@ pub fn is_retail_name(name: &str) -> bool {
     !MARKERS.iter().any(|marker| name.contains(marker))
 }
 
+/// The countries in the region tag of a No-Intro name, such as `usa` and
+/// `europe` in "Sonic (USA, Europe)", in lower case.
+pub(crate) fn countries(name: &str) -> HashSet<String> {
+    NameParts::parse(name).countries
+}
+
 #[derive(Debug, Clone)]
 struct NameParts {
     title: String,

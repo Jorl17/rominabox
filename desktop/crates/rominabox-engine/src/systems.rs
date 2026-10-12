@@ -119,6 +119,19 @@ pub struct System {
     /// `header_title` count from the start of the cartridge.
     #[serde(default, rename = "copierHeader")]
     pub copier_header: Option<u64>,
+    /// The picture filters we recommend for its games.
+    #[serde(default, rename = "recommendedFilters")]
+    pub recommended_filters: Option<RecommendedFilters>,
+}
+
+/// The picture filters we recommend for the games of a console, by their ids
+/// in the shader catalog: `default` for every game, and `pal` in its place for
+/// a game only for PAL countries, when the console has such a list.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub struct RecommendedFilters {
+    pub default: Vec<String>,
+    #[serde(default)]
+    pub pal: Vec<String>,
 }
 
 /// How a sheet lists the files that go with it. The catalog schema has
@@ -281,6 +294,19 @@ pub struct FirmwareRequirement {
 }
 
 impl System {
+    /// The picture filters we recommend for a game of this console, whose name
+    /// in the No-Intro catalog is `catalog_name` when we identified it.
+    pub fn recommended_filters(&self, catalog_name: Option<&str>) -> &[String] {
+        let Some(filters) = &self.recommended_filters else {
+            return &[];
+        };
+        if !filters.pal.is_empty() && catalog_name.is_some_and(crate::tv_system::pal_only) {
+            &filters.pal
+        } else {
+            &filters.default
+        }
+    }
+
     /// Whether we can recognise a dropped file but not export it.
     pub fn is_recognize_only(&self, extension: &str) -> bool {
         self.recognize_only
@@ -520,6 +546,24 @@ pub fn candidates_for_extension(extension: &str) -> Vec<&'static System> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// We recommend the PAL filters for a game only for PAL countries, on a
+    /// console with PAL filters, and the filters for every game otherwise.
+    #[test]
+    fn a_game_only_for_pal_countries_gets_the_pal_filters_of_its_console() {
+        let megadrive = find("megadrive").unwrap();
+        let filters = megadrive.recommended_filters.as_ref().unwrap();
+        assert_eq!(megadrive.recommended_filters(Some("Sonic the Hedgehog (Europe)")), filters.pal.as_slice());
+        assert_eq!(megadrive.recommended_filters(Some("Sonic the Hedgehog (USA, Europe)")), filters.default.as_slice());
+        assert_eq!(megadrive.recommended_filters(None), filters.default.as_slice());
+        assert_eq!(filters.pal.first().map(String::as_str), Some("crt-royale-pal"));
+
+        let gba = find("gba").unwrap();
+        assert_eq!(
+            gba.recommended_filters(Some("Sonic Advance (Europe)")),
+            gba.recommended_filters.as_ref().unwrap().default.as_slice()
+        );
+    }
     use std::path::PathBuf;
 
     #[test]
@@ -683,6 +727,7 @@ mod tests {
             category: "cartridge".into(),
             header_title: Vec::new(),
             copier_header: None,
+            recommended_filters: None,
         };
         let one = assess_firmware(&system, &[PathBuf::from("a.bin")]);
         assert!(!one.can_continue);
