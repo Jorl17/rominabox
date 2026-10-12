@@ -4513,7 +4513,7 @@
         "profile": "megadrive",
         "screen": "shaders",
         "selected": [
-          "phosphor"
+          "scanlines"
         ],
         "showing": [],
         "sliders": {
@@ -10546,7 +10546,7 @@
         "profile": "megadrive",
         "screen": "shaders",
         "selected": [
-          "phosphor"
+          "scanlines"
         ],
         "showing": [],
         "sliders": {
@@ -16587,7 +16587,7 @@
         "profile": "megadrive",
         "screen": "shaders",
         "selected": [
-          "phosphor"
+          "scanlines"
         ],
         "showing": [],
         "sliders": {
