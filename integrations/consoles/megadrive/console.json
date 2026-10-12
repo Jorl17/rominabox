@@ -43,6 +43,7 @@
   },
   "recommendedFilters": {
     "default": [
+      "rominabox-crt",
       "crt-royale",
       "blargg",
       "checkerboard-dedither",
@@ -50,6 +51,7 @@
       "crt-hyllian"
     ],
     "pal": [
+      "rominabox-crt",
       "crt-royale-pal",
       "pal-r57shell",
       "checkerboard-dedither",

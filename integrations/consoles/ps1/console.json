@@ -70,12 +70,14 @@
   },
   "recommendedFilters": {
     "default": [
+      "rominabox-crt",
       "crt-guest-advanced",
       "crt-royale",
       "crt-hyllian",
       "sharp-bilinear-simple"
     ],
     "pal": [
+      "rominabox-crt",
       "crt-royale-pal",
       "pal-r57shell",
       "crt-hyllian",

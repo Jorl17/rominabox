@@ -35,6 +35,7 @@
   },
   "recommendedFilters": {
     "default": [
+      "rominabox-crt",
       "crt-royale",
       "blargg",
       "crt-guest-advanced",

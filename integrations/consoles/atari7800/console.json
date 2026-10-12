@@ -39,12 +39,14 @@
   },
   "recommendedFilters": {
     "default": [
+      "rominabox-crt",
       "crt-royale",
       "blargg",
       "crt-guest-advanced",
       "crt-hyllian"
     ],
     "pal": [
+      "rominabox-crt",
       "crt-royale-pal",
       "pal-r57shell",
       "crt-guest-advanced",

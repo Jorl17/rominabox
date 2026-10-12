@@ -38,6 +38,7 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "checkerboard-dedither",
@@ -45,6 +46,7 @@
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "checkerboard-dedither",
@@ -118,6 +120,7 @@
       "category": "disc",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "checkerboard-dedither",
@@ -125,6 +128,7 @@
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "checkerboard-dedither",
@@ -174,12 +178,14 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "crt-guest-advanced",
@@ -263,6 +269,7 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
@@ -425,12 +432,14 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "crt-guest-advanced",
@@ -470,6 +479,7 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "checkerboard-dedither",
@@ -477,6 +487,7 @@
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "checkerboard-dedither",
@@ -530,12 +541,14 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-guest-advanced",
           "crt-royale",
           "crt-hyllian",
           "sharp-bilinear-simple"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "crt-hyllian",
@@ -634,12 +647,14 @@
       "category": "disc",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-guest-advanced",
           "crt-royale",
           "crt-hyllian",
           "sharp-bilinear-simple"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "crt-hyllian",
@@ -834,12 +849,14 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "crt-guest-advanced",
@@ -876,6 +893,7 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
@@ -912,12 +930,14 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
           "crt-hyllian"
         ],
         "pal": [
+          "rominabox-crt",
           "crt-royale-pal",
           "pal-r57shell",
           "crt-guest-advanced",
@@ -1010,6 +1030,7 @@
       "category": "cartridge",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
@@ -1097,6 +1118,7 @@
       "category": "disc",
       "recommendedFilters": {
         "default": [
+          "rominabox-crt",
           "crt-royale",
           "blargg",
           "crt-guest-advanced",
