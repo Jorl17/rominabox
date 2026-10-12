@@ -1799,9 +1799,7 @@
         "selected": [
           "phosphor"
         ],
-        "showing": [
-          "notice"
-        ],
+        "showing": [],
         "sliders": {
           "brightness-level": 0.5,
           "contrast-level": 0.5,
@@ -1911,9 +1909,7 @@
         "selected": [
           "phosphor"
         ],
-        "showing": [
-          "notice"
-        ],
+        "showing": [],
         "sliders": {
           "brightness-level": 0.5,
           "contrast-level": 0.5,
@@ -1954,6 +1950,7 @@
       }
     },
     "script": [
+      "wait-overlays",
       "options",
       "shaders",
       "report:before",
@@ -8151,6 +8148,7 @@
       }
     },
     "script": [
+      "wait-overlays",
       "options",
       "shaders",
       "report:before",
@@ -14378,6 +14376,7 @@
       }
     },
     "script": [
+      "wait-overlays",
       "options",
       "shaders",
       "report:before",
