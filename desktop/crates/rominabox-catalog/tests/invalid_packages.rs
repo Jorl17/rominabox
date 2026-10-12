@@ -453,9 +453,15 @@ fn one_package_reports_every_fault_in_a_single_load() {
 /// A scratch folder with a shader catalog that has the presets `presets`, as
 /// in the repository, and the folder in it for the packages.
 fn beside_shaders(presets: &[&str]) -> (rominabox_scratch::Scratch, PathBuf) {
-    let root = scratch();
     let listed: Vec<Value> = presets.iter().map(|id| json!({ "id": id })).collect();
-    write_json(&root.join("shaders/catalog.json"), &json!({ "presets": listed }));
+    beside_catalog(listed)
+}
+
+/// A scratch folder with a shader catalog that lists `presets`, and the
+/// folder in it for the packages.
+fn beside_catalog(presets: Vec<Value>) -> (rominabox_scratch::Scratch, PathBuf) {
+    let root = scratch();
+    write_json(&root.join("shaders/catalog.json"), &json!({ "presets": presets }));
     let consoles = root.join("consoles");
     (root, consoles)
 }
@@ -476,6 +482,21 @@ fn recommended_filters_are_at_most_five_each_once_and_each_shipped() {
     assert_has(&problems, "filters.repeated", "tv", "recommendedFilters.pal");
     assert_has(&problems, "filters.unknown", "tv", "recommendedFilters.pal");
     assert_eq!(problems.len(), 3, "{}", render(&problems));
+}
+
+/// We recommend our own filters beyond the five from libretro's packs.
+#[test]
+fn our_own_filters_are_not_counted_in_the_five() {
+    let mut presets: Vec<Value> = ["a", "b", "c", "d", "e"].iter().map(|id| json!({ "id": id })).collect();
+    presets.push(json!({ "id": "ours", "ours": true }));
+    let (_root, consoles) = beside_catalog(presets);
+    let mut manifest = plain("tv");
+    manifest["recommendedFilters"] = json!({ "default": ["ours", "a", "b", "c", "d", "e"] });
+    write_console(&package_dir(&consoles, "tv"), &manifest);
+
+    let catalog = Catalog::load(&consoles).unwrap();
+    let filters = catalog.console("tv").unwrap().console.recommended_filters.clone().unwrap();
+    assert_eq!(filters.default.len(), 6);
 }
 
 #[test]

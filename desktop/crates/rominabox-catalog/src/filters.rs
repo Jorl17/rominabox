@@ -1,13 +1,15 @@
 //! The picture filters we recommend for the games of a console. We check that
-//! each list has at most five filters, each once, and that we ship each one,
-//! that is, that the shader catalog beside the packages has a preset with
-//! that id.
+//! each list has at most five filters from libretro's packs, each filter
+//! once, and that we ship each one, that is, that the shader catalog beside
+//! the packages has a preset with that id. Our own filters, marked `ours` in
+//! the catalog, are not counted in the five.
 
 use crate::{Catalog, Diagnostic};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-/// The most filters we recommend for a game, so that the choice stays short.
+/// The most filters from libretro's packs we recommend for a game, so that
+/// the choice stays short.
 pub const MOST: usize = 5;
 
 /// The shader catalog, beside the folder of the packages.
@@ -15,8 +17,9 @@ fn shader_catalog(root: &Path) -> std::path::PathBuf {
     root.join("../shaders/catalog.json")
 }
 
-/// The ids of the presets in the shader catalog of `root`.
-fn shipped(root: &Path) -> Result<BTreeSet<String>, String> {
+/// The presets in the shader catalog of `root`: each id, and whether the
+/// preset is one of our own.
+fn shipped(root: &Path) -> Result<BTreeMap<String, bool>, String> {
     let path = shader_catalog(root);
     let text = std::fs::read_to_string(&path).map_err(|error| format!("could not read {}: {error}", path.display()))?;
     let catalog: serde_json::Value =
@@ -25,7 +28,10 @@ fn shipped(root: &Path) -> Result<BTreeSet<String>, String> {
         .as_array()
         .into_iter()
         .flatten()
-        .filter_map(|preset| preset["id"].as_str().map(str::to_string))
+        .filter_map(|preset| {
+            let ours = preset["ours"].as_bool().unwrap_or(false);
+            preset["id"].as_str().map(|id| (id.to_string(), ours))
+        })
         .collect())
 }
 
@@ -58,12 +64,13 @@ pub(crate) fn check(catalog: &Catalog, root: &Path, problems: &mut Vec<Diagnosti
         }
         for (field, list) in [("default", &filters.default), ("pal", &filters.pal)] {
             let field = format!("recommendedFilters.{field}");
-            if list.len() > MOST {
+            let counted = list.iter().filter(|filter| shipped.get(*filter) != Some(&true)).count();
+            if counted > MOST {
                 problems.push(Diagnostic::new(
                     "filters.too_many",
                     package.as_str(),
                     &field,
-                    format!("{} filters, and we recommend at most {MOST}", list.len()),
+                    format!("{counted} filters from libretro's packs, and we recommend at most {MOST}"),
                 ));
             }
             let mut seen = BTreeSet::new();
@@ -76,7 +83,7 @@ pub(crate) fn check(catalog: &Catalog, root: &Path, problems: &mut Vec<Diagnosti
                         format!("'{filter}' is listed twice"),
                     ));
                 }
-                if !shipped.contains(filter) {
+                if !shipped.contains_key(filter) {
                     problems.push(Diagnostic::new(
                         "filters.unknown",
                         package.as_str(),
