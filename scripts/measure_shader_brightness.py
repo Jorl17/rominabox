@@ -12,6 +12,7 @@ above 100 %, we raise this parameter first and add the rest of the light with
 our pass (desktop/crates/rominabox-engine/src/video.rs).
 
     uv run python scripts/measure_shader_brightness.py
+    uv run python scripts/measure_shader_brightness.py crt-guest-advanced  # only those named
     uv run python scripts/measure_shader_brightness.py --language glsl --check
 
 We measure the slang version of a preset where there is one, because on a
@@ -231,6 +232,7 @@ def main() -> int:
                         help="the language to measure; by default slang where a preset has it")
     parser.add_argument("--check", action="store_true",
                         help="compare with the catalogue's tables and write nothing")
+    parser.add_argument("presets", nargs="*", help="the ids of the presets to measure; by default every one")
     arguments = parser.parse_args()
     player = player_build.player_in(player_build.selected_build())
     catalog = json.loads(previews.CATALOG.read_text(encoding="utf-8"))
@@ -239,7 +241,7 @@ def main() -> int:
         work = Path(temporary)
         card = previews.card(work)
         for preset in catalog["presets"]:
-            if "brightness" not in preset:
+            if "brightness" not in preset or (arguments.presets and preset["id"] not in arguments.presets):
                 continue
             files = preset["files"]
             language = arguments.language or ("slang" if files.get("slang") else "glsl")
