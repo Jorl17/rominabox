@@ -285,7 +285,7 @@ pub fn compose_menu(request: &MenuRequest) -> Result<Composition, String> {
     let stylesheet = tokens::substitute(&manifest.stylesheet()?, &values)?;
     // The hotkeys, whether or not the game has HOTKEYS to change them. A hint
     // names a hotkey by the words of its bindings.
-    let game_hotkeys = crate::hotkeys::GameHotkeys::of(&request.settings);
+    let game_hotkeys = crate::hotkeys::GameHotkeys::of(&request.settings, &request.shaders);
     let hotkeys = game_hotkeys.offered(&request.hotkeys);
     let hint = |text: &str| hotkeys.hint(text);
 

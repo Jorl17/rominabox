@@ -106,6 +106,8 @@ fn declarations() -> &'static [Declaration] {
 
 /// The hotkey that a game has only with fast forward on.
 pub const FAST_FORWARD: &str = "fast-forward";
+/// The hotkeys that a game has only with shaders.
+pub const SHADER_STEPS: [&str; 2] = ["previous-shader", "next-shader"];
 /// The hotkeys of the buttons we write with a badge (menu::badges): BACK on
 /// a Back button, and the page hotkeys on the arrows of a list.
 pub const BACK: &str = "back";
@@ -121,16 +123,27 @@ pub struct GameHotkeys {
 }
 
 impl GameHotkeys {
-    /// The settings of a game, from the defaults of its player settings. Fast
-    /// forward is absent when off, and works while held (its first way) or
-    /// from one press to the next (its second).
-    pub fn of(defaults: &crate::player_settings::Defaults) -> GameHotkeys {
+    /// The settings of a game, from the defaults of its player settings and
+    /// its shaders. Fast forward is absent when off, and works while held (its
+    /// first way) or from one press to the next (its second). The shader
+    /// hotkeys are absent in a game without shaders.
+    pub fn of(
+        defaults: &crate::player_settings::Defaults,
+        shaders: &crate::shaders::ShaderSelection,
+    ) -> GameHotkeys {
         let Some(fast_forward) = Hotkey::named(FAST_FORWARD) else {
             return GameHotkeys::default();
         };
         let ways = fast_forward.modes();
+        let mut absent = Vec::new();
+        if !defaults.fast_forward {
+            absent.push(fast_forward);
+        }
+        if shaders.is_empty() {
+            absent.extend(SHADER_STEPS.iter().filter_map(|id| Hotkey::named(id)));
+        }
         GameHotkeys {
-            absent: if defaults.fast_forward { Vec::new() } else { vec![fast_forward] },
+            absent,
             modes: ways
                 .get(if defaults.fast_forward_hold { 0 } else { 1 })
                 .map(|way| vec![(fast_forward, *way)])

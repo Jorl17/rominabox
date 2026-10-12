@@ -64,6 +64,8 @@ const everySetting = {
     "quick-load": ["key:f8"],
     "previous-slot": [],
     "next-slot": ["key:f12"],
+    "previous-shader": ["key:f9"],
+    "next-shader": ["key:f10"],
     "fast-forward": ["key:tab"],
     fullscreen: ["key:f11"],
   },

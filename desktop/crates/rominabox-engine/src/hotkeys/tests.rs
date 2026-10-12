@@ -29,6 +29,8 @@ fn the_hotkeys_are_the_players_own() {
             "quick-load",
             "previous-slot",
             "next-slot",
+            "previous-shader",
+            "next-shader",
             "fast-forward",
             "fullscreen"
         ]
@@ -567,4 +569,24 @@ fn a_request_gets_the_defaults_of_its_console_for_what_it_leaves_out() {
     let mut without = serde_json::json!({ "title": "No console" }).as_object().unwrap().clone();
     complete(&mut without).unwrap();
     assert!(!without.contains_key("hotkeys"), "{without:?}");
+}
+
+/// A game has PREVIOUS SHADER and NEXT SHADER only when it has a shader
+/// besides the unfiltered picture, and F9 and F10 are their defaults.
+#[test]
+fn the_shader_hotkeys_are_offered_only_with_shaders() {
+    use crate::shaders::ShaderSelection;
+    let defaults = crate::player_settings::Defaults::default();
+    let steps: Vec<Hotkey> = super::SHADER_STEPS.iter().map(|id| Hotkey::named(id).unwrap()).collect();
+    let without = super::GameHotkeys::of(&defaults, &ShaderSelection::default());
+    assert!(steps.iter().all(|step| without.absent.contains(step)), "{:?}", without.absent);
+    let unfiltered = ShaderSelection { bundled: vec!["none".into()], ..ShaderSelection::default() };
+    let only_unfiltered = super::GameHotkeys::of(&defaults, &unfiltered);
+    assert!(steps.iter().all(|step| only_unfiltered.absent.contains(step)));
+    let with = ShaderSelection { bundled: vec!["scanlines".into()], ..ShaderSelection::default() };
+    let offered = super::GameHotkeys::of(&defaults, &with);
+    assert!(steps.iter().all(|step| !offered.absent.contains(step)), "{:?}", offered.absent);
+    let builder = crate::builder::unstated::hotkeys();
+    assert_eq!(texts(&builder, "previous-shader"), ["key:f9"]);
+    assert_eq!(texts(&builder, "next-shader"), ["key:f10"]);
 }

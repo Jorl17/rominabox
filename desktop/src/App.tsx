@@ -1231,6 +1231,7 @@ export function App() {
 
               <ControlsSection
                 settings={draft}
+                shaders={shaders}
                 update={update}
                 controls={controls}
                 onControls={setControls}

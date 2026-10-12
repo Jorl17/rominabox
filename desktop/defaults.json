@@ -30,6 +30,8 @@
     "quick-load": ["key:f4"],
     "previous-slot": ["key:f6"],
     "next-slot": ["key:f7"],
+    "previous-shader": ["key:f9"],
+    "next-shader": ["key:f10"],
     "fast-forward": ["key:space"],
     "fullscreen": []
   }

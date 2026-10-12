@@ -9,7 +9,9 @@ slot round the six, the last before the first and the first after the last.
 QUICK LOAD (F4) loads nothing from an empty slot and reports that, and loads
 the saved one. The menu, when opened, shows the slot chosen with the hotkeys.
 We read each step from the player's checkpoints: the words in the notice row,
-the slots as in the menu, and the selection. In a second run, after we launch
+the slots as in the menu, and the selection. NEXT SHADER (F10) and
+PREVIOUS SHADER (F9) step through the game's shaders, Unfiltered first, and
+SHADERS in the menu then marks the shader they left on. In a second run, after we launch
 the game again, we start on the slot chosen in the first run, and QUICK SAVE
 saves there. That run ends on the notice, for its picture.
 
@@ -38,7 +40,12 @@ from menu_workflows import checkpoints
 ROOT = shots.ROOT
 OUTPUT = ROOT / "work/test-output/play-hotkeys"
 # We play the game from the start and open the menu only at the end.
-EXPORT = {"title": "Play Hotkeys", "startAtMenu": False, "splash": False}
+EXPORT = {
+    "title": "Play Hotkeys",
+    "startAtMenu": False,
+    "splash": False,
+    "shaders": {"bundled": ["scanlines", "phosphor"], "initial": None},
+}
 # We hold a key down for two frames, then wait the frames that a slot change
 # takes to show. We give a save or a load in RetroArch one second, which is
 # enough for this cartridge. We read its notice while it is up, because a
@@ -52,7 +59,10 @@ SCRIPT = [
     "press:f7", STEP, "report:wrapped",
     "press:f7", STEP, "press:f4", STEP, "report:empty",
     "press:f6", STEP, "press:f4", TASK, "report:loaded",
-    "press:f7", STEP, "press:f7", STEP, "toggle", "wait-ms:500", "report:menu",
+    "press:f7", STEP, "press:f7", STEP,
+    "press:f10", STEP, "press:f10", STEP, "press:f9", STEP,
+    "toggle", "wait-ms:500", "report:menu",
+    "options", "video", "shaders", "report:shader",
 ]
 NOTICE_SCRIPT = ["wait-ms:1000", "press:f2", TASK, "report:relaunched"]
 
@@ -131,6 +141,11 @@ def main() -> int:
               f"the menu shows slot 3 chosen: {menu['selected']}")
         check(menu["slots"][0] == {"occupied": True, "thumbnail": True},
               f"the menu shows slot 1's save with its picture: {menu['slots'][0]}")
+        # From Unfiltered, F10 twice reaches Phosphor and F9 steps back to Scanlines.
+        shader = reports["shader"]
+        check(shader["screen"] == "shaders", f"SHADERS opened: {shader['screen']}")
+        check(shader["selected"] == ["scanlines"],
+              f"SHADERS marks Scanlines after F10, F10 and F9: {shader['selected']}")
 
         files = state_files(data)
         states = [name for name in files if name.endswith(".state1")]

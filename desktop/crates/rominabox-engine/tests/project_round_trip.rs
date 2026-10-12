@@ -190,6 +190,8 @@ fn a_project_saved_with_menu_controls_opens_with_them_as_hotkeys() {
             "quick-load": defaults["quick-load"],
             "previous-slot": defaults["previous-slot"],
             "next-slot": defaults["next-slot"],
+            "previous-shader": defaults["previous-shader"],
+            "next-shader": defaults["next-shader"],
             "fast-forward": defaults["fast-forward"],
             "fullscreen": defaults["fullscreen"]
         })

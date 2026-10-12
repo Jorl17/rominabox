@@ -141,9 +141,10 @@ impl Game {
     }
 
     /// The hotkeys of the game. Fast forward is one only when fast forward is
-    /// on, so we neither check nor write a binding kept for it while it is off.
+    /// on, and the shader hotkeys only with shaders, so we neither check nor
+    /// write a binding kept for one the game does not have.
     pub fn offered_hotkeys(&self) -> crate::hotkeys::Hotkeys {
-        crate::hotkeys::GameHotkeys::of(&self.player_defaults()).offered(&self.hotkeys)
+        crate::hotkeys::GameHotkeys::of(&self.player_defaults(), &self.shaders).offered(&self.hotkeys)
     }
 
     /// The game of `rom`, with the builder's default for every setting,
