@@ -557,7 +557,8 @@ mod tests {
         assert_eq!(megadrive.recommended_filters(Some("Sonic the Hedgehog (Europe)")), filters.pal.as_slice());
         assert_eq!(megadrive.recommended_filters(Some("Sonic the Hedgehog (USA, Europe)")), filters.default.as_slice());
         assert_eq!(megadrive.recommended_filters(None), filters.default.as_slice());
-        assert_eq!(filters.pal.first().map(String::as_str), Some("crt-royale-pal"));
+        assert!(filters.pal.iter().any(|filter| filter == "crt-royale-pal"));
+        assert!(!filters.default.iter().any(|filter| filter == "crt-royale-pal"));
 
         let gba = find("gba").unwrap();
         assert_eq!(
