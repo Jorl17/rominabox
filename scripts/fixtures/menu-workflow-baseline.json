@@ -8157,6 +8157,10 @@
       "fullscreen",
       "wait:30",
       "report:after"
+    ],
+    "size": [
+      6354,
+      4320
     ]
   },
   "native/blue/hotkeys": {
