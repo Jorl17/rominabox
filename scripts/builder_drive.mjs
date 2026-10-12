@@ -79,12 +79,10 @@ function ask(command, request) {
  * desktop shell. We answer each with the CLI command behind the shell's answer.
  */
 const ANSWERS = {
-  "/__rominabox/traveling": (query) =>
-    ask("content", { rom: query.get("path") || "", system: query.get("system") || null, files: JSON.parse(query.get("files") || "null") || undefined }),
-  "/__rominabox/firmware": (query) =>
-    ask("firmware", { system: query.get("system") || "", files: query.getAll("file") }),
-  "/__rominabox/hotkey-defaults": (query) =>
-    ask("hotkey-defaults", { system: query.get("system") || "" }),
+  "/__rominabox/traveling": (query) => ask("content", { rom: query.get("path") || "", system: query.get("system") || null, files: JSON.parse(query.get("files") || "null") || undefined }),
+  "/__rominabox/firmware": (query) => ask("firmware", { system: query.get("system") || "", files: query.getAll("file") }),
+  "/__rominabox/recommended-filters": (query) => ask("recommended-filters", { system: query.get("system") || "", catalogName: query.get("catalogName") }),
+  "/__rominabox/hotkey-defaults": (query) => ask("hotkey-defaults", { system: query.get("system") || "" }),
 };
 
 function serve(root) {

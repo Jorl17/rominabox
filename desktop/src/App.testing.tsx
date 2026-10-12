@@ -29,6 +29,7 @@ const { firmwareHandlers, inspectHandlers, travelingHandlers, nativeBridge } =
             source: "header" | "filename";
             filename: string;
             size: number;
+            catalogName?: string;
           }>)
         | null,
     },
@@ -77,6 +78,8 @@ vi.mock("./bridge", async (importOriginal) => {
       return actual.inspectGame(path, online, systemOverride, files);
     },
     hotkeyDefaults: (system: string) => hotkeyDefaultsWithCli(system),
+    recommendedFilters: (system: string, catalogName?: string) =>
+      Promise.resolve(recommendedFiltersWithCli(system, catalogName)),
     assessFirmware: (system: string, files: string[]) => {
       const assess = firmwareHandlers.assess;
       if (!assess) return actual.assessFirmware(system, files);
@@ -204,6 +207,18 @@ export function hotkeyDefaultsWithCli(system: string): Promise<Hotkeys> {
   return Promise.resolve(
     cliResult<{ hotkeys: Hotkeys }>("hotkey-defaults", { system }).hotkeys,
   );
+}
+
+/** The filters we recommend for a game, from the command line, which we run
+ * here in place of the command in the builder. */
+export function recommendedFiltersWithCli(
+  system: string,
+  catalogName?: string,
+): string[] {
+  return cliResult<{ filters: string[] }>("recommended-filters", {
+    system,
+    catalogName,
+  }).filters;
 }
 
 export async function waitForText(text: string): Promise<void> {

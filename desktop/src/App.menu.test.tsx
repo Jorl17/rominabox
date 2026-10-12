@@ -2,6 +2,7 @@ import { act } from "react";
 import { describe, expect, it } from "vitest";
 
 import designs from "../designs.json";
+import shaderCatalog from "../../integrations/shaders/catalog.json";
 import {
   button,
   checkbox,
@@ -10,7 +11,33 @@ import {
   container,
   openDetails,
   openMenu,
+  inspectHandlers,
+  recommendedFiltersWithCli,
+  waitForText,
 } from "./App.testing";
+
+/** The Picture filters section, the names of its chosen cards and the
+ * filter at the start of the game. */
+function pictureFilters() {
+  const section = container.querySelector("details.picture-filters");
+  if (!(section instanceof HTMLDetailsElement))
+    throw new Error("the Picture filters section is not on this step");
+  const chosen = [...section.querySelectorAll(".shader-card.chosen")].map(
+    (card) => card.querySelector(".shader-name")?.textContent,
+  );
+  const initial = section.querySelector(
+    '[aria-label="Starts on"]',
+  ) as HTMLSelectElement | null;
+  return { section, chosen, initial: initial?.value };
+}
+
+/** The names of the presets with the ids `ids`, in the order of the
+ * catalog, as we show the cards. */
+function presetNames(ids: string[]) {
+  return shaderCatalog.presets
+    .filter((preset) => ids.includes(preset.id))
+    .map((preset) => preset.name);
+}
 
 describe("App workflow", () => {
   it("puts help outside scrolling content and outside checkbox activation", async () => {
@@ -122,6 +149,46 @@ describe("App workflow", () => {
       "Picture filters (shaders) · none selected",
     );
     expect(filters?.querySelector('[aria-label="Starts on"]')).toBeNull();
+  });
+
+  it("adds the filters we recommend for the console to the ones the author chose", async () => {
+    await openMenu();
+    await waitForText("Add recommended");
+    const recommended = recommendedFiltersWithCli("megadrive");
+    expect(recommended.length).toBeGreaterThan(0);
+    expect(recommended).not.toContain("scanlines");
+    const scanlines = [
+      ...pictureFilters().section.querySelectorAll(".shader-card"),
+    ].find((card) => card.textContent?.includes("Scanlines"));
+    act(() => click(scanlines as HTMLElement));
+    const add = button("Add recommended", pictureFilters().section);
+    act(() => click(add));
+    expect(pictureFilters().chosen).toEqual(
+      presetNames(["scanlines", ...recommended]),
+    );
+    // We leave the filter at the start of the game to the author.
+    expect(pictureFilters().initial).toBe("");
+    expect(add.disabled).toBe(true);
+  });
+
+  it("recommends the PAL filters for a game only for PAL countries", async () => {
+    inspectHandlers.inspect = async () => ({
+      title: "Sonic the Hedgehog",
+      system: "megadrive",
+      source: "filename",
+      filename: "upload.gen",
+      size: 512,
+      catalogName: "Sonic the Hedgehog (Europe)",
+    });
+    await openMenu();
+    await waitForText("Add recommended");
+    act(() => click(button("Add recommended", pictureFilters().section)));
+    const pal = recommendedFiltersWithCli(
+      "megadrive",
+      "Sonic the Hedgehog (Europe)",
+    );
+    expect(pal).not.toEqual(recommendedFiltersWithCli("megadrive"));
+    expect(pictureFilters().chosen).toEqual(presetNames(pal));
   });
 
   it("lets the author choose a menu design, and exports the one they chose", async () => {

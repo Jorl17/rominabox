@@ -175,6 +175,25 @@ export type ShaderSelection = {
   custom: CustomShader[];
   initial: string | null;
 };
+/** The ids of the filters we recommend for a game of the console `system`,
+ * whose name in the No-Intro catalog is `catalogName` when we identified it. */
+export function recommendedFilters(
+  system: string,
+  catalogName?: string,
+): Promise<string[]> {
+  if (native)
+    return invoke("recommended_filters", {
+      system,
+      catalogName: catalogName ?? null,
+    });
+  const query = new URLSearchParams({ system });
+  if (catalogName) query.set("catalogName", catalogName);
+  return askWalkthrough<{ filters: string[] }>(
+    "recommended-filters",
+    query,
+    "The filters for this console could not be read.",
+  ).then((result) => result.filters);
+}
 // The name of an added shader file, from the engine, as for one without a
 // name in a command-line request. The browser walkthrough has no engine, so
 // there we show the name of the file.

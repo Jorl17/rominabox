@@ -1,8 +1,8 @@
 {
   "comment": "Our own source files already over the line limit (scripts/line_limit.py), each with its line count. A listed file may not grow; one that comes within the limit leaves this list.",
   "files": {
-    "desktop/src/App.tsx": 1458,
-    "scripts/builder_drive.mjs": 1658,
+    "desktop/src/App.tsx": 1456,
+    "scripts/builder_drive.mjs": 1656,
     "scripts/native_runtime/test_rmlui_interaction.cpp": 1905
   }
 }

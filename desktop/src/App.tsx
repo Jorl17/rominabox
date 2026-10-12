@@ -475,11 +475,7 @@ export function App() {
       setMenuSounds(settings.menuSounds || "off");
       setControls(settings.controls || emptyControls());
       setFirmware(settings.firmware || []);
-      setShaders({
-        bundled: settings.shaders?.bundled ?? [],
-        custom: settings.shaders?.custom ?? [],
-        initial: settings.shaders?.initial ?? null,
-      });
+      setShaders(settings.shaders ?? NO_SHADERS);
       const filename = settings.rom.split(/[\\/]/).pop() || settings.title;
       try {
         const traveled = await filesThatTravel(
@@ -1244,6 +1240,8 @@ export function App() {
                 <PictureFilters
                   shaders={shaders}
                   onChange={setShaders}
+                  system={draft.system}
+                  catalogName={info?.catalogName}
                   onError={fail}
                   clearError={() => setError("")}
                 />

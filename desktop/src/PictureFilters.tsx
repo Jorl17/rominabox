@@ -1,4 +1,10 @@
-import { useRef, type Dispatch, type SetStateAction } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { ChevronRight, Plus } from "lucide-react";
 import * as bridge from "./bridge";
 import { CustomShaderCards } from "./customShaders";
@@ -50,23 +56,61 @@ export async function addCustomShader(filePath: string, onChange: Change) {
   );
 }
 
+/** The filters we recommend for a game of the console `system`, whose name
+ * in the No-Intro catalog is `catalogName` when we identified it. */
+function useRecommendedFilters(system: string, catalogName?: string) {
+  const [filters, setFilters] = useState<string[]>([]);
+  useEffect(() => {
+    let current = true;
+    setFilters([]);
+    bridge
+      .recommendedFilters(system, catalogName)
+      .then((found) => {
+        if (current) setFilters(found);
+      })
+      // Without the list we recommend nothing, and the author can still
+      // choose every filter.
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [system, catalogName]);
+  return filters;
+}
+
 /** The Picture filters section of the Menu step: the presets of the shader
  * catalog and the files of the author, which the player can choose between
- * in the game, and the filter at the start of the game. */
+ * in the game, and the filter at the start of the game. With "Add
+ * recommended", the author adds the filters we recommend for the game to
+ * the ones already chosen. */
 export function PictureFilters({
   shaders,
   onChange,
+  system,
+  catalogName,
   onError,
   clearError,
 }: {
   shaders: bridge.ShaderSelection;
   onChange: Change;
+  system: string;
+  catalogName?: string;
   onError: (reason: unknown) => void;
   clearError: () => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { bundled, custom, initial } = shaders;
   const count = bundled.length + custom.length;
+  const recommended = useRecommendedFilters(system, catalogName);
+  function addRecommended() {
+    onChange((current) => ({
+      ...current,
+      bundled: [
+        ...current.bundled,
+        ...recommended.filter((id) => !current.bundled.includes(id)),
+      ],
+    }));
+  }
   function togglePreset(id: string) {
     onChange((current) =>
       current.bundled.includes(id)
@@ -107,10 +151,22 @@ export function PictureFilters({
           : `Picture filters (shaders) · ${count} selected`}
       </summary>
       <div className="shader-choices">
-        <p className="shader-lede">
-          Pick the shaders players can choose in the game. Click one to select
-          it.
-        </p>
+        <div className="shader-intro">
+          <p className="shader-lede">
+            Pick the shaders players can choose in the game. Click one to select
+            it.
+          </p>
+          {recommended.length > 0 && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={recommended.every((id) => bundled.includes(id))}
+              onClick={addRecommended}
+            >
+              Add recommended
+            </button>
+          )}
+        </div>
         <div className="shader-grid">
           {shaderCatalog.presets.map((preset) => {
             const chosen = bundled.includes(preset.id);
