@@ -1,0 +1,12 @@
+#reference "../crt/crt-guest-advanced.slangp"
+
+shadowMask = "6.0"
+masksize = "1.0"
+maskstr = "0.7"
+mcut = "0.85"
+post_br = "2.5"
+brightboost = "3.0"
+brightboost1 = "1.6"
+wp_saturation = "1.55"
+gamma_out = "1.95"
+CP = "0.0"

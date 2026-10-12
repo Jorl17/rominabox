@@ -93,6 +93,59 @@
       }
     },
     {
+      "id": "rominabox-crt",
+      "name": "ROM-in-a-Box CRT",
+      "detail": "A bright tube with RGB stripes",
+      "files": {
+        "slang": "rominabox/rominabox-crt.slangp"
+      },
+      "authors": "guest(r), with ideas from Dr. Venom; settings by Jorl17",
+      "ours": true,
+      "brightness": {
+        "parameter": "post_br",
+        "table": [
+          [
+            1.0,
+            2.5
+          ],
+          [
+            1.023,
+            2.6667
+          ],
+          [
+            1.042,
+            2.8333
+          ],
+          [
+            1.058,
+            3.0
+          ],
+          [
+            1.072,
+            3.1667
+          ],
+          [
+            1.086,
+            3.3333
+          ],
+          [
+            1.099,
+            3.5
+          ],
+          [
+            1.11,
+            3.6667
+          ]
+        ]
+      },
+      "interlacing": {
+        "slang": {
+          "parameter": "interm",
+          "off": 0.0
+        }
+      }
+    },
+    {
       "id": "crt-easymode",
       "name": "CRT Easymode",
       "detail": "A sharp, flat tube",
