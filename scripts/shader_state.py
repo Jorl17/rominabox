@@ -7,9 +7,10 @@ while a different filter was running.
 
 We export our generated Game Boy Color cartridge with two presets, with the
 author's choice on the second. In the first launch we choose the other one.
-In the second launch we open the shader screen, and the row marked ON must
-be the preset running in that launch. We take the picture of the menu from
-inside the game.
+In the second launch we open the shader screen, and the row marked ON (the
+one with the `selected` class, which the design draws as ON) must be the
+preset running in that launch. We read the marked row from the player's
+checkpoint report, and keep the picture of the menu for a person to look at.
 
     uv run python scripts/shader_state.py
 """
@@ -24,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import exported_game  # noqa: E402
 import menu_shots  # noqa: E402
 import toolchain  # noqa: E402
+from menu_workflows import checkpoints  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 # Our own committed cartridge. Any game in which we can open the shader screen will do.
@@ -33,8 +35,6 @@ SHOTS = ROOT / "work/shaderstate-shots"
 MARK_SOURCE = ROOT / "scripts/native_runtime/test_shader_mark.c"
 MARK_BINARY = toolchain.executable(ROOT / "work/shaderstate-mark")
 
-# The blue palette's highlight. We draw ON in it, and nothing for an empty state.
-HIGHLIGHT = (255, 241, 61)
 CHOSEN = "scanlines"
 INITIAL = "phosphor"
 
@@ -78,48 +78,6 @@ def running_id(app: Path, listed: dict[str, str]) -> str:
     if matched is None:
         raise SystemExit(f"the saved choice names no bundled shader: {current!r}")
     return matched
-
-
-def _near(pixel: tuple[int, ...], colour: tuple[int, int, int]) -> bool:
-    return all(abs(channel - wanted) <= 28 for channel, wanted in zip(pixel[:3], colour))
-
-
-def marked_row(image_path: Path, count: int) -> tuple[int, list[int]]:
-    """Return the row whose state column is in the highlight colour.
-
-    The window is 960 by 600, and the list is inside the screen frame. The
-    state words are in the right-hand column of each row. ON is in the
-    highlight colour and that column is empty for an off row, so the row with
-    the highlight there is the one marked ON.
-    """
-    from PIL import Image
-
-    image = Image.open(image_path).convert("RGB")
-    width, _height = image.size
-    scale = width / 960
-    # #screen is border-box at the origin of a 960-wide window, with a 4dp
-    # frame. The list is 36dp in and 68dp down inside that frame.
-    list_left = (4 + 36) * scale
-    list_top = (4 + 68) * scale
-    list_width = 880 * scale
-    row_height = 68 * scale
-    gap = 4 * scale
-    state_right = list_left + list_width - 14 * scale
-    state_left = state_right - 110 * scale
-    scores: list[int] = []
-    pixels = image.load()
-    for index in range(count):
-        top = int(list_top + index * (row_height + gap) + 8 * scale)
-        bottom = int(top + row_height - 16 * scale)
-        left = int(state_left)
-        right = int(state_right)
-        score = 0
-        for y in range(max(top, 0), min(bottom, image.size[1])):
-            for x in range(max(left, 0), min(right, image.size[0])):
-                if _near(pixels[x, y], HIGHLIGHT):
-                    score += 1
-        scores.append(score)
-    return max(range(count), key=lambda index: scores[index]), scores
 
 
 def shoot(app: Path, name: str, script: list[str]) -> None:
@@ -188,16 +146,13 @@ def main() -> int:
                 f"the first launch was asked for {CHOSEN} and saved {running}"
             )
 
-        shoot(app, "restarted", ["options", "shaders"])
-    picture = SHOTS / "restarted.png"
-    index, scores = marked_row(picture, len(listed))
-    shown = list(listed)[index]
+        shoot(app, "restarted", ["options", "shaders", "report:restarted"])
+    marked = checkpoints(SHOTS / "restarted.log")["restarted"]["selected"]
     print(f"running {running}")
-    print(f"marked  {shown}  scores={scores}  picture={picture}")
-    if max(scores) < 8:
-        raise SystemExit(
-            f"no ON mark was visible in {picture} (scores {scores})"
-        )
+    print(f"marked  {marked}  picture={SHOTS / 'restarted.png'}")
+    if len(marked) != 1:
+        raise SystemExit(f"the shader screen marks {marked}, not one row")
+    shown = marked[0]
     if shown != running:
         raise SystemExit(
             f"the shader that is running is {running}, "
