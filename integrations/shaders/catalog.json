@@ -411,6 +411,16 @@
       }
     },
     {
+      "id": "crt-hyllian",
+      "name": "CRT Hyllian",
+      "detail": "A sharp tube with clean scanlines",
+      "files": {
+        "glsl": "crt/crt-hyllian.glslp",
+        "slang": "crt/crt-hyllian.slangp"
+      },
+      "authors": "Hyllian"
+    },
+    {
       "id": "ntsc-adaptive",
       "name": "NTSC",
       "detail": "A TV signal that blends dithering",
@@ -635,6 +645,15 @@
       }
     },
     {
+      "id": "checkerboard-dedither",
+      "name": "Dedither",
+      "detail": "Blends dithered patterns into solid colours",
+      "files": {
+        "slang": "dithering/checkerboard-dedither.slangp"
+      },
+      "authors": "Hyllian"
+    },
+    {
       "id": "pal-r57shell",
       "name": "PAL",
       "detail": "A European TV signal",
@@ -761,6 +780,16 @@
         "slang": "handheld/zfast-lcd.slangp"
       },
       "authors": "Greg Hogan (SoltanGris42)"
+    },
+    {
+      "id": "lcd3x",
+      "name": "LCD3x",
+      "detail": "A handheld screen with its colour stripes",
+      "files": {
+        "glsl": "handheld/lcd3x.glslp",
+        "slang": "handheld/lcd3x.slangp"
+      },
+      "authors": "Gigaherz"
     },
     {
       "id": "gbc-lcd",

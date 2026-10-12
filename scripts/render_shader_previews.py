@@ -7,6 +7,7 @@ a shader that an author supplies can have a preview too.
     uv run python scripts/render_shader_previews.py            # regenerate every preview
     uv run python scripts/render_shader_previews.py --check    # fail if any has drifted
     uv run python scripts/render_shader_previews.py --library  # redraw libretro's presets
+    uv run python scripts/render_shader_previews.py --library crt-hyllian  # only those named
 
 We take the GLSL from the exporter, so we compile the same GLSL as in an
 exported game and not a copy of it. Rendering requires the Chrome already on
@@ -143,8 +144,9 @@ PLAYER_FOLDERS = {
 }
 
 
-def draw_library(destination: Path) -> None:
-    """Draw the preview of each libretro preset with the test player."""
+def draw_library(destination: Path, only: list[str]) -> None:
+    """Draw the preview of each libretro preset with the test player, or of
+    the presets in `only` when it names any."""
     from PIL import Image
 
     player = player_build.player_in(player_build.selected_build())
@@ -153,6 +155,8 @@ def draw_library(destination: Path) -> None:
         work = Path(temporary)
         test_card = card(work)
         for id, language, path in library_presets():
+            if only and id not in only:
+                continue
             data = work / id
             folders = {key: data / name for key, name in PLAYER_FOLDERS.items()}
             for folder in folders.values():
@@ -236,14 +240,19 @@ def main() -> int:
     )
     parser.add_argument(
         "--library",
-        action="store_true",
-        help="redraw the previews of libretro's presets with the runtime kit's player",
+        nargs="*",
+        metavar="ID",
+        help="redraw the previews of libretro's presets with the runtime kit's player, or of the presets named",
     )
     arguments = parser.parse_args()
 
-    if arguments.library:
-        draw_library(PREVIEWS)
-        print(f"\nrendered {len(library_presets())} library previews -> {PREVIEWS}")
+    if arguments.library is not None:
+        known = {id for id, _, _ in library_presets()}
+        unknown = sorted(set(arguments.library) - known)
+        if unknown:
+            raise SystemExit(f"no libretro preset in the catalogue is called {', '.join(unknown)}")
+        draw_library(PREVIEWS, arguments.library)
+        print(f"\nrendered {len(arguments.library) or len(known)} library previews -> {PREVIEWS}")
         return 0
 
     shaders = sources()
