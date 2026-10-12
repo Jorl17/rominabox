@@ -546,6 +546,7 @@ pub fn candidates_for_extension(extension: &str) -> Vec<&'static System> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     /// We recommend the PAL filters for a game only for PAL countries, on a
     /// console with PAL filters, and the filters for every game otherwise.
@@ -564,7 +565,6 @@ mod tests {
             gba.recommended_filters.as_ref().unwrap().default.as_slice()
         );
     }
-    use std::path::PathBuf;
 
     #[test]
     fn aliases_and_shared_extensions_come_from_one_registry() {

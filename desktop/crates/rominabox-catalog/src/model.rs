@@ -622,8 +622,7 @@ pub struct Console {
 
 /// The picture filters we recommend for the games of a console, by their ids
 /// in the shader catalog: `default` for every game, and `pal` in its place for
-/// a game from a PAL country, when the console had PAL games that we filter
-/// differently.
+/// a game only for PAL countries, when the console has such a list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RecommendedFilters {
