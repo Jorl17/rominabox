@@ -230,6 +230,14 @@ fn assess_firmware(
     Ok(systems::assess_firmware(system, &files))
 }
 
+/// The filters we recommend for a game of the console `system`, whose name in
+/// the No-Intro catalog is `catalog_name` when we identified it.
+#[tauri::command]
+fn recommended_filters(system: String, catalog_name: Option<String>) -> Result<Vec<String>, String> {
+    let system = systems::find(&system).ok_or_else(|| format!("no console is named {system}"))?;
+    Ok(system.recommended_filters(catalog_name.as_deref()).to_vec())
+}
+
 /// Whether the hotkeys follow the rules of the game's menu, for the game
 /// `system` with `controls`, or else the error that we would show in an
 /// export.
@@ -588,6 +596,7 @@ fn main() {
             open_bug_report,
             intel_macs_default,
             assess_firmware,
+            recommended_filters,
             check_hotkeys,
             hotkey_defaults,
             export_game,

@@ -3,8 +3,9 @@
 //! controller variants in the Controls step, a lookup in the builder's cache,
 //! the preview in the Menu step, the refusal of a project with a palette this
 //! build lacks, the warnings on an author's filter that a Windows game may not
-//! load, the name of a filter nobody named, and the games on this computer
-//! with their data in the Game data section.
+//! load, the name of a filter nobody named, the filters we recommend for a
+//! game, and the games on this computer with their data in the Game data
+//! section.
 
 use rominabox_engine::builder::{self, defaults, Places};
 use rominabox_engine::game::Game;
@@ -140,6 +141,20 @@ fn hotkey_defaults_prints_the_hotkeys_a_game_for_a_console_starts_with() {
         let engine = rominabox_engine::hotkeys::defaults_for(system).unwrap();
         assert_eq!(printed["hotkeys"], serde_json::to_value(engine).unwrap(), "{system}");
     }
+}
+
+/// The filters we recommend in the Picture filters panel of the builder,
+/// for a game with or without a name in the No-Intro catalog, are the same
+/// in `recommended-filters`.
+#[test]
+fn recommended_filters_prints_the_filters_the_builder_recommends() {
+    let megadrive = rominabox_engine::systems::find("megadrive").unwrap();
+    for name in [None, Some("Sonic the Hedgehog (USA, Europe)"), Some("Sonic the Hedgehog (Europe)")] {
+        let printed = result("recommended-filters", Some(&json!({ "system": "megadrive", "catalogName": name })));
+        assert_eq!(printed["filters"], json!(megadrive.recommended_filters(name)), "{name:?}");
+    }
+    let (succeeded, _, printed) = run("recommended-filters", Some(&json!({ "system": "nothing" })));
+    assert!(!succeeded && printed.contains("no console is named nothing"), "{printed}");
 }
 
 /// In `inspect_game` we look in the builder's cache, which the author
