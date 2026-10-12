@@ -208,6 +208,41 @@
           }
         ]
       }
+    },
+    {
+      "name": "down from a +, to the + of the next row, not to the buttons below it",
+      "steps": [
+        "options",
+        "hotkeys",
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:right",
+        "key:down",
+        "key:down",
+        "key:right",
+        "key:down"
+      ],
+      "focused": {
+        "*": [
+          "volume-level",
+          "hotkey-menu-1",
+          "hotkey-menu-2",
+          "hotkey-menu-3",
+          "hotkey-menu-add",
+          "hotkey-next-page-1",
+          "hotkey-next-page-2",
+          "hotkey-next-page-add",
+          "hotkey-next-slot-1",
+          "hotkey-previous-shader-1",
+          "hotkey-next-shader-1",
+          "hotkey-next-shader-add",
+          "hotkey-fullscreen-add"
+        ]
+      }
     }
   ]
 }
