@@ -212,6 +212,7 @@
     "fast-forward-options": { "script": ["options"], "fastForward": true },
     "fast-forward-speed-pressed": { "script": ["options", "fast-forward-speed"], "fastForward": true },
     "notice-slot": { "script": ["wait-ms:5500", "press:f7", "wait:30"], "startAtMenu": false },
+    "shaders-over-game": { "script": ["wait-ms:6000", "toggle", "wait:30", "options", "shaders", "key:down", "wait:30"], "startAtMenu": false, "shaders": { "bundled": ["scanlines", "phosphor"], "initial": "phosphor" } },
     "shaders-royale": {
       "script": ["options", "shaders"],
       "shaders": { "bundled": ["crt-royale", "crt-lottes", "zfast-crt"], "initial": "crt-royale" }
