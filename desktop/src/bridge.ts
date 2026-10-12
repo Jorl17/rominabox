@@ -53,11 +53,7 @@ export type ExportRequest = {
   intelMacs: boolean;
   /** What the author left out of, and added to, the files of the game. */
   files: GameFiles;
-  shaders?: {
-    bundled: string[];
-    custom: { name: string; path: string }[];
-    initial?: string | null;
-  };
+  shaders?: ShaderSelection;
   firmware: string[];
   theme: string;
   palette: string;
@@ -169,6 +165,16 @@ export function inspectGame(
 ): Promise<GameInfo> {
   return invoke("inspect_game", { path, online, systemOverride, files });
 }
+/** A shader file of the author, with the name the player sees in the game. */
+export type CustomShader = { name: string; path: string };
+/** The filters in a game: the ids of the presets in the shader catalog, the
+ * files of the author, and the filter at the start of the game, as an id or
+ * the name of a file, or null for none. */
+export type ShaderSelection = {
+  bundled: string[];
+  custom: CustomShader[];
+  initial: string | null;
+};
 // The name of an added shader file, from the engine, as for one without a
 // name in a command-line request. The browser walkthrough has no engine, so
 // there we show the name of the file.
@@ -184,11 +190,9 @@ export type Warning = { text: string; detail: string };
  * on each platform (`shaders::ShaderWarnings`). */
 export type ShaderWarnings = { warned: string[]; warnings: Warning[] };
 // The browser walkthrough has no desktop shell, so we show none.
-export function shaderWarnings(selection: {
-  bundled: string[];
-  custom: { name: string; path: string }[];
-  initial: string | null;
-}): Promise<ShaderWarnings> {
+export function shaderWarnings(
+  selection: ShaderSelection,
+): Promise<ShaderWarnings> {
   if (!native) return Promise.resolve({ warned: [], warnings: [] });
   return invoke("shader_warnings", { selection });
 }

@@ -3,15 +3,13 @@ import { TriangleAlert } from "lucide-react";
 import * as bridge from "./bridge";
 import { ShaderWarning } from "./ShaderWarning";
 
-type CustomShader = { name: string; path: string };
-
 const NONE: bridge.ShaderWarnings = { warned: [], warnings: [] };
 
 /** The warnings about the author's filters, from the shader check in the
  * shell. */
 function useShaderWarnings(
   bundled: string[],
-  custom: CustomShader[],
+  custom: bridge.CustomShader[],
   initial: string | null,
 ): bridge.ShaderWarnings {
   const [warnings, setWarnings] = useState(NONE);
@@ -51,8 +49,8 @@ export function CustomShaderCards({
   selection: [bundled, custom, initial],
   onRemove,
 }: {
-  selection: [string[], CustomShader[], string | null];
-  onRemove: (shader: CustomShader) => void;
+  selection: [string[], bridge.CustomShader[], string | null];
+  onRemove: (shader: bridge.CustomShader) => void;
 }) {
   const { warned, warnings } = useShaderWarnings(bundled, custom, initial);
   return (
@@ -82,7 +80,7 @@ function CustomShaderCard({
   warned,
   onRemove,
 }: {
-  shader: CustomShader;
+  shader: bridge.CustomShader;
   warned: boolean;
   onRemove: () => void;
 }) {

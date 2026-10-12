@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { SYSTEMS, formatBytes, inspectRom } from "./inspection";
 import * as bridge from "./bridge";
-import { CustomShaderCards } from "./customShaders";
 import {
   afterExport,
   afterProgress,
@@ -39,33 +38,8 @@ import { ExportChoices, exportProduct, type Platform } from "./ExportChoices";
 import { FirmwarePicker } from "./FirmwarePicker";
 import { BackgroundPicker } from "./BackgroundPicker";
 import { AdvancedOptions } from "./AdvancedOptions";
+import { NO_SHADERS, PictureFilters, addCustomShader } from "./PictureFilters";
 import largeIcon from "../src-tauri/icons/icon-large.png";
-import shaderCatalog from "../../integrations/shaders/catalog.json";
-import {
-  NOT_A_SHADER_FILE,
-  SHADER_ACCEPT,
-  SHADER_FORMATS,
-  isShaderFile,
-} from "./shaderFiles";
-// The same pictures as in the exported game, rendered from the GLSL of each
-// shader with scripts/render_shader_previews.py. We read them as a directory
-// and do not list them, so a preset added to the catalogue comes with its
-// preview instead of a broken image.
-const shaderPreviews = Object.fromEntries(
-  Object.entries(
-    import.meta.glob("../../integrations/shaders/previews/*.png", {
-      eager: true,
-      query: "?url",
-      import: "default",
-    }) as Record<string, string>,
-  ).map(([path, url]) => [
-    path
-      .split("/")
-      .pop()!
-      .replace(/\.png$/, ""),
-    url,
-  ]),
-);
 import "./style.css";
 
 const steps = ["Game", "Details", "Menu", "Export"];
@@ -123,11 +97,7 @@ export function App() {
   const [design, setDesign] = useState(declared.theme);
   const [menuSounds, setMenuSounds] = useState(declared.menuSounds);
   const [firmware, setFirmware] = useState<string[]>([]);
-  const [bundledShaders, setBundledShaders] = useState<string[]>([]);
-  const [customShaders, setCustomShaders] = useState<
-    { name: string; path: string }[]
-  >([]);
-  const [shaderInitial, setShaderInitial] = useState<string | null>(null);
+  const [shaders, setShaders] = useState<bridge.ShaderSelection>(NO_SHADERS);
   const [firmwareAssessment, setFirmwareAssessment] =
     useState<bridge.FirmwareAssessment | null>(null);
   const [controls, setControls] = useState<Controls>(emptyControls);
@@ -153,7 +123,6 @@ export function App() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const gameInput = useRef<HTMLInputElement>(null);
-  const shaderInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const imageTarget = useRef<"icon" | "background">("icon");
   const heading = useRef<HTMLHeadingElement>(null);
@@ -446,14 +415,7 @@ export function App() {
       icon: icon?.path || null,
       background: background?.path || null,
       // We bundle no shaders in a game without VIDEO, because the player chooses them there.
-      shaders:
-        draft.showMenu && draft.video
-          ? {
-              bundled: bundledShaders,
-              custom: customShaders,
-              initial: shaderInitial,
-            }
-          : { bundled: [], custom: [], initial: null },
+      shaders: draft.showMenu && draft.video ? shaders : NO_SHADERS,
       startAtMenu: draft.showMenu && draft.startAtMenu,
       theme: design,
       palette,
@@ -513,9 +475,11 @@ export function App() {
       setMenuSounds(settings.menuSounds || "off");
       setControls(settings.controls || emptyControls());
       setFirmware(settings.firmware || []);
-      setBundledShaders(settings.shaders?.bundled ?? []);
-      setCustomShaders(settings.shaders?.custom ?? []);
-      setShaderInitial(settings.shaders?.initial ?? null);
+      setShaders({
+        bundled: settings.shaders?.bundled ?? [],
+        custom: settings.shaders?.custom ?? [],
+        initial: settings.shaders?.initial ?? null,
+      });
       const filename = settings.rom.split(/[\\/]/).pop() || settings.title;
       try {
         const traveled = await filesThatTravel(
@@ -581,45 +545,6 @@ export function App() {
       setBusy(null);
     }
   }
-  function togglePreset(id: string) {
-    const on = bundledShaders.includes(id);
-    setBundledShaders(
-      on
-        ? bundledShaders.filter((item) => item !== id)
-        : [...bundledShaders, id],
-    );
-    if (on) setShaderInitial((current) => (current === id ? null : current));
-  }
-  function removeCustomShader(shader: { name: string; path: string }) {
-    setCustomShaders((current) =>
-      current.filter((item) => item.path !== shader.path),
-    );
-    setShaderInitial((current) => (current === shader.name ? null : current));
-  }
-  async function addCustomShader(filePath: string) {
-    if (!isShaderFile(filePath)) {
-      setError(NOT_A_SHADER_FILE);
-      return;
-    }
-    const name = await bridge.customShaderName(filePath);
-    setCustomShaders((current) => {
-      if (current.some((item) => item.path === filePath)) return current;
-      return [...current, { name, path: filePath }];
-    });
-  }
-  async function chooseShaderFile() {
-    setError("");
-    if (!bridge.native) {
-      shaderInput.current?.click();
-      return;
-    }
-    try {
-      const path = await bridge.pickShader();
-      if (path) await addCustomShader(path);
-    } catch (e) {
-      fail(e);
-    }
-  }
   nativeDropHandler.current = (paths, pos) => {
     const under = document.elementFromPoint(pos.x, pos.y);
     // The Installed games section covers the steps and takes no files.
@@ -632,7 +557,8 @@ export function App() {
     }
     if (target === "icon" || target === "background")
       loadPicture(target, paths[0]).catch(fail);
-    else if (target === "shader") addCustomShader(paths[0]).catch(fail);
+    else if (target === "shader")
+      addCustomShader(paths[0], setShaders).catch(fail);
     else if (step === 0)
       choose({
         path: paths[0],
@@ -1315,118 +1241,12 @@ export function App() {
                 busy={!!busy}
               />
               <VideoOptions draft={draft} update={update}>
-                <details className="advanced picture-filters">
-                  <summary>
-                    <ChevronRight size={16} />
-                    {bundledShaders.length + customShaders.length === 0
-                      ? "Picture filters (shaders) · none selected"
-                      : `Picture filters (shaders) · ${bundledShaders.length + customShaders.length} selected`}
-                  </summary>
-                  <div className="shader-choices">
-                    <p className="shader-lede">
-                      Pick the shaders players can choose in the game. Click one
-                      to select it.
-                    </p>
-                    <div className="shader-grid">
-                      {shaderCatalog.presets.map((preset) => {
-                        const chosen = bundledShaders.includes(preset.id);
-                        return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            className={`shader-card${chosen ? " chosen" : ""}`}
-                            aria-pressed={chosen}
-                            onClick={() => togglePreset(preset.id)}
-                          >
-                            <img
-                              className="shader-preview"
-                              src={shaderPreviews[preset.id]}
-                              alt=""
-                            />
-                            <span className="shader-name">{preset.name}</span>
-                            <span className="shader-detail">
-                              {preset.detail}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      <CustomShaderCards
-                        selection={[
-                          bundledShaders,
-                          customShaders,
-                          shaderInitial,
-                        ]}
-                        onRemove={removeCustomShader}
-                      />
-                      <button
-                        type="button"
-                        className="shader-card shader-add"
-                        data-drop="shader"
-                        onClick={() => {
-                          void chooseShaderFile();
-                        }}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          const file = event.dataTransfer.files[0];
-                          if (!file) return;
-                          const dropped = file as File & { path?: string };
-                          addCustomShader(dropped.path || file.name).catch(
-                            fail,
-                          );
-                        }}
-                      >
-                        <span>
-                          <Plus size={22} aria-hidden="true" />
-                          Add your own
-                          <small className="shader-formats">
-                            {SHADER_FORMATS.join(" ")}
-                          </small>
-                        </span>
-                      </button>
-                    </div>
-                    <input
-                      ref={shaderInput}
-                      type="file"
-                      hidden
-                      accept={SHADER_ACCEPT}
-                      data-shader
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) addCustomShader(file.name).catch(fail);
-                        event.target.value = "";
-                      }}
-                    />
-                    {bundledShaders.length + customShaders.length > 0 && (
-                      <label className="shader-initial">
-                        Starts on
-                        <select
-                          aria-label="Starts on"
-                          value={shaderInitial ?? ""}
-                          onChange={(event) =>
-                            setShaderInitial(event.target.value || null)
-                          }
-                        >
-                          <option value="">Unfiltered</option>
-                          {shaderCatalog.presets
-                            .filter((preset) =>
-                              bundledShaders.includes(preset.id),
-                            )
-                            .map((preset) => (
-                              <option key={preset.id} value={preset.id}>
-                                {preset.name}
-                              </option>
-                            ))}
-                          {customShaders.map((shader) => (
-                            <option key={shader.path} value={shader.name}>
-                              {shader.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                  </div>
-                </details>
+                <PictureFilters
+                  shaders={shaders}
+                  onChange={setShaders}
+                  onError={fail}
+                  clearError={() => setError("")}
+                />
               </VideoOptions>
               <AdvancedOptions settings={draft} update={update} />
             </>
