@@ -1,6 +1,6 @@
 [package]
 name = "rominabox-desktop"
-version = "0.5.2"
+version = "0.5.3"
 description = "ROM-in-a-Box desktop shell"
 edition = "2021"
 
