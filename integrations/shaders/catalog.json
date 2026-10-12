@@ -13,21 +13,21 @@
     {
       "id": "scanlines",
       "name": "Scanlines",
-      "detail": "Darkens every other line",
+      "detail": "Thin dark lines across the picture",
       "fragment": "vec3 colour = COMPAT_TEXTURE(Texture, TEX0.xy).rgb; float line = mod(floor(TEX0.y * TextureSize.y), 2.0); colour *= mix(1.0, 0.45, line); FragColor = vec4(colour, 1.0);",
       "ours": true
     },
     {
       "id": "phosphor",
       "name": "Phosphor",
-      "detail": "A strong green tint",
+      "detail": "Everything green, like an old computer",
       "fragment": "vec3 colour = COMPAT_TEXTURE(Texture, TEX0.xy).rgb; colour = vec3(colour.r * 0.22, min(colour.g * 1.25, 1.0), colour.b * 0.28); FragColor = vec4(colour, 1.0);",
       "ours": true
     },
     {
       "id": "crt-royale",
       "name": "CRT Royale",
-      "detail": "A detailed tube, for large screens",
+      "detail": "A very lifelike old TV, for fast computers",
       "files": {
         "glsl": "crt/crt-royale.glslp",
         "slang": "crt/crt-royale.slangp"
@@ -43,7 +43,7 @@
     {
       "id": "crt-royale-pal",
       "name": "CRT Royale PAL",
-      "detail": "A detailed tube with a European signal",
+      "detail": "A very lifelike old European TV",
       "files": {
         "glsl": "crt/crt-royale-pal-r57shell.glslp",
         "slang": "presets/crt-plus-signal/crt-royale-pal-r57shell.slangp"
@@ -59,7 +59,7 @@
     {
       "id": "crt-guest-advanced",
       "name": "CRT Guest",
-      "detail": "A tube with glow and many settings",
+      "detail": "An old TV with a soft, gentle look",
       "files": {
         "slang": "crt/crt-guest-advanced.slangp"
       },
@@ -95,7 +95,7 @@
     {
       "id": "rominabox-crt",
       "name": "ROM-in-a-Box CRT",
-      "detail": "A bright tube with RGB stripes",
+      "detail": "Our own old TV look, bright and colourful",
       "files": {
         "slang": "rominabox/rominabox-crt.slangp"
       },
@@ -148,7 +148,7 @@
     {
       "id": "crt-easymode",
       "name": "CRT Easymode",
-      "detail": "A sharp, flat tube",
+      "detail": "A crisp old TV, light and simple",
       "files": {
         "glsl": "crt/crt-easymode.glslp",
         "slang": "crt/crt-easymode.slangp"
@@ -227,7 +227,7 @@
     {
       "id": "crt-lottes",
       "name": "CRT Lottes",
-      "detail": "An arcade monitor",
+      "detail": "An old arcade screen, slightly curved",
       "files": {
         "glsl": "crt/crt-lottes.glslp",
         "slang": "crt/crt-lottes.slangp"
@@ -290,7 +290,7 @@
     {
       "id": "crt-geom",
       "name": "CRT Geom",
-      "detail": "A curved tube",
+      "detail": "An old TV with a curved screen",
       "files": {
         "glsl": "crt/crt-geom.glslp",
         "slang": "crt/crt-geom.slangp"
@@ -310,7 +310,7 @@
     {
       "id": "crt-aperture",
       "name": "CRT Aperture",
-      "detail": "A studio monitor's fine grille",
+      "detail": "A crisp TV screen with a soft glow",
       "files": {
         "glsl": "crt/crt-aperture.glslp",
         "slang": "crt/crt-aperture.slangp"
@@ -389,7 +389,7 @@
     {
       "id": "zfast-crt",
       "name": "zfast CRT",
-      "detail": "A light tube for slower computers",
+      "detail": "A simple old TV look, for slow computers",
       "files": {
         "glsl": "crt/zfast-crt.glslp",
         "slang": "crt/zfast-crt.slangp"
@@ -468,7 +468,7 @@
     {
       "id": "crt-hyllian",
       "name": "CRT Hyllian",
-      "detail": "A sharp tube with clean scanlines",
+      "detail": "A crisp old TV with bold lines",
       "files": {
         "glsl": "crt/crt-hyllian.glslp",
         "slang": "crt/crt-hyllian.slangp"
@@ -478,7 +478,7 @@
     {
       "id": "ntsc-adaptive",
       "name": "NTSC",
-      "detail": "A TV signal that blends dithering",
+      "detail": "American TV look, blends see-through effects",
       "files": {
         "glsl": "ntsc/ntsc-adaptive.glslp",
         "slang": "ntsc/ntsc-adaptive.slangp"
@@ -623,7 +623,7 @@
     {
       "id": "blargg",
       "name": "Composite",
-      "detail": "Colour bleed of a composite cable",
+      "detail": "Blurry colours, like an old TV cable",
       "files": {
         "glsl": "ntsc/blargg.glslp",
         "slang": "ntsc/blargg.slangp"
@@ -702,7 +702,7 @@
     {
       "id": "checkerboard-dedither",
       "name": "Dedither",
-      "detail": "Blends dithered patterns into solid colours",
+      "detail": "Makes checkered see-through effects smooth",
       "files": {
         "slang": "dithering/checkerboard-dedither.slangp"
       },
@@ -711,7 +711,7 @@
     {
       "id": "pal-r57shell",
       "name": "PAL",
-      "detail": "A European TV signal",
+      "detail": "Soft colours, like a European TV",
       "files": {
         "glsl": "pal/pal-r57shell.glslp",
         "slang": "pal/pal-r57shell.slangp"
@@ -750,7 +750,7 @@
     {
       "id": "lcd-grid-v2",
       "name": "LCD Grid",
-      "detail": "A handheld screen's pixel grid",
+      "detail": "Thin lines between pixels, like a handheld",
       "files": {
         "glsl": "handheld/lcd-grid-v2.glslp",
         "slang": "handheld/lcd-grid-v2.slangp"
@@ -829,7 +829,7 @@
     {
       "id": "zfast-lcd",
       "name": "zfast LCD",
-      "detail": "A light handheld screen",
+      "detail": "A simple handheld look, for slow computers",
       "files": {
         "glsl": "handheld/zfast-lcd.glslp",
         "slang": "handheld/zfast-lcd.slangp"
@@ -839,7 +839,7 @@
     {
       "id": "lcd3x",
       "name": "LCD3x",
-      "detail": "A handheld screen with its colour stripes",
+      "detail": "Each pixel shown as red, green and blue",
       "files": {
         "glsl": "handheld/lcd3x.glslp",
         "slang": "handheld/lcd3x.slangp"
@@ -849,7 +849,7 @@
     {
       "id": "gbc-lcd",
       "name": "GBC LCD",
-      "detail": "Red, green and blue subpixels",
+      "detail": "Like a Game Boy Color screen, up close",
       "files": {
         "slang": "rominabox/gbc-lcd.slangp"
       },
@@ -915,7 +915,7 @@
     {
       "id": "gbc-lcd-original-colours",
       "name": "GBC LCD, original colours",
-      "detail": "Subpixels with the real screen's muted colours",
+      "detail": "Game Boy Color screen with its real colours",
       "files": {
         "slang": "rominabox/gbc-lcd-original-colours.slangp"
       },
@@ -985,7 +985,7 @@
     {
       "id": "gba-lcd",
       "name": "GBA LCD",
-      "detail": "Red, green and blue subpixels",
+      "detail": "Like a Game Boy Advance screen, up close",
       "files": {
         "slang": "rominabox/gba-lcd.slangp"
       },
@@ -1051,7 +1051,7 @@
     {
       "id": "gba-lcd-original-colours",
       "name": "GBA LCD, original colours",
-      "detail": "Subpixels with the real screen's muted colours",
+      "detail": "Game Boy Advance screen, its real colours",
       "files": {
         "slang": "rominabox/gba-lcd-original-colours.slangp"
       },
@@ -1121,7 +1121,7 @@
     {
       "id": "gameboy",
       "name": "Dot Matrix",
-      "detail": "The green handheld screen",
+      "detail": "Like the green screen of the first Game Boy",
       "files": {
         "glsl": "handheld/gameboy.glslp",
         "slang": "handheld/gameboy.slangp"
@@ -1160,7 +1160,7 @@
     {
       "id": "sharp-bilinear-simple",
       "name": "Sharp Pixels",
-      "detail": "Even pixels at any size",
+      "detail": "Crisp, even pixels at any size",
       "files": {
         "glsl": "interpolation/sharp-bilinear-simple.glslp",
         "slang": "pixel-art-scaling/sharp-bilinear-simple.slangp"
