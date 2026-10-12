@@ -32,5 +32,13 @@
   "support": {
     "macos-arm64": "planned"
   },
+  "recommendedFilters": {
+    "default": [
+      "crt-royale",
+      "blargg",
+      "crt-guest-advanced",
+      "crt-hyllian"
+    ]
+  },
   "presentationOrder": 16
 }

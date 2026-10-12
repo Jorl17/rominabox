@@ -615,6 +615,21 @@ pub struct Console {
     /// Firmware the author must supply before we can export this console.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub firmware: Vec<FirmwareGroup>,
+    /// The picture filters we recommend for its games.
+    #[serde(default, rename = "recommendedFilters", skip_serializing_if = "Option::is_none")]
+    pub recommended_filters: Option<RecommendedFilters>,
+}
+
+/// The picture filters we recommend for the games of a console, by their ids
+/// in the shader catalog: `default` for every game, and `pal` in its place for
+/// a game from a PAL country, when the console had PAL games that we filter
+/// differently.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecommendedFilters {
+    pub default: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pal: Vec<String>,
 }
 
 #[cfg(test)]

@@ -40,5 +40,19 @@
   "support": {
     "macos-arm64": "planned"
   },
+  "recommendedFilters": {
+    "default": [
+      "crt-guest-advanced",
+      "crt-royale",
+      "crt-hyllian",
+      "sharp-bilinear-simple"
+    ],
+    "pal": [
+      "crt-royale-pal",
+      "pal-r57shell",
+      "crt-hyllian",
+      "sharp-bilinear-simple"
+    ]
+  },
   "presentationOrder": 10
 }

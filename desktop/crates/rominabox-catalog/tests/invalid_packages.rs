@@ -449,3 +449,51 @@ fn one_package_reports_every_fault_in_a_single_load() {
     assert_has(&problems, "content.no_extensions", "half", "content.extensions");
     assert_has(&problems, "reference.missing_profile", "half", "controllers");
 }
+
+/// A scratch folder with a shader catalog that has the presets `presets`, as
+/// in the repository, and the folder in it for the packages.
+fn beside_shaders(presets: &[&str]) -> (rominabox_scratch::Scratch, PathBuf) {
+    let root = scratch();
+    let listed: Vec<Value> = presets.iter().map(|id| json!({ "id": id })).collect();
+    write_json(&root.join("shaders/catalog.json"), &json!({ "presets": listed }));
+    let consoles = root.join("consoles");
+    (root, consoles)
+}
+
+#[test]
+fn recommended_filters_are_at_most_five_each_once_and_each_shipped() {
+    let (_root, consoles) = beside_shaders(&["a", "b", "c", "d", "e", "f"]);
+    let mut manifest = plain("tv");
+    manifest["recommendedFilters"] = json!({
+        "default": ["a", "b", "c", "d", "e", "f"],
+        "pal": ["a", "a", "missing"]
+    });
+    write_console(&package_dir(&consoles, "tv"), &manifest);
+
+    let problems = reject(&consoles);
+
+    assert_has(&problems, "filters.too_many", "tv", "recommendedFilters.default");
+    assert_has(&problems, "filters.repeated", "tv", "recommendedFilters.pal");
+    assert_has(&problems, "filters.unknown", "tv", "recommendedFilters.pal");
+    assert_eq!(problems.len(), 3, "{}", render(&problems));
+}
+
+#[test]
+fn a_console_recommends_shipped_filters_for_every_game_and_for_pal_games() {
+    let (_root, consoles) = beside_shaders(&["crt", "pal-crt", "lcd"]);
+    let mut manifest = plain("tv");
+    manifest["recommendedFilters"] = json!({ "default": ["crt", "lcd"], "pal": ["pal-crt"] });
+    write_console(&package_dir(&consoles, "tv"), &manifest);
+    let mut empty = plain("radio");
+    empty["recommendedFilters"] = json!({ "default": [] });
+    write_console(&package_dir(&consoles, "radio"), &empty);
+
+    let problems = reject(&consoles);
+    assert_has(&problems, "filters.empty", "radio", "recommendedFilters.default");
+    assert_eq!(problems.len(), 1, "{}", render(&problems));
+
+    fs::remove_dir_all(consoles.join("radio")).unwrap();
+    let catalog = Catalog::load(&consoles).unwrap();
+    let filters = catalog.console("tv").unwrap().console.recommended_filters.clone().unwrap();
+    assert_eq!((filters.default, filters.pal), (vec!["crt".to_string(), "lcd".into()], vec!["pal-crt".to_string()]));
+}

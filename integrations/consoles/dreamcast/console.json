@@ -56,5 +56,11 @@
   "support": {
     "macos-arm64": "planned"
   },
+  "recommendedFilters": {
+    "default": [
+      "sharp-bilinear-simple",
+      "crt-easymode"
+    ]
+  },
   "presentationOrder": 12
 }

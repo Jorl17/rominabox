@@ -33,5 +33,12 @@
   "support": {
     "macos-arm64": "planned"
   },
+  "recommendedFilters": {
+    "default": [
+      "lcd-grid-v2",
+      "zfast-lcd",
+      "lcd3x"
+    ]
+  },
   "presentationOrder": 21
 }

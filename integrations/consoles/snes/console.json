@@ -49,5 +49,21 @@
   "support": {
     "macos-arm64": "enabled"
   },
+  "recommendedFilters": {
+    "default": [
+      "crt-royale",
+      "blargg",
+      "checkerboard-dedither",
+      "crt-guest-advanced",
+      "crt-hyllian"
+    ],
+    "pal": [
+      "crt-royale-pal",
+      "pal-r57shell",
+      "checkerboard-dedither",
+      "crt-guest-advanced",
+      "crt-hyllian"
+    ]
+  },
   "presentationOrder": 9
 }

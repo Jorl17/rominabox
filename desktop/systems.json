@@ -36,6 +36,22 @@
       ],
       "controllerProfile": "megadrive",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "checkerboard-dedither",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "checkerboard-dedither",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      },
       "headerTitle": {
         "offset": 336,
         "length": 48
@@ -100,6 +116,22 @@
       ],
       "controllerProfile": "megadrive",
       "category": "disc",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "checkerboard-dedither",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "checkerboard-dedither",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      },
       "headerTitle": {
         "offset": 336,
         "length": 48,
@@ -139,7 +171,21 @@
         }
       ],
       "controllerProfile": "mastersystem",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "gamegear",
@@ -173,7 +219,14 @@
         }
       ],
       "controllerProfile": "gamegear",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "lcd-grid-v2",
+          "zfast-lcd",
+          "lcd3x"
+        ]
+      }
     },
     {
       "id": "sg1000",
@@ -207,7 +260,15 @@
         }
       ],
       "controllerProfile": "mastersystem",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "gb",
@@ -236,6 +297,13 @@
       ],
       "controllerProfile": "gameboy",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "gameboy",
+          "lcd-grid-v2",
+          "lcd3x"
+        ]
+      },
       "headerTitle": {
         "offset": 308,
         "length": 15
@@ -268,6 +336,14 @@
       ],
       "controllerProfile": "gameboy",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "gbc-lcd",
+          "gbc-lcd-original-colours",
+          "lcd-grid-v2",
+          "lcd3x"
+        ]
+      },
       "headerTitle": {
         "offset": 308,
         "length": 15
@@ -300,6 +376,14 @@
       ],
       "controllerProfile": "gba",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "gba-lcd",
+          "gba-lcd-original-colours",
+          "lcd-grid-v2",
+          "lcd3x"
+        ]
+      },
       "headerTitle": {
         "offset": 160,
         "length": 12
@@ -338,7 +422,21 @@
         }
       ],
       "controllerProfile": "nes",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "snes",
@@ -370,6 +468,22 @@
       ],
       "controllerProfile": "snes",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "checkerboard-dedither",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "checkerboard-dedither",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      },
       "copierHeader": 512,
       "headerTitle": [
         {
@@ -414,6 +528,20 @@
       ],
       "controllerProfile": "n64",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-guest-advanced",
+          "crt-royale",
+          "crt-hyllian",
+          "sharp-bilinear-simple"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "crt-hyllian",
+          "sharp-bilinear-simple"
+        ]
+      },
       "headerTitle": {
         "offset": 32,
         "length": 20
@@ -503,7 +631,21 @@
         }
       ],
       "controllerProfile": "ps1",
-      "category": "disc"
+      "category": "disc",
+      "recommendedFilters": {
+        "default": [
+          "crt-guest-advanced",
+          "crt-royale",
+          "crt-hyllian",
+          "sharp-bilinear-simple"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "crt-hyllian",
+          "sharp-bilinear-simple"
+        ]
+      }
     },
     {
       "id": "dreamcast",
@@ -551,6 +693,12 @@
       ],
       "controllerProfile": "dreamcast",
       "category": "disc",
+      "recommendedFilters": {
+        "default": [
+          "sharp-bilinear-simple",
+          "crt-easymode"
+        ]
+      },
       "headerTitle": {
         "offset": 128,
         "length": 96,
@@ -593,6 +741,12 @@
       ],
       "controllerProfile": "gamecube",
       "category": "disc",
+      "recommendedFilters": {
+        "default": [
+          "sharp-bilinear-simple",
+          "crt-easymode"
+        ]
+      },
       "headerTitle": {
         "offset": 32,
         "length": 96,
@@ -642,7 +796,13 @@
         }
       ],
       "controllerProfile": "ps1",
-      "category": "disc"
+      "category": "disc",
+      "recommendedFilters": {
+        "default": [
+          "sharp-bilinear-simple",
+          "crt-easymode"
+        ]
+      }
     },
     {
       "id": "atari2600",
@@ -671,7 +831,21 @@
         }
       ],
       "controllerProfile": "atari2600",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "atari5200",
@@ -699,7 +873,15 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "atari7800",
@@ -728,6 +910,20 @@
       ],
       "controllerProfile": "retropad",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ],
+        "pal": [
+          "crt-royale-pal",
+          "pal-r57shell",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      },
       "headerTitle": {
         "offset": 17,
         "length": 32
@@ -761,6 +957,13 @@
       ],
       "controllerProfile": "retropad",
       "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "lcd-grid-v2",
+          "zfast-lcd",
+          "lcd3x"
+        ]
+      },
       "headerTitle": {
         "offset": 10,
         "length": 32,
@@ -804,7 +1007,15 @@
         }
       ],
       "controllerProfile": "pce",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "pcecd",
@@ -883,7 +1094,15 @@
         }
       ],
       "controllerProfile": "pce",
-      "category": "disc"
+      "category": "disc",
+      "recommendedFilters": {
+        "default": [
+          "crt-royale",
+          "blargg",
+          "crt-guest-advanced",
+          "crt-hyllian"
+        ]
+      }
     },
     {
       "id": "neogeopocket",
@@ -912,7 +1131,14 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "lcd-grid-v2",
+          "zfast-lcd",
+          "lcd3x"
+        ]
+      }
     },
     {
       "id": "neogeopocketcolor",
@@ -941,7 +1167,14 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "lcd-grid-v2",
+          "zfast-lcd",
+          "lcd3x"
+        ]
+      }
     },
     {
       "id": "wonderswan",
@@ -969,7 +1202,14 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "lcd-grid-v2",
+          "zfast-lcd",
+          "lcd3x"
+        ]
+      }
     },
     {
       "id": "wonderswancolor",
@@ -997,7 +1237,14 @@
         }
       ],
       "controllerProfile": "retropad",
-      "category": "cartridge"
+      "category": "cartridge",
+      "recommendedFilters": {
+        "default": [
+          "lcd-grid-v2",
+          "zfast-lcd",
+          "lcd3x"
+        ]
+      }
     }
   ]
 }

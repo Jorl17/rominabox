@@ -9,6 +9,7 @@
 //! We load a package only when it is complete, and otherwise report why it is
 //! not. We never use a default in place of a missing declaration.
 
+mod filters;
 pub mod model;
 mod registries;
 mod sticks;
@@ -123,6 +124,7 @@ impl Catalog {
         }
 
         catalog.validate(&mut problems);
+        filters::check(&catalog, root, &mut problems);
 
         if problems.is_empty() {
             Ok(catalog)

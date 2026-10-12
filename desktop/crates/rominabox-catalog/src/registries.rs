@@ -101,6 +101,9 @@ pub fn compatibility_registries(catalog: &Catalog) -> Result<Vec<(&'static str, 
             json!(console.controllers.default),
         );
         system.insert("category".into(), json!(console.content.category));
+        if let Some(filters) = &console.recommended_filters {
+            system.insert("recommendedFilters".into(), json!(filters));
+        }
         // We treat a bounded offset and a length as data, and a list of them
         // when the title is not at one address. A branch per console is code.
         if let Some(size) = console.recognition.copier_header {
