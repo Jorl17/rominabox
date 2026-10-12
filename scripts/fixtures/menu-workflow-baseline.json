@@ -1780,6 +1780,188 @@
       "report:fullscreen"
     ]
   },
+  "disc/blue/fullscreen-screen": {
+    "files": {},
+    "reports": {
+      "after": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "FILTERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "before": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "FILTERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [
+          "notice"
+        ],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "FILTERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders",
+      "report:before",
+      "fullscreen",
+      "wait:30",
+      "report:after"
+    ]
+  },
   "disc/blue/hotkeys": {
     "files": {},
     "reports": {
@@ -7797,6 +7979,184 @@
       "fullscreen",
       "wait:30",
       "report:fullscreen"
+    ]
+  },
+  "native/blue/fullscreen-screen": {
+    "files": {},
+    "reports": {
+      "after": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "before": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders",
+      "report:before",
+      "fullscreen",
+      "wait:30",
+      "report:after"
     ]
   },
   "native/blue/hotkeys": {
@@ -13842,6 +14202,184 @@
       "fullscreen",
       "wait:30",
       "report:fullscreen"
+    ]
+  },
+  "rominabox/blue/fullscreen-screen": {
+    "files": {},
+    "reports": {
+      "after": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "before": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      },
+      "final": {
+        "bindsBox": false,
+        "captureActive": false,
+        "capturing": [],
+        "disabled": [],
+        "focused": [
+          "none"
+        ],
+        "leaving": [],
+        "menuOpen": true,
+        "on": [],
+        "profile": "megadrive",
+        "screen": "shaders",
+        "selected": [
+          "phosphor"
+        ],
+        "showing": [],
+        "sliders": {
+          "brightness-level": 0.5,
+          "contrast-level": 0.5,
+          "volume-level": 1.0
+        },
+        "slots": [
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          },
+          {
+            "occupied": false,
+            "thumbnail": false
+          }
+        ],
+        "text": {
+          "footer-hint": "Esc  BACK",
+          "heading": "SHADERS"
+        },
+        "transferPending": false,
+        "volumeDb": 0.0
+      }
+    },
+    "script": [
+      "options",
+      "shaders",
+      "report:before",
+      "fullscreen",
+      "wait:30",
+      "report:after"
     ]
   },
   "rominabox/blue/hotkeys": {
