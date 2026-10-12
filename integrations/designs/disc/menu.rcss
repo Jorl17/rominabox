@@ -26,7 +26,11 @@ body[data-screen=shaders] #shaders-list { width: 392dp; }
 body[data-screen=shaders] #shaders-list .list-row-title { right: 48dp; white-space: nowrap; overflow: hidden; }
 body[data-screen=shaders] #shaders-list .list-row-detail { right: 12dp; white-space: nowrap; overflow: hidden; }
 body[data-screen=shaders] #shaders-list .list-row-state { top: 6dp; }
-body[data-screen=shaders] #shaders-back { left: 24dp; }
+/* BACK and the page buttons share the bottom row of the column. */
+body[data-screen=shaders] #shaders-back { left: 24dp; width: 120dp; }
+body[data-screen=shaders] #shaders-prev { left: 136dp; }
+body[data-screen=shaders] #shaders-page-count { left: 208dp; }
+body[data-screen=shaders] #shaders-next { left: 316dp; }
 body[data-screen=shaders] #shaders-status { width: 392dp; }
 body[data-screen=shaders] #footer { width: 392dp; z-index: 1; }
 body[data-screen=shaders] #version { display: none; }

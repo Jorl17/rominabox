@@ -23,9 +23,12 @@ body[data-screen=shaders] #heading { width: 380dp; z-index: 1; }
 body[data-screen=shaders] #shaders-list { left: 28dp; width: 328dp; }
 body[data-screen=shaders] #shaders-list .list-row-title, body[data-screen=shaders] #shaders-list .list-row-detail { right: 52dp; }
 body[data-screen=shaders] #shaders-list .list-row-state { width: 40dp; }
-body[data-screen=shaders] #shaders-prev { left: 0; }
-body[data-screen=shaders] #shaders-page-count { left: 104dp; }
-body[data-screen=shaders] #shaders-next { left: 272dp; }
+/* BACK and the page buttons share the bottom row of the column. */
+body[data-screen=shaders] #shaders-pager { top: 440dp; }
+body[data-screen=shaders] #shaders-back { width: 136dp; }
+body[data-screen=shaders] #shaders-prev { left: 148dp; width: 48dp; }
+body[data-screen=shaders] #shaders-page-count { left: 196dp; width: 84dp; }
+body[data-screen=shaders] #shaders-next { left: 280dp; width: 48dp; }
 body[data-screen=shaders] #shaders-panel .list-actions, body[data-screen=shaders] #shaders-status { left: 28dp; width: 328dp; }
 body[data-screen=shaders] #footer { width: 340dp; z-index: 1; }
 body[data-screen=shaders] #version { display: none; }
