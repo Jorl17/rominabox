@@ -20,16 +20,16 @@ body[data-screen=shaders] { background-color: transparent; }
 body[data-screen=shaders] #screen { background-color: transparent; border-color: transparent; decorator: none; }
 body[data-screen=shaders] #shaders-panel { position: absolute; left: -4dp; top: -4dp; width: 384dp; height: 600dp; background-color: #1049c3; border-right: 4dp #5296ef; }
 body[data-screen=shaders] #heading { width: 380dp; z-index: 1; }
-body[data-screen=shaders] #shaders-list { left: 28dp; width: 328dp; }
-body[data-screen=shaders] #shaders-list .list-row-title, body[data-screen=shaders] #shaders-list .list-row-detail { right: 52dp; }
-body[data-screen=shaders] #shaders-list .list-row-state { width: 40dp; }
+body[data-screen=shaders] .list { left: 28dp; width: 328dp; }
+body[data-screen=shaders] .list-row-title, body[data-screen=shaders] .list-row-detail { right: 52dp; }
+body[data-screen=shaders] .list-row-state { width: 40dp; }
 /* BACK and the page buttons share the bottom row of the column. */
-body[data-screen=shaders] #shaders-pager { top: 440dp; }
-body[data-screen=shaders] #shaders-back { width: 136dp; }
-body[data-screen=shaders] #shaders-prev { left: 148dp; width: 48dp; }
-body[data-screen=shaders] #shaders-page-count { left: 196dp; width: 84dp; }
-body[data-screen=shaders] #shaders-next { left: 280dp; width: 48dp; }
-body[data-screen=shaders] #shaders-panel .list-actions, body[data-screen=shaders] #shaders-status { left: 28dp; width: 328dp; }
+body[data-screen=shaders] .list-pager { top: 440dp; }
+body[data-screen=shaders] .list-back { width: 136dp; }
+body[data-screen=shaders] .list-pager-prev { left: 148dp; width: 48dp; }
+body[data-screen=shaders] .list-pager-count { left: 196dp; width: 84dp; }
+body[data-screen=shaders] .list-pager-next { left: 280dp; width: 48dp; }
+body[data-screen=shaders] .list-actions, body[data-screen=shaders] .list-status { left: 28dp; width: 328dp; }
 body[data-screen=shaders] #footer { width: 340dp; z-index: 1; }
 body[data-screen=shaders] #version { display: none; }
 
